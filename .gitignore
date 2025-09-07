@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules
+dist
+dist-ssr
+
+# Local environment files
+*.local
+.DS_Store
+
+# IDE specific files
+.vscode/*
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.iws
+*.iml
+*.ipr
+
+# Documentation
+HELP.md
+
+# Gradle files
+.gradle
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Eclipse files
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# Binary directories
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# Output directories
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# NetBeans files
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
