@@ -28,4 +28,17 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+
+    public void sendTwoFactorCode(String email, String code) {
+        String subject = "Your 2FA Code";
+        String content = "<p>Use the following code to complete your login:</p>"
+                + "<h3>" + code + "</h3>"
+                + "<p>This code will expire in 5 minutes.</p>";
+        try {
+            sendEmail(email, subject, content);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send 2FA email", e);
+        }
+    }
 }

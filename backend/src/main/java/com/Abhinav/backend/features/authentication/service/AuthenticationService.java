@@ -2,6 +2,7 @@ package com.Abhinav.backend.features.authentication.service;
 
 import com.Abhinav.backend.features.authentication.dto.AuthenticationRequestBody;
 import com.Abhinav.backend.features.authentication.dto.AuthenticationResponseBody;
+import com.Abhinav.backend.features.authentication.dto.TwoFactorRequest;
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
 import com.Abhinav.backend.features.authentication.utils.EmailService;
@@ -20,7 +21,7 @@ import java.util.Optional;
 public class AuthenticationService {
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
     private final AuthenticationUserRepository authenticationUserRepository;
-    private final int durationInMinutes = 1;
+    private final int durationInMinutes = 10;
 
     private final Encoder encoder;
     private final JsonWebToken jsonWebToken;
@@ -64,13 +65,13 @@ public class AuthenticationService {
         }
     }
 
-    public void validateEmailVerificationToken(String token, String email) {
+    public AuthenticationUser validateEmailVerificationToken(String token, String email) {
         Optional<AuthenticationUser> user = authenticationUserRepository.findByEmail(email);
         if (user.isPresent() && encoder.matches(token, user.get().getEmailVerificationToken()) && !user.get().getEmailVerificationTokenExpiryDate().isBefore(LocalDateTime.now())) {
             user.get().setEmailVerified(true);
             user.get().setEmailVerificationToken(null);
             user.get().setEmailVerificationTokenExpiryDate(null);
-            authenticationUserRepository.save(user.get());
+            return authenticationUserRepository.save(user.get());
         } else if (user.isPresent() && encoder.matches(token, user.get().getEmailVerificationToken()) && user.get().getEmailVerificationTokenExpiryDate().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Email verification token expired.");
         } else {
@@ -83,8 +84,20 @@ public class AuthenticationService {
         if (!encoder.matches(loginRequestBody.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Password is incorrect.");
         }
-        String token = jsonWebToken.generateToken(loginRequestBody.getEmail());
-        return new AuthenticationResponseBody(token, "Authentication succeeded.");
+
+        if (user.getTwoFactorEnabled()) {
+            String code = generateEmailVerificationToken();
+            user.setTwoFactorToken(code);
+            user.setTwoFactorTokenRequested(true);
+            user.setTwoFactorTokenExpiryDate(LocalDateTime.now().plusMinutes(durationInMinutes)); // expires in 10 minutes
+            authenticationUserRepository.save(user);
+
+            // Send the code via email
+            emailService.sendTwoFactorCode(user.getEmail(), code);
+            return new AuthenticationResponseBody(null, null ,"2FA code sent to your email.");
+        }
+
+        return generateTokensForUser(user);
     }
 
     public AuthenticationResponseBody register(AuthenticationRequestBody registerRequestBody) {
@@ -122,8 +135,8 @@ public class AuthenticationService {
         } catch (Exception e) {
             logger.info("Error while sending email: {}", e.getMessage());
         }
-        String authToken = jsonWebToken.generateToken(registerRequestBody.getEmail());
-        return new AuthenticationResponseBody(authToken, "User registered successfully.");
+
+        return new AuthenticationResponseBody(null, null ,"User registered successfully.");
     }
 
     public AuthenticationUser getUser(String email) {
@@ -158,19 +171,30 @@ public class AuthenticationService {
     public void resetPassword(String email, String newPassword, String token) {
         Optional<AuthenticationUser> user = authenticationUserRepository.findByEmail(email);
 
+        if (user.isEmpty()) {
+            throw new IllegalArgumentException("User not found.");
+        }
+
+        AuthenticationUser foundUser = user.get();
+
+        // new password should be different from old password
+        if (encoder.matches(newPassword, foundUser.getPassword())) {
+            throw new IllegalArgumentException("New password cannot be the same as the old password.");
+        }
+
         // --- Password strength check ---
         if (!PasswordValidator.isValid(newPassword)) {
             throw new IllegalArgumentException(
                     "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
             );
-        }
-
-        if (user.isPresent() && encoder.matches(token, user.get().getPasswordResetToken()) && !user.get().getPasswordResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
-            user.get().setPasswordResetToken(null);
-            user.get().setPasswordResetTokenExpiryDate(null);
-            user.get().setPassword(encoder.encode(newPassword));
-            authenticationUserRepository.save(user.get());
-        } else if (user.isPresent() && encoder.matches(token, user.get().getPasswordResetToken()) && user.get().getPasswordResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
+        } // Check if the token matches and is not expired
+        else if (encoder.matches(token, foundUser.getPasswordResetToken()) && !foundUser.getPasswordResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
+            foundUser.setPasswordResetToken(null);
+            foundUser.setPasswordResetTokenExpiryDate(null);
+            foundUser.setPassword(encoder.encode(newPassword));
+            authenticationUserRepository.save(foundUser);
+        } // Check if the token matches but is expired
+        else if (encoder.matches(token, foundUser.getPasswordResetToken()) && foundUser.getPasswordResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Password reset token expired.");
         } else {
             throw new IllegalArgumentException("Password reset token failed.");
@@ -178,8 +202,74 @@ public class AuthenticationService {
     }
 
     public void toggleTwoFactor(AuthenticationUser user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User not found or not authenticated.");
+        }
+
         boolean newState = !user.getTwoFactorEnabled();
         user.setTwoFactorEnabled(newState);
         authenticationUserRepository.save(user);
+    }
+
+    public AuthenticationResponseBody verifyTwoFactor(TwoFactorRequest request) {
+        AuthenticationUser user = authenticationUserRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        if (!user.isTwoFactorTokenRequested()) {
+            throw new IllegalArgumentException("You must login first before verifying 2FA.");
+        }
+
+        if (user.getTwoFactorToken() == null || user.getTwoFactorTokenExpiryDate().isBefore(LocalDateTime.now())) {
+            // Reset 2FA request flag on expiry
+            user.setTwoFactorTokenRequested(false);
+            authenticationUserRepository.save(user);
+
+            throw new IllegalArgumentException("2FA code expired. Please login again.");
+        }
+
+        if (!user.getTwoFactorToken().equals(request.getCode())) {
+            throw new IllegalArgumentException("Invalid 2FA code.");
+        }
+
+        user.setTwoFactorToken(null);
+        user.setTwoFactorTokenExpiryDate(null);
+        user.setTwoFactorTokenRequested(false);
+        authenticationUserRepository.save(user);
+
+        return generateTokensForUser(user);
+    }
+
+
+    public AuthenticationResponseBody refreshAccessToken(String refreshToken) {
+        if (!jsonWebToken.validateRefreshToken(refreshToken)) {
+            throw new IllegalArgumentException("Invalid or expired refresh token.");
+        }
+
+        String email = jsonWebToken.getEmailFromToken(refreshToken);
+        AuthenticationUser user = authenticationUserRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        // Ensure the provided refresh token matches the one stored for the user
+        if (!refreshToken.equals(user.getRefreshToken())) {
+            user.setRefreshToken(null);
+            authenticationUserRepository.save(user);
+            throw new IllegalArgumentException("Refresh token mismatch. Please log in again.");
+        }
+
+        String newAccessToken = jsonWebToken.generateAccessToken(email);
+        return new AuthenticationResponseBody(newAccessToken, refreshToken, "Access token refreshed successfully.");
+    }
+
+
+    public AuthenticationResponseBody generateTokensForUser(AuthenticationUser user) {
+        String email=user.getEmail();
+
+        String accessToken = jsonWebToken.generateAccessToken(email);
+        String refreshToken = jsonWebToken.generateRefreshToken(email);
+
+        user.setRefreshToken(refreshToken);
+        authenticationUserRepository.save(user);
+
+        return new AuthenticationResponseBody(accessToken, refreshToken, "Authentication succeeded.");
     }
 }

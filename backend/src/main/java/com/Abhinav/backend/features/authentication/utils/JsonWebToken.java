@@ -15,15 +15,31 @@ public class JsonWebToken {
     @Value("${jwt.secret.key}")
     private String secret;
 
+    // Access token: short-lived (e.g., 15 min)
+    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000; // 15 min in ms
+    // Refresh token: long-lived (e.g., 7 days)
+    private static final long REFRESH_TOKEN_EXPIRATION = 7L * 24 * 60 * 60 * 1000; // 7 days in ms
+
+
     public SecretKey getKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateToken(String email) {
+
+    public String generateAccessToken(String email) {
         return Jwts.builder()
-                .subject(email)
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 5 * 10))
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
+                .signWith(getKey())
+                .compact();
+    }
+
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION))
                 .signWith(getKey())
                 .compact();
     }
@@ -53,4 +69,9 @@ public class JsonWebToken {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
+
+    public boolean validateRefreshToken(String token) {
+        return !isTokenExpired(token);
+    }
+
 }

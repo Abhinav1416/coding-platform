@@ -3,12 +3,14 @@ package com.Abhinav.backend.features.authentication.controller;
 import com.Abhinav.backend.features.authentication.dto.AuthenticationRequestBody;
 import com.Abhinav.backend.features.authentication.dto.AuthenticationResponseBody;
 import com.Abhinav.backend.features.authentication.dto.Response;
+import com.Abhinav.backend.features.authentication.dto.TwoFactorRequest;
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.authentication.service.AuthenticationService;
 import jakarta.validation.Valid;
-import org.apache.catalina.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/authentication")
@@ -34,11 +36,23 @@ public class AuthenticationController {
         return user;
     }
 
+//    @PutMapping("/validate-email-verification-token")
+//    public Response verifyEmail(@RequestParam String token, @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+//        authenticationUserService.validateEmailVerificationToken(token, user.getEmail());
+//        return new Response("Email verified successfully.");
+//    }
+
     @PutMapping("/validate-email-verification-token")
-    public Response verifyEmail(@RequestParam String token, @RequestAttribute("authenticatedUser") AuthenticationUser user) {
-        authenticationUserService.validateEmailVerificationToken(token, user.getEmail());
-        return new Response("Email verified successfully.");
+    public AuthenticationResponseBody verifyEmail(
+            @RequestParam String email,
+            @RequestParam String token) {
+
+        AuthenticationUser user = authenticationUserService.validateEmailVerificationToken(token, email);
+
+        // Now email is verified → generate tokens
+        return authenticationUserService.generateTokensForUser(user);
     }
+
 
     @GetMapping("/send-email-verification-token")
     public Response sendEmailVerificationToken(@RequestAttribute("authenticatedUser") AuthenticationUser user) {
@@ -65,4 +79,16 @@ public class AuthenticationController {
         authenticationUserService.toggleTwoFactor(user);
         return ResponseEntity.ok("2FA " + (user.getTwoFactorEnabled() ? "enabled" : "disabled"));
     }
+
+    @PostMapping("/verify-2fa")
+    public AuthenticationResponseBody verifyTwoFactor(@Valid @RequestBody TwoFactorRequest request) {
+        return authenticationUserService.verifyTwoFactor(request);
+    }
+
+    @PostMapping("/refresh-access-token")
+    public AuthenticationResponseBody refreshAccessToken(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        return authenticationUserService.refreshAccessToken(refreshToken);
+    }
+
 }

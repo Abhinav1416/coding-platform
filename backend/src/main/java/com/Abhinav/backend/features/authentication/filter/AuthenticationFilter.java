@@ -20,8 +20,11 @@ public class AuthenticationFilter extends HttpFilter {
             "/api/v1/authentication/login",
             "/api/v1/authentication/register",
             "/api/v1/authentication/send-password-reset-token",
-            "/api/v1/authentication/reset-password"
+            "/api/v1/authentication/reset-password",
+            "/api/v1/authentication/verify-2fa",
+            "/api/v1/authentication/validate-email-verification-token"
     );
+
 
     private final JsonWebToken jsonWebTokenService;
     private final AuthenticationService authenticationService;
