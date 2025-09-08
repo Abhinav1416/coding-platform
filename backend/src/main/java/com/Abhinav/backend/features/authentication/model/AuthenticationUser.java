@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
+
 @Entity(name = "users")
 public class AuthenticationUser {
     @Id
@@ -23,6 +24,12 @@ public class AuthenticationUser {
     private String password;
     private String passwordResetToken = null;
     private LocalDateTime passwordResetTokenExpiryDate = null;
+
+    // 2FA related fields
+    private Boolean twoFactorEnabled = false;
+    private String otp;
+    private LocalDateTime otpExpiry;
+
 
     public AuthenticationUser(String email, String password) {
         this.email = email;
@@ -82,5 +89,29 @@ public class AuthenticationUser {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public Boolean getTwoFactorEnabled() {
+        return twoFactorEnabled;
+    }
+
+    public void setTwoFactorEnabled(Boolean twoFactorEnabled) {
+        this.twoFactorEnabled = twoFactorEnabled;
+    }
+
+    public String getOtp() {
+        return otp;
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
+    }
+
+    public LocalDateTime getOtpExpiry() {
+        return otpExpiry;
+    }
+
+    public void setOtpExpiry(LocalDateTime otpExpiry) {
+        this.otpExpiry = otpExpiry;
     }
 }

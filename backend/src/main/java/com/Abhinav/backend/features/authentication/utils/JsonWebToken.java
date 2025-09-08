@@ -23,7 +23,7 @@ public class JsonWebToken {
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 5 * 10))
                 .signWith(getKey())
                 .compact();
     }

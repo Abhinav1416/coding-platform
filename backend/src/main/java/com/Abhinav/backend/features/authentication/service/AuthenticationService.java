@@ -7,6 +7,7 @@ import com.Abhinav.backend.features.authentication.repository.AuthenticationUser
 import com.Abhinav.backend.features.authentication.utils.EmailService;
 import com.Abhinav.backend.features.authentication.utils.Encoder;
 import com.Abhinav.backend.features.authentication.utils.JsonWebToken;
+import com.Abhinav.backend.features.authentication.utils.PasswordValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -87,6 +88,20 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponseBody register(AuthenticationRequestBody registerRequestBody) {
+
+        // email already exists check
+        if (authenticationUserRepository.findByEmail(registerRequestBody.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email already exists.");
+        }
+
+
+        // --- Password strength check ---
+        if (!PasswordValidator.isValid(registerRequestBody.getPassword())) {
+            throw new IllegalArgumentException(
+                    "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
+            );
+        }
+
         AuthenticationUser user = authenticationUserRepository.save(new AuthenticationUser(registerRequestBody.getEmail(), encoder.encode(registerRequestBody.getPassword())));
 
         String emailVerificationToken = generateEmailVerificationToken();
@@ -142,6 +157,14 @@ public class AuthenticationService {
 
     public void resetPassword(String email, String newPassword, String token) {
         Optional<AuthenticationUser> user = authenticationUserRepository.findByEmail(email);
+
+        // --- Password strength check ---
+        if (!PasswordValidator.isValid(newPassword)) {
+            throw new IllegalArgumentException(
+                    "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
+            );
+        }
+
         if (user.isPresent() && encoder.matches(token, user.get().getPasswordResetToken()) && !user.get().getPasswordResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
             user.get().setPasswordResetToken(null);
             user.get().setPasswordResetTokenExpiryDate(null);
@@ -152,5 +175,11 @@ public class AuthenticationService {
         } else {
             throw new IllegalArgumentException("Password reset token failed.");
         }
+    }
+
+    public void toggleTwoFactor(AuthenticationUser user) {
+        boolean newState = !user.getTwoFactorEnabled();
+        user.setTwoFactorEnabled(newState);
+        authenticationUserRepository.save(user);
     }
 }
