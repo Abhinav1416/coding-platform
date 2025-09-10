@@ -1,9 +1,6 @@
 package com.Abhinav.backend.features.authentication.controller;
 
-import com.Abhinav.backend.features.authentication.dto.AuthenticationRequestBody;
-import com.Abhinav.backend.features.authentication.dto.AuthenticationResponseBody;
-import com.Abhinav.backend.features.authentication.dto.Response;
-import com.Abhinav.backend.features.authentication.dto.TwoFactorRequest;
+import com.Abhinav.backend.features.authentication.dto.*;
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.authentication.service.AuthenticationService;
 import jakarta.validation.Valid;
@@ -22,12 +19,12 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login")
-    public AuthenticationResponseBody loginPage(@Valid @RequestBody AuthenticationRequestBody loginRequestBody) {
+    public AuthenticationResponseBody login(@Valid @RequestBody AuthenticationRequestBody loginRequestBody) {
         return authenticationUserService.login(loginRequestBody);
     }
 
     @PostMapping("/register")
-    public AuthenticationResponseBody registerPage(@Valid @RequestBody AuthenticationRequestBody registerRequestBody) {
+    public AuthenticationResponseBody register(@Valid @RequestBody AuthenticationRequestBody registerRequestBody) {
         return authenticationUserService.register(registerRequestBody);
     }
 
@@ -36,45 +33,34 @@ public class AuthenticationController {
         return user;
     }
 
-//    @PutMapping("/validate-email-verification-token")
-//    public Response verifyEmail(@RequestParam String token, @RequestAttribute("authenticatedUser") AuthenticationUser user) {
-//        authenticationUserService.validateEmailVerificationToken(token, user.getEmail());
-//        return new Response("Email verified successfully.");
-//    }
-
     @PutMapping("/validate-email-verification-token")
-    public AuthenticationResponseBody verifyEmail(
-            @RequestParam String email,
-            @RequestParam String token) {
-
-        AuthenticationUser user = authenticationUserService.validateEmailVerificationToken(token, email);
-
-        // Now email is verified → generate tokens
+    public AuthenticationResponseBody verifyEmail(@Valid @RequestBody EmailVerificationRequest request) {
+        AuthenticationUser user = authenticationUserService.validateEmailVerificationToken(
+                request.getToken(), request.getEmail());
         return authenticationUserService.generateTokensForUser(user);
     }
 
-
-    @GetMapping("/send-email-verification-token")
-    public Response sendEmailVerificationToken(@RequestAttribute("authenticatedUser") AuthenticationUser user) {
-        authenticationUserService.sendEmailVerificationToken(user.getEmail());
+    @PostMapping("/send-email-verification-token")
+    public Response sendEmailVerificationToken(@RequestBody EmailTokenRequest request) {
+        authenticationUserService.sendEmailVerificationToken(request.getEmail());
         return new Response("Email verification token sent successfully.");
     }
 
-    @PutMapping("/send-password-reset-token")
-    public Response sendPasswordResetToken(@RequestParam String email) {
-        authenticationUserService.sendPasswordResetToken(email);
+    @PostMapping("/send-password-reset-token")
+    public Response sendPasswordResetToken(@Valid @RequestBody EmailTokenRequest request) {
+        authenticationUserService.sendPasswordResetToken(request.getEmail());
         return new Response("Password reset token sent successfully.");
     }
 
     @PutMapping("/reset-password")
-    public Response resetPassword(@RequestParam String newPassword, @RequestParam String token,
-                                  @RequestParam String email) {
-        authenticationUserService.resetPassword(email, newPassword, token);
+    public Response resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authenticationUserService.resetPassword(request.getEmail(), request.getNewPassword(), request.getToken());
         return new Response("Password reset successfully.");
     }
 
     @PostMapping("/2fa/toggle")
-    public ResponseEntity<String> toggle2FA(@RequestParam String email) {
+    public ResponseEntity<String> toggle2FA(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
         AuthenticationUser user = authenticationUserService.getUser(email);
         authenticationUserService.toggleTwoFactor(user);
         return ResponseEntity.ok("2FA " + (user.getTwoFactorEnabled() ? "enabled" : "disabled"));
@@ -86,9 +72,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/refresh-access-token")
-    public AuthenticationResponseBody refreshAccessToken(@RequestBody Map<String, String> request) {
-        String refreshToken = request.get("refreshToken");
-        return authenticationUserService.refreshAccessToken(refreshToken);
+    public AuthenticationResponseBody refreshAccessToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return authenticationUserService.refreshAccessToken(request.getRefreshToken());
     }
-
 }

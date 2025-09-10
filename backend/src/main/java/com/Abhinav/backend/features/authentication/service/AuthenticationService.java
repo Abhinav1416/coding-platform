@@ -227,7 +227,7 @@ public class AuthenticationService {
             throw new IllegalArgumentException("2FA code expired. Please login again.");
         }
 
-        if (!user.getTwoFactorToken().equals(request.getCode())) {
+        if (!user.getTwoFactorToken().equals(request.getToken())) {
             throw new IllegalArgumentException("Invalid 2FA code.");
         }
 

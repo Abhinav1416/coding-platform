@@ -1,19 +1,12 @@
 package com.Abhinav.backend.features.authentication.dto;
 
-
 import jakarta.validation.constraints.NotBlank;
 
-public class TwoFactorRequest {
+public class EmailVerificationRequest {
     @NotBlank(message = "Email cannot be blank")
     private String email;
+    @NotBlank
     private String token;
-
-    public TwoFactorRequest() {}
-
-    public TwoFactorRequest(String email, String code) {
-        this.email = email;
-        this.token = code;
-    }
 
     public String getEmail() {
         return email;
