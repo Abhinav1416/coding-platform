@@ -1,14 +1,14 @@
-package com.Abhinav.backend.features.authentication.service;
+package com.Abhinav.backend.features.authentication.AuthService;
 
 import com.Abhinav.backend.features.authentication.dto.AuthenticationRequestBody;
 import com.Abhinav.backend.features.authentication.dto.AuthenticationResponseBody;
 import com.Abhinav.backend.features.authentication.dto.TwoFactorRequest;
-import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
-import com.Abhinav.backend.features.authentication.utils.EmailService;
-import com.Abhinav.backend.features.authentication.utils.Encoder;
-import com.Abhinav.backend.features.authentication.utils.JsonWebToken;
-import com.Abhinav.backend.features.authentication.utils.PasswordValidator;
+import com.Abhinav.backend.features.authentication.AuthModel.AuthenticationUser;
+import com.Abhinav.backend.features.authentication.AuthRepository.AuthenticationUserRepository;
+import com.Abhinav.backend.features.authentication.AuthUtils.EmailService;
+import com.Abhinav.backend.features.authentication.AuthUtils.Encoder;
+import com.Abhinav.backend.features.authentication.AuthUtils.JsonWebToken;
+import com.Abhinav.backend.features.authentication.AuthUtils.PasswordValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -257,6 +257,7 @@ public class AuthenticationService {
         }
 
         String newAccessToken = jsonWebToken.generateAccessToken(email);
+        System.out.println("Generated a new Access Token");
         return new AuthenticationResponseBody(newAccessToken, refreshToken, "Access token refreshed successfully.");
     }
 

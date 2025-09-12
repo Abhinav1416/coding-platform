@@ -13,6 +13,7 @@ import type {
   ResendTokenPayload,
   PasswordResetRequest,
   SendPasswordResetTokenRequest,
+  User,
 } from "../types/auth";
 
 
@@ -71,4 +72,9 @@ export const resetPassword = async (
   data: PasswordResetRequest
 ): Promise<void> => {
   await api.put("/reset-password", data);
+};
+
+export const getCurrentUser = async (): Promise<User | null> => {
+  const res = await api.get("/api/v1/authentication/me");
+  return res.data?.user ?? null;
 };

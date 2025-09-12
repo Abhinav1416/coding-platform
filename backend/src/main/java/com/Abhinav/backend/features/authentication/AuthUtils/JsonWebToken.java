@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication.utils;
+package com.Abhinav.backend.features.authentication.AuthUtils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -18,7 +18,7 @@ public class JsonWebToken {
     // Access token: short-lived (e.g., 15 min)
     private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000; // 15 min in ms
     // Refresh token: long-lived (e.g., 7 days)
-    private static final long REFRESH_TOKEN_EXPIRATION = 7L * 24 * 60 * 60 * 1000; // 7 days in ms
+    private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 
     public SecretKey getKey() {

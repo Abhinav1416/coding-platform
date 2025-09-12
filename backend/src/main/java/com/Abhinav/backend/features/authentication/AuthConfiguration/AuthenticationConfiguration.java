@@ -1,6 +1,6 @@
-package com.Abhinav.backend.features.authentication.configuration;
+package com.Abhinav.backend.features.authentication.AuthConfiguration;
 
-import com.Abhinav.backend.features.authentication.filter.AuthenticationFilter;
+import com.Abhinav.backend.features.authentication.AuthFilter.AuthenticationFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

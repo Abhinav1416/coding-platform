@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication.utils;
+package com.Abhinav.backend.features.authentication.AuthUtils;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

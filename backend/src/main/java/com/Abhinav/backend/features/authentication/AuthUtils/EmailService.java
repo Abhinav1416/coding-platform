@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication.utils;
+package com.Abhinav.backend.features.authentication.AuthUtils;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

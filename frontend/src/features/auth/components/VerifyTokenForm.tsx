@@ -14,7 +14,7 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
   const [resending, setResending] = useState(false);
   const [isTokenExpired, setIsTokenExpired] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [cooldown, setCooldown] = useState(0); // seconds remaining
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
   let timer: ReturnType<typeof setInterval>;

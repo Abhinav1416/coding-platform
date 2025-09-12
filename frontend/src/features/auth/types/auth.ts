@@ -59,3 +59,8 @@ export interface PasswordResetRequest {
   token: string;
   newPassword: string;
 }
+
+export interface User {
+  id: string;
+  email: string;
+}

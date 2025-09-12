@@ -1,8 +1,8 @@
-package com.Abhinav.backend.features.authentication.controller;
+package com.Abhinav.backend.features.authentication.AuthController;
 
 import com.Abhinav.backend.features.authentication.dto.*;
-import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.authentication.service.AuthenticationService;
+import com.Abhinav.backend.features.authentication.AuthModel.AuthenticationUser;
+import com.Abhinav.backend.features.authentication.AuthService.AuthenticationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +28,7 @@ public class AuthenticationController {
         return authenticationUserService.register(registerRequestBody);
     }
 
-    @GetMapping("/user")
+    @GetMapping("/me")
     public AuthenticationUser getUser(@RequestAttribute("authenticatedUser") AuthenticationUser user) {
         return user;
     }

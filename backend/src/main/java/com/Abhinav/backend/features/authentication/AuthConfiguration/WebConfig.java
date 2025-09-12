@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication.configuration;
+package com.Abhinav.backend.features.authentication.AuthConfiguration;
 
 // In a new file, e.g., WebConfig.java or CorsConfig.java
 

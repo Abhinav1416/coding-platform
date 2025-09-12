@@ -1,8 +1,8 @@
-package com.Abhinav.backend.features.authentication.filter;
+package com.Abhinav.backend.features.authentication.AuthFilter;
 
-import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.authentication.service.AuthenticationService;
-import com.Abhinav.backend.features.authentication.utils.JsonWebToken;
+import com.Abhinav.backend.features.authentication.AuthModel.AuthenticationUser;
+import com.Abhinav.backend.features.authentication.AuthService.AuthenticationService;
+import com.Abhinav.backend.features.authentication.AuthUtils.JsonWebToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpFilter;

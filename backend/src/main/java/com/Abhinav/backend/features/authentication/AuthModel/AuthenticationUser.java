@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication.model;
+package com.Abhinav.backend.features.authentication.AuthModel;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
