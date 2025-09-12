@@ -12,17 +12,16 @@ export const useForgotPassword = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Reusable logic for sending the token
   const sendToken = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
     try {
       await sendPasswordResetToken({ email });
-      return true; // Indicate success
+      return true;
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
-      return false; // Indicate failure
+      return false;
     } finally {
       setLoading(false);
     }
@@ -71,7 +70,6 @@ export const useForgotPassword = () => {
       await resetPasswordService({ email, token, newPassword });
       setSuccess('Your password has been reset successfully! You can now log in.');
       setStep('request');
-      // Clear sensitive fields after success
       setToken('');
       setNewPassword('');
       setConfirmPassword('');

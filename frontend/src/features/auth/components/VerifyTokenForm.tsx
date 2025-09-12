@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { resendVerificationToken, verifyEmail } from '../services/authService';
 
 interface Props {
@@ -14,6 +14,17 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
   const [resending, setResending] = useState(false);
   const [isTokenExpired, setIsTokenExpired] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [cooldown, setCooldown] = useState(0); // seconds remaining
+
+  useEffect(() => {
+  let timer: ReturnType<typeof setInterval>;
+  if (cooldown > 0) {
+    timer = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+  }
+  return () => clearInterval(timer);
+}, [cooldown]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +49,7 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
   };
 
   const handleResendToken = async () => {
+    if (cooldown > 0) return; // guard
     setError('');
     setSuccessMessage('');
     setResending(true);
@@ -46,6 +58,7 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
       setSuccessMessage(response.message || 'A new token has been sent.');
       setIsTokenExpired(false);
       setToken('');
+      setCooldown(30); // start 30s cooldown
     } catch (err: any) {
       setError(err.message || 'Failed to resend token. Please try again.');
     } finally {
@@ -79,9 +92,13 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
             type="button"
             onClick={handleResendToken}
             className="w-full bg-orange-500 text-white font-bold p-3 rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50"
-            disabled={resending}
+            disabled={resending || cooldown > 0}
           >
-            {resending ? 'Sending...' : 'Resend Verification Token'}
+            {resending
+              ? 'Sending...'
+              : cooldown > 0
+              ? `Resend available in ${cooldown}s`
+              : 'Resend Verification Token'}
           </button>
         ) : (
           <>
@@ -100,6 +117,20 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
               disabled={loading}
             >
               {loading ? 'Verifying...' : 'Verify Email'}
+            </button>
+
+            {/* "Didn't receive token?" link with cooldown */}
+            <button
+              type="button"
+              onClick={handleResendToken}
+              className="w-full text-sm text-indigo-600 dark:text-indigo-400 hover:underline mt-2 disabled:opacity-50"
+              disabled={resending || cooldown > 0}
+            >
+              {resending
+                ? 'Sending...'
+                : cooldown > 0
+                ? `Resend available in ${cooldown}s`
+                : "Didn't receive token?"}
             </button>
           </>
         )}
