@@ -1,15 +1,20 @@
 package com.Abhinav.backend.features.problems.service;
 
 
-import com.Abhinav.backend.features.problems.dto.ProblemDetailResponse;
-import com.Abhinav.backend.features.problems.dto.ProblemInitiationRequest;
-import com.Abhinav.backend.features.problems.dto.ProblemInitiationResponse;
+import com.Abhinav.backend.features.exception.AuthorizationException;
+import com.Abhinav.backend.features.exception.ResourceNotFoundException;
+import com.Abhinav.backend.features.problems.dto.*;
+import org.springframework.beans.factory.annotation.Value;
 import com.Abhinav.backend.features.problems.models.Problem;
+import com.Abhinav.backend.features.problems.models.Tag;
 import com.Abhinav.backend.features.problems.models.TestCase;
 import com.Abhinav.backend.features.problems.repository.ProblemRepository;
+import com.Abhinav.backend.features.problems.repository.TagRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -27,14 +33,33 @@ import java.util.zip.ZipInputStream;
 public class ProblemServiceImpl implements ProblemService {
 
     private final ProblemRepository problemRepository;
+    private final TagRepository tagRepository;
     private final ObjectMapper objectMapper;
+
+
+    @Value("${problem.limit}")
+    private int problemLimit;
+
 
     @Override
     @Transactional
     public ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, Long userId) {
+        if (getTotalProblemCount().getTotalCount() >= problemLimit) {
+            throw new IllegalStateException(
+                    "Problem creation limit reached. Cannot create more than " + problemLimit + " problems."
+            );
+        }
+
         problemRepository.findBySlug(requestDto.getSlug()).ifPresent(p -> {
             throw new IllegalArgumentException("Slug '" + requestDto.getSlug() + "' is already in use.");
         });
+
+        Set<Tag> problemTags = new HashSet<>();
+        for (String tagName : requestDto.getTags()) {
+            Tag tag = tagRepository.findByName(tagName)
+                    .orElseGet(() -> tagRepository.save(Tag.builder().name(tagName).build()));
+            problemTags.add(tag);
+        }
 
         Problem problem = new Problem();
         problem.setTitle(requestDto.getTitle());
@@ -45,6 +70,7 @@ public class ProblemServiceImpl implements ProblemService {
         problem.setTimeLimitMs(requestDto.getTimeLimitMs());
         problem.setMemoryLimitKb(requestDto.getMemoryLimitKb());
         problem.setAuthorId(userId);
+        problem.setTags(problemTags);
         problem.setStatus("PENDING_TEST_CASES");
 
         try {
@@ -104,6 +130,100 @@ public class ProblemServiceImpl implements ProblemService {
         Problem finalizedProblem = problemRepository.save(problem);
 
         return ProblemDetailResponse.fromEntity(finalizedProblem);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedProblemResponse getAllProblems(Pageable pageable, List<String> tags, String tagOperator) {
+        Page<Problem> problemPage;
+
+        if (tags == null || tags.isEmpty()) {
+            problemPage = problemRepository.findAll(pageable);
+        } else {
+            List<String> lowerCaseTags = tags.stream()
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toList());
+
+            // Check the operator and call the correct repository method
+            if ("OR".equalsIgnoreCase(tagOperator)) {
+                problemPage = problemRepository.findByAnyTagName(lowerCaseTags, pageable);
+            } else { // Default to AND
+                problemPage = problemRepository.findByAllTagNames(lowerCaseTags, (long) lowerCaseTags.size(), pageable);
+            }
+        }
+
+        // The rest of the mapping logic remains the same
+        List<ProblemSummaryResponse> problemSummaries = problemPage.getContent().stream()
+                .map(ProblemSummaryResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        return PaginatedProblemResponse.builder()
+                .problems(problemSummaries)
+                .currentPage(problemPage.getNumber())
+                .totalPages(problemPage.getTotalPages())
+                .totalItems(problemPage.getTotalElements())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProblemDetailResponse getProblemBySlug(String slug) {
+        Problem problem = problemRepository.findBySlug(slug)
+                .orElseThrow(() -> new NoSuchElementException("Problem with slug '" + slug + "' not found."));
+
+        return ProblemDetailResponse.fromEntity(problem);
+    }
+
+    @Override
+    @Transactional
+    public ProblemDetailResponse updateProblem(UUID problemId, ProblemUpdateRequest requestDto, Long authorId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new NoSuchElementException("Problem with ID '" + problemId + "' not found."));
+
+        if (!problem.getAuthorId().equals(authorId)) {
+            throw new IllegalStateException("User is not authorized to edit this problem.");
+        }
+
+        if (requestDto.getTitle() != null) problem.setTitle(requestDto.getTitle());
+        if (requestDto.getSlug() != null) problem.setSlug(requestDto.getSlug());
+        if (requestDto.getDescription() != null) problem.setDescription(requestDto.getDescription());
+        if (requestDto.getConstraints() != null) problem.setConstraints(requestDto.getConstraints());
+        if (requestDto.getPoints() != null) problem.setPoints(requestDto.getPoints());
+        if (requestDto.getTimeLimitMs() != null) problem.setTimeLimitMs(requestDto.getTimeLimitMs());
+        if (requestDto.getMemoryLimitKb() != null) problem.setMemoryLimitKb(requestDto.getMemoryLimitKb());
+
+
+        if (requestDto.getTags() != null && !requestDto.getTags().isEmpty()) {
+            Set<Tag> updatedTags = new HashSet<>();
+            for (String tagName : requestDto.getTags()) {
+                Tag tag = tagRepository.findByName(tagName)
+                        .orElseGet(() -> tagRepository.save(Tag.builder().name(tagName).build()));
+                updatedTags.add(tag);
+            }
+            problem.setTags(updatedTags);
+        }
+
+        Problem updatedProblem = problemRepository.save(problem);
+        return ProblemDetailResponse.fromEntity(updatedProblem);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProblem(UUID problemId, Long authorId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Problem not found with id: " + problemId));
+
+        if (!problem.getAuthorId().equals(authorId)) {
+            throw new AuthorizationException("User is not authorized to delete this problem.");
+        }
+
+        problemRepository.delete(problem);
+    }
+
+    @Override
+    public ProblemCountResponse getTotalProblemCount() {
+        long count = problemRepository.count();
+        return new ProblemCountResponse(count);
     }
 
     private String generateBoilerplateCode(String genericSignature) throws JsonProcessingException {

@@ -1,19 +1,20 @@
 package com.Abhinav.backend.features.problems.controller;
 
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.problems.dto.ProblemDetailResponse;
-import com.Abhinav.backend.features.problems.dto.ProblemInitiationRequest;
-import com.Abhinav.backend.features.problems.dto.ProblemInitiationResponse;
-import com.Abhinav.backend.features.problems.models.Problem;
+import com.Abhinav.backend.features.problems.dto.*;
 import com.Abhinav.backend.features.problems.service.ProblemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,13 +24,7 @@ public class ProblemController {
 
     private final ProblemService problemService;
 
-    /**
-     * Endpoint for Phase 1 of problem creation.
-     * Receives problem details and initiates the creation process.
-     *
-     * @param requestDto The validated request body with problem details.
-     * @return A response containing the new problem's ID and an upload location.
-     */
+
     @PostMapping("/initiate")
     public ResponseEntity<ProblemInitiationResponse> initiateProblemCreation(@RequestAttribute("authenticatedUser") AuthenticationUser user ,
                                                                              @Valid @RequestBody ProblemInitiationRequest requestDto) {
@@ -37,14 +32,6 @@ public class ProblemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Endpoint for Phase 2 of problem creation.
-     * Receives the hidden test cases as a file upload and finalizes the problem.
-     *
-     * @param problemId The ID of the problem being finalized.
-     * @param file The uploaded .zip file containing test cases.
-     * @return The complete, published problem object.
-     */
     @PostMapping("/{problemId}/upload-and-finalize")
     public ResponseEntity<ProblemDetailResponse> finalizeProblemCreation(
             @PathVariable UUID problemId,
@@ -52,5 +39,46 @@ public class ProblemController {
 
         ProblemDetailResponse finalizedProblem = problemService.finalizeProblemCreation(problemId, file);
         return ResponseEntity.ok(finalizedProblem);
+    }
+
+    @GetMapping("/{slug}")
+    public ResponseEntity<ProblemDetailResponse> getProblemBySlug(@PathVariable String slug) {
+        ProblemDetailResponse problemDto = problemService.getProblemBySlug(slug);
+        return ResponseEntity.ok(problemDto);
+    }
+
+    @GetMapping
+    public ResponseEntity<PaginatedProblemResponse> getAllProblems(
+            @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(defaultValue = "AND") String tagOperator) { // New parameter
+
+        PaginatedProblemResponse response = problemService.getAllProblems(pageable, tags, tagOperator);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{problemId}")
+    public ResponseEntity<ProblemDetailResponse> updateProblem(
+            @PathVariable UUID problemId,
+            @Valid @RequestBody ProblemUpdateRequest requestDto,
+            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+
+        ProblemDetailResponse updatedProblem = problemService.updateProblem(problemId, requestDto, user.getId());
+        return ResponseEntity.ok(updatedProblem);
+    }
+
+    @DeleteMapping("/{problemId}")
+    public ResponseEntity<Void> deleteProblem(
+            @PathVariable UUID problemId,
+            @RequestAttribute("authenticatedUser") AuthenticationUser author) {
+
+        problemService.deleteProblem(problemId, author.getId());
+
+        return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/count")
+    public ResponseEntity<ProblemCountResponse> getProblemCount() {
+        ProblemCountResponse countResponse = problemService.getTotalProblemCount();
+        return ResponseEntity.ok(countResponse);
     }
 }
