@@ -16,7 +16,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @Table(name = "test_cases")
-public class TestCase { // Here TestCase means Hidden/Large TC. Sample TC's will not be stored here
+public class TestCase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
