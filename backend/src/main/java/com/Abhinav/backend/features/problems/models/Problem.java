@@ -49,7 +49,7 @@ public class Problem {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "user_boilerplate_code", columnDefinition = "jsonb")
-    private String userBoilerplateCode;
+    private Map<String, String> userBoilerplateCode;
 
     @Column(name = "time_limit_ms", nullable = false)
     private Integer timeLimitMs;
@@ -57,9 +57,15 @@ public class Problem {
     @Column(name = "memory_limit_kb", nullable = false)
     private Integer memoryLimitKb;
 
+    // This field is perfect for your 2 sample test cases. No changes needed here.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "sample_test_cases", columnDefinition = "jsonb")
     private String sampleTestCases;
+
+    // NEW: Field to store the S3 key for the hidden test cases .zip file.
+    @Column(name = "hidden_test_cases_s3_key")
+    private String hiddenTestCasesS3Key;
+
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -69,8 +75,6 @@ public class Problem {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(mappedBy = "problem", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TestCase> hiddenTestCases = new ArrayList<>();
 
     @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(
@@ -78,5 +82,6 @@ public class Problem {
             joinColumns = @JoinColumn(name = "problem_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
+    @Builder.Default
     private Set<Tag> tags = new HashSet<>();
 }

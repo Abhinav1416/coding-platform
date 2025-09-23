@@ -2,9 +2,11 @@ package com.Abhinav.backend.features.problems.service;
 
 import com.Abhinav.backend.features.problems.dto.*;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
+// REMOVED: No longer need MultipartFile
+// import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+// REMOVED: No longer need IOException
+// import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,21 +18,20 @@ public interface ProblemService {
      * details for the test case upload.
      *
      * @param requestDto The DTO containing all initial problem data.
+     * @param userId The ID of the authenticated user creating the problem.
      * @return A DTO with the new problem's ID and the upload URL.
      */
     ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, Long userId);
 
     /**
-     * Handles the second phase of problem creation. It processes the uploaded
-     * test case file, saves the test cases, and updates the problem's
-     * status to 'PUBLISHED'.
+     * Handles the second phase of problem creation. It saves the S3 key of the
+     * uploaded test cases and updates the problem's status to 'PUBLISHED'.
      *
      * @param problemId The ID of the problem to finalize.
-     * @param testCaseFile The uploaded .zip file containing hidden test cases.
+     * @param s3Key The key of the .zip file uploaded to S3.
      * @return The fully created and published Problem entity.
-     * @throws IOException if there's an error processing the file.
      */
-    ProblemDetailResponse finalizeProblemCreation(UUID problemId, MultipartFile testCaseFile) throws IOException;
+    ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key);
 
     /**
      * Finds a single problem by its URL-friendly slug.
@@ -44,6 +45,8 @@ public interface ProblemService {
      * Retrieves a paginated list of all problems.
      *
      * @param pageable The pagination information (page number, size, and sorting).
+     * @param tags A list of tags to filter by.
+     * @param tagOperator "AND" or "OR" to specify tag filtering logic.
      * @return A DTO containing the list of problems for the requested page and pagination metadata.
      */
     PaginatedProblemResponse getAllProblems(Pageable pageable, List<String> tags, String tagOperator);

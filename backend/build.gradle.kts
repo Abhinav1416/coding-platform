@@ -17,6 +17,12 @@ repositories {
 	mavenCentral()
 }
 
+dependencyManagement {
+	imports {
+		mavenBom("io.awspring.cloud:spring-cloud-aws-dependencies:3.1.1")
+	}
+}
+
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
@@ -27,19 +33,19 @@ dependencies {
 
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
 	implementation("io.jsonwebtoken:jjwt-impl:0.12.6")
-	implementation(("io.jsonwebtoken:jjwt-jackson:0.12.6"))
+	implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
+	implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
 
 	compileOnly("org.projectlombok:lombok:1.18.34")
 	annotationProcessor("org.projectlombok:lombok:1.18.34")
 	testCompileOnly("org.projectlombok:lombok:1.18.34")
 	testAnnotationProcessor("org.projectlombok:lombok:1.18.34")
 
-
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-
 }
 
 

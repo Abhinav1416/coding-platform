@@ -1,13 +1,15 @@
 package com.Abhinav.backend.features.problems.dto;
 
 import com.Abhinav.backend.features.problems.models.Problem;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -24,13 +26,20 @@ public class ProblemDetailResponse {
     private Integer timeLimitMs;
     private Integer memoryLimitKb;
     private Instant createdAt;
-    private List<TestCaseDetailDTO> hiddenTestCases;
+    private Map<String, String> userBoilerplateCode;
+    private Object sampleTestCases;
+    private String hiddenTestCasesS3Key;
 
-    /**
-     * A static factory method to convert a Problem entity into this DTO.
-     * This is a clean way to handle the mapping logic.
-     */
     public static ProblemDetailResponse fromEntity(Problem problem) {
+        Object parsedSampleTestCases = null;
+        if (problem.getSampleTestCases() != null) {
+            try {
+                parsedSampleTestCases = new ObjectMapper().readValue(problem.getSampleTestCases(), List.class);
+            } catch (JsonProcessingException e) {
+                parsedSampleTestCases = problem.getSampleTestCases();
+            }
+        }
+
         return ProblemDetailResponse.builder()
                 .id(problem.getId())
                 .authorId(problem.getAuthorId())
@@ -43,9 +52,9 @@ public class ProblemDetailResponse {
                 .timeLimitMs(problem.getTimeLimitMs())
                 .memoryLimitKb(problem.getMemoryLimitKb())
                 .createdAt(problem.getCreatedAt())
-                .hiddenTestCases(problem.getHiddenTestCases().stream()
-                        .map(TestCaseDetailDTO::fromEntity)
-                        .collect(Collectors.toList()))
+                .userBoilerplateCode(problem.getUserBoilerplateCode())
+                .sampleTestCases(parsedSampleTestCases)
+                .hiddenTestCasesS3Key(problem.getHiddenTestCasesS3Key())
                 .build();
     }
 }

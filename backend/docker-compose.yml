@@ -1,8 +1,33 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
+  # Mailhog for local email testing
   mailhog:
     image: mailhog/mailhog
     ports:
-      - '1025:1025'
-      - '8025:8025'  # Web UI for viewing emails
+      - '1025:1025'      # SMTP server port
+      - '8025:8025'      # Web UI for viewing emails
+
+  # LocalStack for emulating AWS services (S3, SQS, Lambda) locally
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - '4566:4566'            # Main gateway for all AWS services
+      - '4510-4559:4510-4559'  # Port range for external services like Lambda
+    environment:
+      # Explicitly enable the services you need to save resources
+      - SERVICES=s3,sqs,lambda
+      # Set a default region
+      - AWS_DEFAULT_REGION=ap-southeast-1
+      # Dummy credentials required for the SDK to connect
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      # Persists AWS resources (like S3 buckets) across container restarts
+      - localstack_data:/var/lib/localstack
+      # Mounts the Docker socket to allow LocalStack to create Lambda containers
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  localstack_data:
