@@ -1,6 +1,6 @@
 package com.Abhinav.backend.features.problems.dto;
 
-import com.Abhinav.backend.features.problems.models.Problem;
+import com.Abhinav.backend.features.problems.model.Problem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;

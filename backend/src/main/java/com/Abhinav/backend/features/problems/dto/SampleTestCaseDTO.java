@@ -1,5 +1,6 @@
-package com.Abhinav.backend.features.problems.dto;
+// File: SampleTestCaseDTO.java
 
+package com.Abhinav.backend.features.problems.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -8,8 +9,8 @@ import lombok.Data;
 public class SampleTestCaseDTO {
 
     @NotBlank(message = "Sample test case input cannot be blank.")
-    private String input;
+    private String stdin;
 
     @NotBlank(message = "Sample test case output cannot be blank.")
-    private String output;
+    private String expected_output;
 }

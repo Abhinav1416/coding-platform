@@ -1,5 +1,6 @@
 package com.Abhinav.backend.features.problems.service;
 
+import com.Abhinav.backend.features.judge0.service.Judge0Service;
 import com.Abhinav.backend.features.problems.dto.*;
 import org.springframework.data.domain.Pageable;
 // REMOVED: No longer need MultipartFile
@@ -75,4 +76,12 @@ public interface ProblemService {
      * @return A DTO containing the total problem count.
      */
     ProblemCountResponse getTotalProblemCount();
+
+    /**
+     * Fetches, downloads, and parses the hidden test cases for a given problem from S3.
+     *
+     * @param problemId The ID of the problem.
+     * @return A list of TestCase records ready for the Judge0 service.
+     */
+    List<Judge0Service.TestCase> getTestCasesForProblem(UUID problemId);
 }

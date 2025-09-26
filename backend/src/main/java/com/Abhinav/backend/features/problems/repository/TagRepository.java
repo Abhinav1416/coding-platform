@@ -1,6 +1,6 @@
 package com.Abhinav.backend.features.problems.repository;
 
-import com.Abhinav.backend.features.problems.models.Tag;
+import com.Abhinav.backend.features.problems.model.Tag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

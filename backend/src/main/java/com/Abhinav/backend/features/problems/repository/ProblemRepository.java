@@ -1,6 +1,6 @@
 package com.Abhinav.backend.features.problems.repository;
 
-import com.Abhinav.backend.features.problems.models.Problem;
+import com.Abhinav.backend.features.problems.model.Problem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

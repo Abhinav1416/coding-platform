@@ -3,12 +3,15 @@ package com.Abhinav.backend.features.problems.service;
 import com.Abhinav.backend.features.AWS.service.S3Service;
 import com.Abhinav.backend.features.exception.AuthorizationException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
+import com.Abhinav.backend.features.judge0.service.Judge0Service;
 import com.Abhinav.backend.features.problems.dto.*;
-import com.Abhinav.backend.features.problems.models.Problem;
-import com.Abhinav.backend.features.problems.models.Tag;
+import com.Abhinav.backend.features.problems.model.Problem;
+import com.Abhinav.backend.features.problems.model.Tag;
 import com.Abhinav.backend.features.problems.repository.ProblemRepository;
 import com.Abhinav.backend.features.problems.repository.TagRepository;
+import com.Abhinav.backend.features.problems.utils.CodeGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,8 +22,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 
 @Service
@@ -71,11 +78,16 @@ public class ProblemServiceImpl implements ProblemService {
         problem.setTimeLimitMs(requestDto.getTimeLimitMs());
         problem.setMemoryLimitKb(requestDto.getMemoryLimitKb());
         problem.setAuthorId(userId);
+        problem.setGenericMethodSignature(requestDto.getGenericMethodSignature());
         problem.setTags(problemTags);
         problem.setStatus("PENDING_TEST_CASES");
 
         try {
-            problem.setUserBoilerplateCode(generateBoilerplateCode(requestDto.getGenericMethodSignature()));
+            problem.setUserBoilerplateCode(CodeGenerator.generateUserBoilerplates(requestDto.getGenericMethodSignature()));
+
+            Map<String, String> fullBoilerplates = CodeGenerator.generateFullBoilerplates(requestDto.getGenericMethodSignature());
+            problem.setFullBoilerplateCode(fullBoilerplates);
+
             problem.setSampleTestCases(objectMapper.writeValueAsString(requestDto.getSampleTestCases()));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Internal error: Failed to serialize problem data.", e);
@@ -202,11 +214,19 @@ public class ProblemServiceImpl implements ProblemService {
         return new ProblemCountResponse(count);
     }
 
-    private Map<String, String> generateBoilerplateCode(String genericSignature) {
-        Map<String, String> boilerplates = new HashMap<>();
-        boilerplates.put("java", "class Solution {\n    public //... " + genericSignature + " {\n        // Your code here\n    }\n}");
-        boilerplates.put("python", "class Solution:\n    def " + genericSignature.replace("(", "(self, ") + ":\n        # Your code here");
-        boilerplates.put("cpp", "#include <vector>\nclass Solution {\npublic:\n    //... " + genericSignature + " {\n        // Your code here\n    }\n};");
-        return boilerplates;
+    @Override
+    @Transactional(readOnly = true)
+    public List<Judge0Service.TestCase> getTestCasesForProblem(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Problem not found with id: " + problemId));
+
+        String s3Key = problem.getHiddenTestCasesS3Key();
+        if (s3Key == null || s3Key.isBlank()) {
+            logger.error("Problem {} has no associated S3 key for test cases.", problemId);
+            throw new IllegalStateException("Problem " + problemId + " does not have associated test cases.");
+        }
+
+        logger.info("Fetching and parsing test cases from S3 with key: {}", s3Key);
+        return s3Service.downloadAndParseTestCases(s3Key);
     }
 }

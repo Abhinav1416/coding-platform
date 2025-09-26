@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.problems.models;
+package com.Abhinav.backend.features.problems.model;
 
 
 import jakarta.persistence.*;
@@ -51,6 +51,10 @@ public class Problem {
     @Column(name = "user_boilerplate_code", columnDefinition = "jsonb")
     private Map<String, String> userBoilerplateCode;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "full_boilerplate_code", columnDefinition = "jsonb")
+    private Map<String, String> fullBoilerplateCode;
+
     @Column(name = "time_limit_ms", nullable = false)
     private Integer timeLimitMs;
 
@@ -65,6 +69,10 @@ public class Problem {
     // NEW: Field to store the S3 key for the hidden test cases .zip file.
     @Column(name = "hidden_test_cases_s3_key")
     private String hiddenTestCasesS3Key;
+
+
+    @Column(name = "generic_method_signature", columnDefinition = "TEXT")
+    private String genericMethodSignature;
 
 
     @CreationTimestamp

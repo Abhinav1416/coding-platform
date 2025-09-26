@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.problems.models;
+package com.Abhinav.backend.features.problems.model;
 
 
 import jakarta.persistence.*;

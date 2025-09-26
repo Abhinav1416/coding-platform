@@ -29,11 +29,15 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
-	implementation("org.postgresql:postgresql:42.6.0")
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 
+	// CHANGED: The database driver is only needed at runtime
+	runtimeOnly("org.postgresql:postgresql:42.6.0")
+
+	// Your code should only depend on the API. The implementation and JSON mapper are runtime details.
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
-	implementation("io.jsonwebtoken:jjwt-impl:0.12.6")
-	implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
@@ -47,9 +51,6 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
-
-
-
 
 tasks.withType<Test> {
 	useJUnitPlatform()
