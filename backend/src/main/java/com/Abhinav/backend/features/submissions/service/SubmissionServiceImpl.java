@@ -9,6 +9,7 @@ import com.Abhinav.backend.features.problems.model.Problem;
 import com.Abhinav.backend.features.problems.repository.ProblemRepository;
 import com.Abhinav.backend.features.submissions.dto.SubmissionRequest;
 import com.Abhinav.backend.features.submissions.dto.SubmissionResultDTO;
+import com.Abhinav.backend.features.submissions.events.SubmissionCreatedEvent;
 import com.Abhinav.backend.features.submissions.model.Language;
 import com.Abhinav.backend.features.submissions.model.Submission;
 import com.Abhinav.backend.features.submissions.repository.SubmissionRepository;
@@ -17,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final ObjectMapper objectMapper;
     private final Judge0Service judge0Service;
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private static final Logger logger = LoggerFactory.getLogger(SubmissionServiceImpl.class);
 
 
@@ -61,14 +64,8 @@ public class SubmissionServiceImpl implements SubmissionService {
         Submission savedSubmission = submissionRepository.save(submission);
         logger.info("{} Entity saved with ID: {}", logPrefix, savedSubmission.getId());
 
-        try {
-            logger.debug("{} Sending message to SQS queue...", logPrefix);
-            sqsService.sendSubmissionMessage(savedSubmission.getId());
-            logger.info("{} Message sent successfully to SQS.", logPrefix);
-        } catch (Exception e) {
-            logger.error("{} CRITICAL: Failed to send message to SQS. Rolling back transaction.", logPrefix, e);
-            throw new RuntimeException("Failed to queue submission for processing. Submission ID: " + savedSubmission.getId(), e);
-        }
+        eventPublisher.publishEvent(new SubmissionCreatedEvent(this, savedSubmission.getId()));
+        logger.info("{} Published SubmissionCreatedEvent. SQS message will be sent after commit.", logPrefix);
 
         logger.info("{} <- Submission creation successful.", logPrefix);
         return savedSubmission;
