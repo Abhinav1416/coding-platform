@@ -47,33 +47,18 @@ public class Problem {
     @Column(nullable = false)
     private Integer points;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "user_boilerplate_code", columnDefinition = "jsonb")
-    private Map<String, String> userBoilerplateCode;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "full_boilerplate_code", columnDefinition = "jsonb")
-    private Map<String, String> fullBoilerplateCode;
-
     @Column(name = "time_limit_ms", nullable = false)
     private Integer timeLimitMs;
 
     @Column(name = "memory_limit_kb", nullable = false)
     private Integer memoryLimitKb;
 
-    // This field is perfect for your 2 sample test cases. No changes needed here.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "sample_test_cases", columnDefinition = "jsonb")
     private String sampleTestCases;
 
-    // NEW: Field to store the S3 key for the hidden test cases .zip file.
     @Column(name = "hidden_test_cases_s3_key")
     private String hiddenTestCasesS3Key;
-
-
-    @Column(name = "generic_method_signature", columnDefinition = "TEXT")
-    private String genericMethodSignature;
-
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

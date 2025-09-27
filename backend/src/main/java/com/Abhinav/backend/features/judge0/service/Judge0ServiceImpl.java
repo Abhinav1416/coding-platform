@@ -203,6 +203,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -226,7 +227,6 @@ public class Judge0ServiceImpl implements Judge0Service {
     public SubmissionResultDTO executeCode(String sourceCode, String languageSlug, List<TestCase> testCases) {
         String executionId = UUID.randomUUID().toString().substring(0, 8);
         String logPrefix = "[JUDGE0_EXEC " + executionId + "]";
-
         logger.info("{} -> Executing code in '{}' against {} test cases.", logPrefix, languageSlug, testCases.size());
 
         HttpHeaders headers = new HttpHeaders();
@@ -235,79 +235,92 @@ public class Judge0ServiceImpl implements Judge0Service {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        List<Judge0SubmissionResponse> finalResults = new ArrayList<>();
+        // Build batch request
+        List<Judge0SubmissionRequest> submissions = testCases.stream()
+                .map(tc -> new Judge0SubmissionRequest(
+                        sourceCode,
+                        Language.fromSlug(languageSlug).getJudge0Id(),
+                        tc.input(),
+                        tc.expectedOutput()
+                ))
+                .toList();
 
-        for (TestCase tc : testCases) {
-            // Build request using builder
-            Judge0SubmissionRequest request = new Judge0SubmissionRequest(
-                    sourceCode,
-                    Language.fromSlug(languageSlug).getJudge0Id(),
-                    tc.input(),
-                    tc.expectedOutput()
+
+        Judge0BatchSubmissionRequest batchRequest = new Judge0BatchSubmissionRequest(submissions);
+        String jsonBody;
+
+        try {
+            jsonBody = objectMapper.writeValueAsString(batchRequest);
+
+            // Mask API key in headers for safety
+            Map<String, String> safeHeaders = headers.toSingleValueMap().entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getKey().equalsIgnoreCase("X-RapidAPI-Key") ? "****" : e.getValue()
+                    ));
+
+            logger.info("{} Sending request to Judge0. Headers: {} | Body: {}", logPrefix, safeHeaders, jsonBody);
+        } catch (Exception e) {
+            logger.error("{} Failed to serialize batchRequest.", logPrefix, e);
+            return SubmissionResultDTO.builder().status("INTERNAL_ERROR").stderr("Failed to serialize request body").build();
+        }
+
+        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+
+        List<String> tokens;
+        try {
+            // ---- START OF THE NEW FIX ----
+            ResponseEntity<List<Judge0Token>> response = restTemplate.exchange(
+                    judge0ApiUrl + "/submissions/batch?base64_encoded=false&wait=false",
+                    HttpMethod.POST,
+                    entity,
+                    new org.springframework.core.ParameterizedTypeReference<List<Judge0Token>>() {} // Expect a direct List of tokens
             );
+            // The response body is now the list itself
+            tokens = response.getBody().stream().map(Judge0Token::token).toList();
+            // ---- END OF THE NEW FIX ----
 
+        } catch (RestClientException e) {
+            logger.error("{} Failed to submit batch to Judge0.", logPrefix, e);
+            return SubmissionResultDTO.builder().status("INTERNAL_ERROR").stderr("Failed to contact execution engine").build();
+        }
 
-            HttpEntity<Judge0SubmissionRequest> submissionEntity = new HttpEntity<>(request, headers);
+        if (tokens.isEmpty()) {
+            logger.error("{} No tokens received from Judge0.", logPrefix);
+            return SubmissionResultDTO.builder().status("INTERNAL_ERROR").stderr("Empty response from Judge0").build();
+        }
 
-            String token;
+        String tokenString = String.join(",", tokens);
+        logger.info("{} Polling for batch results with {} tokens.", logPrefix, tokens.size());
+
+        // Poll loop
+        List<Judge0SubmissionResponse> finalResults = null;
+        while (true) {
             try {
-                logger.info("{} Submitting single execution request to Judge0.", logPrefix);
-                ResponseEntity<Judge0Token> response = restTemplate.exchange(
-                        judge0ApiUrl + "/submissions?base64_encoded=false&wait=false",
-                        HttpMethod.POST,
-                        submissionEntity,
-                        Judge0Token.class
+                Thread.sleep(300);
+                String url = judge0ApiUrl + "/submissions/batch?tokens=" + tokenString
+                        + "&base64_encoded=false&fields=status,stdout,stderr,compile_output,time,memory,token";
+
+                ResponseEntity<Judge0GetBatchResponse> pollResponse = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        new HttpEntity<>(headers),
+                        Judge0GetBatchResponse.class
                 );
 
-                if (response.getBody() == null || response.getBody().token() == null) {
-                    logger.error("{} Judge0 did not return a token for test case.", logPrefix);
-                    return SubmissionResultDTO.builder()
-                            .status("INTERNAL_ERROR")
-                            .stderr("No token returned from Judge0")
-                            .build();
-                }
-                token = response.getBody().token();
+                finalResults = pollResponse.getBody().submissions();
+                boolean allDone = finalResults.stream().allMatch(r -> r.status().id() > 2);
+                if (allDone) break;
 
-            } catch (RestClientException e) {
-                logger.error("{} Failed to submit to Judge0 API.", logPrefix, e);
-                return SubmissionResultDTO.builder()
-                        .status("INTERNAL_ERROR")
-                        .stderr("Failed to contact execution engine")
-                        .build();
+            } catch (Exception e) {
+                logger.error("{} Failed while polling Judge0 batch results.", logPrefix, e);
+                return SubmissionResultDTO.builder().status("INTERNAL_ERROR").stderr("Polling failed").build();
             }
-
-            // Poll for result
-            Judge0SubmissionResponse result;
-            while (true) {
-                try {
-                    Thread.sleep(250);
-                    String retrievalUrl = judge0ApiUrl
-                            + "/submissions/" + token
-                            + "?base64_encoded=false&fields=status,stdout,stderr,compile_output,time,memory";
-
-                    ResponseEntity<Judge0SubmissionResponse> pollResponse = restTemplate.exchange(
-                            retrievalUrl,
-                            HttpMethod.GET,
-                            new HttpEntity<>(headers),
-                            Judge0SubmissionResponse.class
-                    );
-
-                    result = pollResponse.getBody();
-                    if (result != null && result.status().id() > 2) break;
-
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return SubmissionResultDTO.builder().status("INTERNAL_ERROR").stderr("Polling interrupted").build();
-                } catch (RestClientException e) {
-                    logger.error("{} Failed to poll Judge0 for results.", logPrefix, e);
-                    return SubmissionResultDTO.builder().status("INTERNAL_ERROR").stderr("Failed to retrieve results from execution engine").build();
-                }
-            }
-            finalResults.add(result);
         }
 
         return aggregateResults(finalResults, logPrefix);
     }
+
 
     private SubmissionResultDTO aggregateResults(List<Judge0SubmissionResponse> results, String logPrefix) {
         logger.debug("{} Starting result aggregation for {} responses.", logPrefix, results.size());

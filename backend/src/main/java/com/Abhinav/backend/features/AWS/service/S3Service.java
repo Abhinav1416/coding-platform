@@ -113,7 +113,6 @@ public class S3Service {
         Map<String, String> outputs = new HashMap<>();
 
         try {
-            // 1. Download the S3 object
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(s3Key)

@@ -8,7 +8,6 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 public class ProblemInitiationResponse {
-
     private UUID problemId;
     private String uploadUrl;
 }

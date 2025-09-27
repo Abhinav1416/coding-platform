@@ -1,5 +1,3 @@
-// File: SampleTestCaseDTO.java
-
 package com.Abhinav.backend.features.problems.dto;
 
 import jakarta.validation.constraints.NotBlank;

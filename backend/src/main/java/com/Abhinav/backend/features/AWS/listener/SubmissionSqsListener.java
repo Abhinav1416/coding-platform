@@ -31,7 +31,7 @@ public class SubmissionSqsListener {
         try {
             logger.debug("{} Attempting to parse message body into a UUID.", logPrefix);
             UUID submissionId = UUID.fromString(message);
-            // Update logPrefix with the parsed UUID for more consistent context
+
             logPrefix = "[SUBMISSION " + submissionId + "]";
             logger.info("{} Successfully parsed UUID. Proceeding to process submission.", logPrefix);
 
@@ -40,13 +40,10 @@ public class SubmissionSqsListener {
             logger.info("{} <- Successfully processed submission.", logPrefix);
 
         } catch (IllegalArgumentException e) {
-            // This error is specific to UUID parsing failure.
             logger.error("{} The received message is not a valid UUID string. Message will be discarded.", logPrefix, e);
         } catch (Exception e) {
-            // This is a catch-all for any unexpected errors during submission processing.
             logger.error("{} An unexpected error occurred during submission processing.", logPrefix, e);
-            // Depending on SQS configuration, the message might be retried or sent to a DLQ.
-            // Re-throwing the exception can be a strategy to signal failure to the listener container for redriving.
+
             throw new RuntimeException("Failed to process submission for message: " + message, e);
         }
     }

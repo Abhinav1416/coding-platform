@@ -42,9 +42,6 @@ public class ProblemInitiationRequest {
     @Size(min = 2, max = 2, message = "Exactly two sample test cases are required.")
     private List<SampleTestCaseDTO> sampleTestCases;
 
-    @NotNull(message = "A generic method signature must be provided.")
-    private String genericMethodSignature;
-
     @Size(min = 1, message = "At least one tag is required.")
     private List<String> tags = new ArrayList<>();;
 }

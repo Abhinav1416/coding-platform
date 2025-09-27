@@ -26,7 +26,6 @@ public class ProblemDetailResponse {
     private Integer timeLimitMs;
     private Integer memoryLimitKb;
     private Instant createdAt;
-    private Map<String, String> userBoilerplateCode;
     private Object sampleTestCases;
     private String hiddenTestCasesS3Key;
 
@@ -52,7 +51,6 @@ public class ProblemDetailResponse {
                 .timeLimitMs(problem.getTimeLimitMs())
                 .memoryLimitKb(problem.getMemoryLimitKb())
                 .createdAt(problem.getCreatedAt())
-                .userBoilerplateCode(problem.getUserBoilerplateCode())
                 .sampleTestCases(parsedSampleTestCases)
                 .hiddenTestCasesS3Key(problem.getHiddenTestCasesS3Key())
                 .build();
