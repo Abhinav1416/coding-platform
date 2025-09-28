@@ -1,7 +1,7 @@
 package com.Abhinav.backend.features.AWS.listener;
 
 
-import com.Abhinav.backend.features.submissions.service.SubmissionService;
+import com.Abhinav.backend.features.submission.service.SubmissionService;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

@@ -190,8 +190,8 @@
 package com.Abhinav.backend.features.judge0.service;
 
 import com.Abhinav.backend.features.judge0.dto.*;
-import com.Abhinav.backend.features.submissions.dto.SubmissionResultDTO;
-import com.Abhinav.backend.features.submissions.model.Language;
+import com.Abhinav.backend.features.submission.dto.SubmissionResultDTO;
+import com.Abhinav.backend.features.submission.model.Language;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

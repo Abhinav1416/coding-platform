@@ -1,7 +1,7 @@
 package com.Abhinav.backend.features.judge0.service;
 
 
-import com.Abhinav.backend.features.submissions.dto.SubmissionResultDTO;
+import com.Abhinav.backend.features.submission.dto.SubmissionResultDTO;
 import java.util.List;
 
 public interface Judge0Service {
