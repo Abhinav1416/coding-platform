@@ -29,6 +29,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
+	implementation("org.apache.commons:commons-lang3:3.13.0")
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 
 	// CHANGED: The database driver is only needed at runtime
@@ -40,6 +41,7 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
 
 	compileOnly("org.projectlombok:lombok:1.18.34")

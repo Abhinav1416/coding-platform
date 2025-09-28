@@ -3,7 +3,6 @@ package com.Abhinav.backend.features.problems.service;
 import com.Abhinav.backend.features.AWS.service.S3Service;
 import com.Abhinav.backend.features.exception.AuthorizationException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
-import com.Abhinav.backend.features.judge0.service.Judge0Service;
 import com.Abhinav.backend.features.problems.dto.*;
 import com.Abhinav.backend.features.problems.model.Problem;
 import com.Abhinav.backend.features.problems.model.Tag;

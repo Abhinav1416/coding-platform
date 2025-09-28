@@ -26,7 +26,7 @@ public class ProblemInitiationRequest {
     private String constraints;
 
     @NotNull(message = "Points must be provided.")
-    @Min(value = 0, message = "Points cannot be negative.")
+    @Min(value = 1000, message = "Points cannot be negative.")
     private Integer points;
 
     @NotNull(message = "Time limit must be provided.")

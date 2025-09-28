@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.submissions.service;
 
 
+import com.Abhinav.backend.features.submissions.dto.SubmissionDetailsDTO;
 import com.Abhinav.backend.features.submissions.dto.SubmissionRequest;
 import com.Abhinav.backend.features.submissions.model.Submission;
 import org.springframework.data.domain.Page;
@@ -39,4 +40,7 @@ public interface SubmissionService {
      * @return A Page of Submission entities.
      */
     Page<Submission> getSubmissionsForProblemAndUser(UUID problemId, Long userId, Pageable pageable);
+
+    // Add this new method to your interface
+    SubmissionDetailsDTO getSubmissionDetails(UUID submissionId);
 }

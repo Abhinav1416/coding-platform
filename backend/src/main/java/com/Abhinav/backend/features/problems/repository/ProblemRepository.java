@@ -18,14 +18,13 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
     Optional<Problem> findBySlug(String slug);
 
 
-
-
     @Query("SELECT DISTINCT p FROM Problem p JOIN p.tags t " +
             "WHERE LOWER(t.name) IN :tagNames")
     Page<Problem> findByAnyTagName(
             @Param("tagNames") List<String> tagNames,
             Pageable pageable
     );
+
 
     @Query("SELECT p FROM Problem p JOIN p.tags t " +
             "WHERE LOWER(t.name) IN :tagNames " +
@@ -35,5 +34,25 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
             @Param("tagNames") List<String> tagNames,
             @Param("tagCount") Long tagCount,
             Pageable pageable
+    );
+
+    @Query(
+            value = """
+            SELECT p.id FROM problems p
+            WHERE p.points >= :minPoints AND p.points <= :maxPoints
+            AND p.id NOT IN (
+                SELECT s.problem_id FROM submissions s
+                WHERE s.status = 'ACCEPTED' AND s.user_id IN (:playerOneId, :playerTwoId)
+            )
+            ORDER BY RANDOM()
+            LIMIT 1
+            """,
+            nativeQuery = true
+    )
+    Optional<UUID> findRandomUnsolvedProblemForTwoUsers(
+            @Param("minPoints") Integer minPoints,
+            @Param("maxPoints") Integer maxPoints,
+            @Param("playerOneId") Long playerOneId,
+            @Param("playerTwoId") Long playerTwoId
     );
 }

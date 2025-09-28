@@ -2,10 +2,7 @@ package com.Abhinav.backend.features.submissions.controller;
 
 
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.submissions.dto.PaginatedSubmissionResponse;
-import com.Abhinav.backend.features.submissions.dto.SubmissionRequest;
-import com.Abhinav.backend.features.submissions.dto.SubmissionResponse;
-import com.Abhinav.backend.features.submissions.dto.SubmissionSummaryDTO;
+import com.Abhinav.backend.features.submissions.dto.*;
 import com.Abhinav.backend.features.submissions.model.Submission;
 import com.Abhinav.backend.features.submissions.service.SubmissionService;
 import jakarta.validation.Valid;
@@ -56,5 +53,13 @@ public class SubmissionController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/{submissionId}")
+    public ResponseEntity<SubmissionDetailsDTO> getSubmissionById(
+            @PathVariable UUID submissionId) {
+        SubmissionDetailsDTO submissionDetails = submissionService.getSubmissionDetails(submissionId);
+        return ResponseEntity.ok(submissionDetails);
     }
 }

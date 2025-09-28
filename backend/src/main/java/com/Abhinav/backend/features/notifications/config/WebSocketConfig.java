@@ -1,4 +1,4 @@
-package com.Abhinav.backend.config;
+package com.Abhinav.backend.features.notifications.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

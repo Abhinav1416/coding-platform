@@ -29,7 +29,8 @@ public class ProblemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/{problemId}/finalize-upload")
+
+    @PostMapping("/{problemId}/finalize")
     public ResponseEntity<ProblemDetailResponse> finalizeProblemCreation(
             @PathVariable UUID problemId,
             @Valid @RequestBody FinalizeS3UploadRequest request) {

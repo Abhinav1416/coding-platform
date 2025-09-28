@@ -7,6 +7,7 @@ import com.Abhinav.backend.features.notifications.service.NotificationService;
 import com.Abhinav.backend.features.problems.dto.SampleTestCaseDTO;
 import com.Abhinav.backend.features.problems.model.Problem;
 import com.Abhinav.backend.features.problems.repository.ProblemRepository;
+import com.Abhinav.backend.features.submissions.dto.SubmissionDetailsDTO;
 import com.Abhinav.backend.features.submissions.dto.SubmissionRequest;
 import com.Abhinav.backend.features.submissions.dto.SubmissionResultDTO;
 import com.Abhinav.backend.features.submissions.events.SubmissionCreatedEvent;
@@ -15,6 +16,7 @@ import com.Abhinav.backend.features.submissions.model.Submission;
 import com.Abhinav.backend.features.submissions.repository.SubmissionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -34,20 +37,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SubmissionServiceImpl implements SubmissionService {
 
-    private final ProblemRepository problemRepository;
-    private final SubmissionRepository submissionRepository;
-    private final SqsService sqsService;
     private final S3Service s3Service;
     private final ObjectMapper objectMapper;
     private final Judge0Service judge0Service;
+    private final ProblemRepository problemRepository;
     private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
+    private final SubmissionRepository submissionRepository;
     private static final Logger logger = LoggerFactory.getLogger(SubmissionServiceImpl.class);
 
 
     @Override
     @Transactional
     public Submission createSubmission(SubmissionRequest request, Long userId) {
+        Problem problem = problemRepository.findById(UUID.fromString(request.getProblemId()))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Problem not found for ID: " + request.getProblemId()));
+
+
         String logPrefix = String.format("[CREATE_SUBMISSION userId=%d, problemId=%s]", userId, request.getProblemId());
         logger.info("{} -> Starting submission creation.", logPrefix);
 
@@ -194,5 +201,31 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Transactional(readOnly = true)
     public Page<Submission> getSubmissionsForProblemAndUser(UUID problemId, Long userId, Pageable pageable) {
         return submissionRepository.findByProblemIdAndUserIdOrderByCreatedAtDesc(problemId, userId, pageable);
+    }
+
+
+    @Override
+    public SubmissionDetailsDTO getSubmissionDetails(UUID submissionId) {
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submission not found with id: " + submissionId));
+
+
+        Problem problem = problemRepository.findById(submission.getProblemId())
+                .orElseThrow(() -> new EntityNotFoundException("Problem not found with id: " + submission.getProblemId()));
+
+        return SubmissionDetailsDTO.builder()
+                .id(submission.getId())
+                .problemId(problem.getId())
+                .problemTitle(problem.getTitle())
+                .problemSlug(problem.getSlug())
+                .status(submission.getStatus())
+                .language(submission.getLanguage().name())
+                .code(submission.getCode())
+                .runtimeMs(submission.getRuntimeMs())
+                .memoryKb(submission.getMemoryKb())
+                .stdout(submission.getStdout())
+                .stderr(submission.getStderr())
+                .createdAt(submission.getCreatedAt())
+                .build();
     }
 }
