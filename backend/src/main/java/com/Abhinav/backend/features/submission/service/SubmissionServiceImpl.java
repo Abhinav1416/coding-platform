@@ -2,6 +2,7 @@ package com.Abhinav.backend.features.submission.service;
 
 import com.Abhinav.backend.features.AWS.service.S3Service;
 import com.Abhinav.backend.features.judge0.service.Judge0Service;
+import com.Abhinav.backend.features.match.service.MatchService;
 import com.Abhinav.backend.features.notification.service.NotificationService;
 import com.Abhinav.backend.features.problem.dto.SampleTestCaseDTO;
 import com.Abhinav.backend.features.problem.model.Problem;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 public class SubmissionServiceImpl implements SubmissionService {
 
     private final S3Service s3Service;
+    private final MatchService matchService;
     private final ObjectMapper objectMapper;
     private final Judge0Service judge0Service;
     private final ProblemRepository problemRepository;
@@ -59,6 +61,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         logger.debug("{} Building Submission entity with PENDING status.", logPrefix);
         Submission submission = Submission.builder()
                 .userId(userId)
+                .matchId(request.getMatchId())
                 .problemId(UUID.fromString(request.getProblemId()))
                 .code(request.getCode())
                 .language(Language.fromSlug(request.getLanguage()))
@@ -92,6 +95,9 @@ public class SubmissionServiceImpl implements SubmissionService {
         logger.info("{} STEP A: Acquired submission. Setting status to PROCESSING.", logPrefix);
         submission.setStatus("PROCESSING");
         submission = submissionRepository.save(submission);
+
+        UUID matchId = submission.getMatchId();
+
 
         try {
             logger.info("{} STEP B: Fetching associated problem data.", logPrefix);
@@ -148,7 +154,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
             logger.info("{} STEP E: Sending code to Judge0 for execution.", logPrefix);
 
-            SubmissionResultDTO tempResult = judge0Service.executeCode(fullCode, submission.getLanguage().getSlug(), allTestCases);
+            SubmissionResultDTO tempResult = judge0Service.executeCode(fullCode, submission.getLanguage().getSlug(), allTestCases, matchId);
 
             logger.info("{}   - Execution complete. Status: {}, Runtime: {}ms, Memory: {}KB", logPrefix,
                     tempResult.getStatus(), tempResult.getRuntimeMs(), tempResult.getMemoryKb());
@@ -157,6 +163,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
             submission.setStatus(tempResult.getStatus());
             submission.setRuntimeMs(tempResult.getRuntimeMs());
+            submission.setMatchId(tempResult.getMatchId());
             submission.setMemoryKb(tempResult.getMemoryKb());
             submission.setStderr(tempResult.getStderr());
             Submission savedSubmission = submissionRepository.save(submission);
@@ -164,6 +171,19 @@ public class SubmissionServiceImpl implements SubmissionService {
             logger.info("{} STEP G: Sending WebSocket notification.", logPrefix);
 
             SubmissionResultDTO finalResult = SubmissionResultDTO.fromEntity(savedSubmission);
+
+            if (matchId != null) {
+                logger.info("[PROCESS_SUBMISSION id={}] This submission belongs to duel {}. Notifying MatchService.", submissionId, matchId);
+                try {
+                    matchService.processDuelSubmissionResult(
+                            matchId,
+                            savedSubmission.getUserId(),
+                            savedSubmission.getStatus()
+                    );
+                } catch (Exception e) {
+                    logger.error("[PROCESS_SUBMISSION id={}] CRITICAL: Failed to process duel state update for match {}.", submissionId, matchId, e);
+                }
+            }
 
             notificationService.notifyUser(submission.getUserId(), submission.getId(), finalResult);
 
@@ -182,6 +202,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             submission.setStatus("INTERNAL_ERROR");
             String errorMessage = e.getClass().getSimpleName() + ": " + e.getMessage();
             submission.setStderr(errorMessage);
+            submission.setMatchId(submission.getMatchId());
             Submission savedSubmission = submissionRepository.save(submission);
             logger.info("{}   - Submission status updated to INTERNAL_ERROR in database.", logPrefix);
 
@@ -214,6 +235,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         return SubmissionDetailsDTO.builder()
                 .id(submission.getId())
                 .problemId(problem.getId())
+                .matchId(submission.getMatchId())
                 .problemTitle(problem.getTitle())
                 .problemSlug(problem.getSlug())
                 .status(submission.getStatus())

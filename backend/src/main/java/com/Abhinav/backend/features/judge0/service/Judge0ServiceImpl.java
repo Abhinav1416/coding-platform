@@ -224,7 +224,7 @@ public class Judge0ServiceImpl implements Judge0Service {
     private String judge0ApiHost;
 
     @Override
-    public SubmissionResultDTO executeCode(String sourceCode, String languageSlug, List<TestCase> testCases) {
+    public SubmissionResultDTO executeCode(String sourceCode, String languageSlug, List<TestCase> testCases, UUID matchId) {
         String executionId = UUID.randomUUID().toString().substring(0, 8);
         String logPrefix = "[JUDGE0_EXEC " + executionId + "]";
         logger.info("{} -> Executing code in '{}' against {} test cases.", logPrefix, languageSlug, testCases.size());
@@ -318,11 +318,11 @@ public class Judge0ServiceImpl implements Judge0Service {
             }
         }
 
-        return aggregateResults(finalResults, logPrefix);
+        return aggregateResults(finalResults, logPrefix, matchId);
     }
 
 
-    private SubmissionResultDTO aggregateResults(List<Judge0SubmissionResponse> results, String logPrefix) {
+    private SubmissionResultDTO aggregateResults(List<Judge0SubmissionResponse> results, String logPrefix, UUID matchId) {
         logger.debug("{} Starting result aggregation for {} responses.", logPrefix, results.size());
         double maxTimeInSeconds = 0;
         int maxMemoryInKb = 0;
@@ -365,6 +365,7 @@ public class Judge0ServiceImpl implements Judge0Service {
         return SubmissionResultDTO.builder()
                 .status("ACCEPTED")
                 .runtimeMs(runtimeMs)
+                .matchId(matchId)
                 .memoryKb(maxMemoryInKb)
                 .build();
     }

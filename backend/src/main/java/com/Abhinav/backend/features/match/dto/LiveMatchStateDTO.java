@@ -23,4 +23,5 @@ public class LiveMatchStateDTO {
     private Instant playerTwoFinishTime;
 
     private Instant startedAt;
+    private Integer durationInMinutes;
 }

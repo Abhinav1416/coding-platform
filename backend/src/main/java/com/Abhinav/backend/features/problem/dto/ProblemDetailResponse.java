@@ -26,7 +26,6 @@ public class ProblemDetailResponse {
     private Integer memoryLimitKb;
     private Instant createdAt;
     private Object sampleTestCases;
-    private String hiddenTestCasesS3Key;
 
     public static ProblemDetailResponse fromEntity(Problem problem) {
         Object parsedSampleTestCases = null;
@@ -51,7 +50,6 @@ public class ProblemDetailResponse {
                 .memoryLimitKb(problem.getMemoryLimitKb())
                 .createdAt(problem.getCreatedAt())
                 .sampleTestCases(parsedSampleTestCases)
-                .hiddenTestCasesS3Key(problem.getHiddenTestCasesS3Key())
                 .build();
     }
 }

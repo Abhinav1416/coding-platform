@@ -20,6 +20,7 @@ import java.util.UUID;
 public class SubmissionResultDTO {
 
     private UUID submissionId;
+    private UUID matchId;
     private String status;
     private Integer runtimeMs;
     private Integer memoryKb;
@@ -28,12 +29,11 @@ public class SubmissionResultDTO {
     private Instant createdAt;
     private String language;
 
-    /**
-     * A factory method to easily convert a Submission entity into this DTO.
-     */
+
     public static SubmissionResultDTO fromEntity(Submission submission) {
         return SubmissionResultDTO.builder()
                 .submissionId(submission.getId())
+                .matchId(submission.getMatchId())
                 .status(submission.getStatus())
                 .runtimeMs(submission.getRuntimeMs())
                 .memoryKb(submission.getMemoryKb())

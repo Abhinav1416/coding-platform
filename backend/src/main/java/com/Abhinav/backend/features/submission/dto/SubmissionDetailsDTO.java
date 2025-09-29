@@ -10,6 +10,7 @@ import java.util.UUID;
 public class SubmissionDetailsDTO {
     private UUID id;
     private UUID problemId;
+    private UUID matchId;
     private String problemTitle;
     private String problemSlug;
     private String status;

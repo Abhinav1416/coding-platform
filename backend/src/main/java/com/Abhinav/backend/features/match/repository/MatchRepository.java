@@ -15,4 +15,6 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     Optional<Match> findByRoomCode(String roomCode);
 
     List<Match> findAllByStatusAndScheduledAtBefore(MatchStatus status, Instant currentTime);
+
+    List<Match> findAllByStatus(MatchStatus status);
 }

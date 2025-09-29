@@ -9,6 +9,7 @@ import java.util.UUID;
 @Data
 @Builder
 public class ProblemSummaryResponse {
+
     private UUID id;
     private String slug;
     private String title;

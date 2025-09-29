@@ -13,6 +13,7 @@ import java.util.UUID;
 @Builder
 public class SubmissionSummaryDTO {
     private UUID id;
+    private UUID matchId;
     private String status;
     private Language language;
     private Integer runtimeMs;
@@ -21,6 +22,7 @@ public class SubmissionSummaryDTO {
     public static SubmissionSummaryDTO fromEntity(Submission submission) {
         return SubmissionSummaryDTO.builder()
                 .id(submission.getId())
+                .matchId(submission.getMatchId())
                 .status(submission.getStatus())
                 .language(submission.getLanguage())
                 .runtimeMs(submission.getRuntimeMs())

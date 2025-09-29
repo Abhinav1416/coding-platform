@@ -1,9 +1,7 @@
 package com.Abhinav.backend.features.match.controller;
 
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.match.dto.CreateDuelRequest;
-import com.Abhinav.backend.features.match.dto.CreateDuelResponse;
-import com.Abhinav.backend.features.match.dto.JoinDuelRequest;
+import com.Abhinav.backend.features.match.dto.*;
 import com.Abhinav.backend.features.match.service.MatchService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/duels")
@@ -18,6 +17,8 @@ import java.util.Map;
 public class MatchController {
 
     private final MatchService matchService;
+
+
 
     @PostMapping
     public ResponseEntity<CreateDuelResponse> createDuel(
@@ -30,13 +31,26 @@ public class MatchController {
 
 
     @PostMapping("/join")
-    public ResponseEntity<Map<String, String>> joinDuel(
-            @Valid @RequestBody JoinDuelRequest request,
-            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+    public ResponseEntity<JoinDuelResponse> joinDuel(
+                                                      @Valid @RequestBody JoinDuelRequest request,
+                                                      @RequestAttribute("authenticatedUser") AuthenticationUser user) {
 
-        matchService.joinDuel(request, user.getId());
+        JoinDuelResponse response = matchService.joinDuel(request, user.getId());
 
-        Map<String, String> response = Map.of("message", "Successfully joined the duel. The match is now scheduled.");
         return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/{matchId}")
+    public ResponseEntity<DuelStateResponseDTO> getDuelState(@PathVariable UUID matchId) {
+        DuelStateResponseDTO duelState = matchService.getDuelState(matchId);
+        return ResponseEntity.ok(duelState);
+    }
+
+
+    @GetMapping("/{matchId}/results")
+    public ResponseEntity<MatchResultDTO> getMatchResults(@PathVariable UUID matchId) {
+        MatchResultDTO results = matchService.getMatchResults(matchId);
+        return ResponseEntity.ok(results);
     }
 }

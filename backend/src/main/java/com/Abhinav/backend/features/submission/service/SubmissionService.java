@@ -41,6 +41,6 @@ public interface SubmissionService {
      */
     Page<Submission> getSubmissionsForProblemAndUser(UUID problemId, Long userId, Pageable pageable);
 
-    // Add this new method to your interface
+
     SubmissionDetailsDTO getSubmissionDetails(UUID submissionId);
 }

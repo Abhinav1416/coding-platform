@@ -36,6 +36,10 @@ public class Submission {
     @Column(nullable = false)
     private Language language;
 
+
+    @Column(name = "match_id")
+    private UUID matchId;
+
     /**
      * Possible statuses: PENDING, PROCESSING, ACCEPTED, WRONG_ANSWER,
      * TIME_LIMIT_EXCEEDED, COMPILATION_ERROR, RUNTIME_ERROR

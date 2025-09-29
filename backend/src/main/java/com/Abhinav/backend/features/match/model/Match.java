@@ -44,6 +44,9 @@ public class Match {
     @Column(name = "difficulty_max", nullable = false)
     private Integer difficultyMax;
 
+    @Column(name = "duration_in_minutes", nullable = false)
+    private Integer durationInMinutes;
+
     @Column(name = "start_delay_in_minutes", nullable = false)
     private Integer startDelayInMinutes;
 

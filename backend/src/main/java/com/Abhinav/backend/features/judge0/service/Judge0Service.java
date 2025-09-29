@@ -3,6 +3,7 @@ package com.Abhinav.backend.features.judge0.service;
 
 import com.Abhinav.backend.features.submission.dto.SubmissionResultDTO;
 import java.util.List;
+import java.util.UUID;
 
 public interface Judge0Service {
 
@@ -16,5 +17,5 @@ public interface Judge0Service {
      * @param testCases A list of test cases to run the code against.
      * @return A SubmissionResultDTO summarizing the outcome.
      */
-    SubmissionResultDTO executeCode(String sourceCode, String languageSlug, List<TestCase> testCases);
+    SubmissionResultDTO executeCode(String sourceCode, String languageSlug, List<TestCase> testCases, UUID matchId);
 }
