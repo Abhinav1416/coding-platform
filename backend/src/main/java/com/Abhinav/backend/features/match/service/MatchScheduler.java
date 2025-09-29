@@ -3,11 +3,11 @@ package com.Abhinav.backend.features.match.service;
 import com.Abhinav.backend.features.match.dto.LiveMatchStateDTO;
 import com.Abhinav.backend.features.match.model.Match;
 import com.Abhinav.backend.features.match.model.MatchStatus;
+import com.Abhinav.backend.features.match.repository.LiveMatchStateRepository; // <-- Import this
 import com.Abhinav.backend.features.match.repository.MatchRepository;
 import com.Abhinav.backend.features.problem.repository.ProblemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,12 +24,9 @@ public class MatchScheduler {
 
     private final MatchRepository matchRepository;
     private final ProblemRepository problemRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final LiveMatchStateRepository liveMatchStateRepository;
 
-    public static final String LIVE_MATCH_KEY_PREFIX = "live_match:";
-
-
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 15000)
     @Transactional
     public void startScheduledMatches() {
         log.info("Scheduler running: Looking for matches to start...");
@@ -56,6 +53,7 @@ public class MatchScheduler {
 
             if (problemIdOpt.isEmpty()) {
                 log.warn("Could not find a suitable problem for match {}. Canceling match.", match.getId());
+                // VVVV --- CHANGE 2: Using your exact CANCELED enum value --- VVVV
                 match.setStatus(MatchStatus.CANCELED);
                 matchRepository.save(match);
                 // TODO: Send WebSocket notification that match was canceled
@@ -63,7 +61,6 @@ public class MatchScheduler {
             }
 
             UUID problemId = problemIdOpt.get();
-
 
             match.setStatus(MatchStatus.ACTIVE);
             match.setProblemId(problemId);
@@ -77,12 +74,12 @@ public class MatchScheduler {
                     .playerOneId(match.getPlayerOneId())
                     .playerTwoId(match.getPlayerTwoId())
                     .startedAt(match.getStartedAt())
+                    .durationInMinutes(match.getDurationInMinutes())
                     .build();
 
-            String redisKey = LIVE_MATCH_KEY_PREFIX + match.getId();
-            redisTemplate.opsForValue().set(redisKey, liveState);
+            liveMatchStateRepository.save(liveState);
 
-            log.info("Successfully started match ID: {}. Problem ID: {}. Redis key: {}", match.getId(), problemId, redisKey);
+            log.info("Successfully started match ID: {}. Problem ID: {}. Live state created in Redis.", match.getId(), problemId);
 
             // 4. TODO: Send WebSocket notification for MATCH_STARTED to both players
         }

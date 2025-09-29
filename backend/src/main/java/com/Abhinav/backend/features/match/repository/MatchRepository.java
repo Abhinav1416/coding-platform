@@ -17,4 +17,6 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     List<Match> findAllByStatusAndScheduledAtBefore(MatchStatus status, Instant currentTime);
 
     List<Match> findAllByStatus(MatchStatus status);
+
+    List<Match> findAllByStatusAndCreatedAtBefore(MatchStatus status, Instant cutoff);
 }

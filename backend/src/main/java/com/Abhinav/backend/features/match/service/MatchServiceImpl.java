@@ -42,6 +42,8 @@ public class MatchServiceImpl implements MatchService {
     private final UserStatsRepository userStatsRepository;
     public static final long PENALTY_MINUTES = 5;
 
+
+
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
@@ -117,6 +119,7 @@ public class MatchServiceImpl implements MatchService {
                 .build();
     }
 
+
     @Override
     public void processDuelSubmissionResult(UUID matchId, Long userId, String submissionStatus) {
         String logPrefix = String.format("[DUEL_SUBMISSION_PROCESS matchId=%s userId=%d]", matchId, userId);
@@ -130,11 +133,9 @@ public class MatchServiceImpl implements MatchService {
             return;
         }
 
-        // "Sudden Death" logic: if the submission is correct, the match ends.
         if ("ACCEPTED".equals(submissionStatus)) {
             log.info("{} Submission was ACCEPTED. Triggering 'sudden death' match completion.", logPrefix);
 
-            // Set the finish time for the player if it hasn't been set already
             if (userId.equals(liveState.getPlayerOneId()) && liveState.getPlayerOneFinishTime() == null) {
                 liveState.setPlayerOneFinishTime(Instant.now());
             } else if (userId.equals(liveState.getPlayerTwoId()) && liveState.getPlayerTwoFinishTime() == null) {
@@ -142,11 +143,9 @@ public class MatchServiceImpl implements MatchService {
             }
             liveMatchStateRepository.save(liveState);
 
-            // Finalize the match
             this.completeMatch(matchId);
 
         } else {
-            // Logic for incorrect submissions: update penalties.
             log.info("{} Submission was not accepted. Updating penalties.", logPrefix);
             if (userId.equals(liveState.getPlayerOneId())) {
                 liveState.setPlayerOnePenalties(liveState.getPlayerOnePenalties() + 1);
@@ -179,36 +178,18 @@ public class MatchServiceImpl implements MatchService {
         Long p1Id = liveState.getPlayerOneId();
         Long p2Id = liveState.getPlayerTwoId();
 
-
-
-
-
         Instant startTime = liveState.getStartedAt();
         Instant p1FinishTime = liveState.getPlayerOneFinishTime();
         Instant p2FinishTime = liveState.getPlayerTwoFinishTime();
-        int p1Penalties = liveState.getPlayerOnePenalties();
-        int p2Penalties = liveState.getPlayerTwoPenalties();
 
-        Duration p1EffectiveTime = (p1FinishTime != null)
-                ? Duration.between(startTime, p1FinishTime).plusMinutes(p1Penalties * PENALTY_MINUTES)
-                : null;
-
-        Duration p2EffectiveTime = (p2FinishTime != null)
-                ? Duration.between(startTime, p2FinishTime).plusMinutes(p2Penalties * PENALTY_MINUTES)
-                : null;
+        Duration p1EffectiveTime = (p1FinishTime != null) ? Duration.between(startTime, p1FinishTime).plusMinutes(liveState.getPlayerOnePenalties() * PENALTY_MINUTES) : null;
+        Duration p2EffectiveTime = (p2FinishTime != null) ? Duration.between(startTime, p2FinishTime).plusMinutes(liveState.getPlayerTwoPenalties() * PENALTY_MINUTES) : null;
 
         Long winnerId = null;
         boolean isDraw = false;
 
-        if (p1EffectiveTime != null && (p2EffectiveTime == null || p1EffectiveTime.compareTo(p2EffectiveTime) < 0)) {
-            winnerId = p1Id;
-        } else if (p2EffectiveTime != null && (p1EffectiveTime == null || p2EffectiveTime.compareTo(p1EffectiveTime) < 0)) {
-            winnerId = p2Id;
-        } else if (p1EffectiveTime != null && p1EffectiveTime.equals(p2EffectiveTime)) {
-            isDraw = true;
-        } else {
-            isDraw = true;
-        }
+        if (p1EffectiveTime != null && (p2EffectiveTime == null || p1EffectiveTime.compareTo(p2EffectiveTime) < 0)) { winnerId = p1Id; } else if (p2EffectiveTime != null && (p1EffectiveTime == null || p2EffectiveTime.compareTo(p1EffectiveTime) < 0)) { winnerId = p2Id; } else if (p1EffectiveTime != null && p1EffectiveTime.equals(p2EffectiveTime)) { isDraw = true; } else { isDraw = true; }
+
 
         log.info("{} Winner determined. WinnerID: {}, isDraw: {}", logPrefix, winnerId, isDraw);
 
@@ -216,44 +197,30 @@ public class MatchServiceImpl implements MatchService {
         match.setStatus(MatchStatus.COMPLETED);
         match.setEndedAt(Instant.now());
         match.setWinnerId(winnerId);
+
+        match.setPlayerOnePenalties(liveState.getPlayerOnePenalties());
+        match.setPlayerTwoPenalties(liveState.getPlayerTwoPenalties());
+        match.setPlayerOneFinishTime(liveState.getPlayerOneFinishTime());
+        match.setPlayerTwoFinishTime(liveState.getPlayerTwoFinishTime());
+
         matchRepository.save(match);
-        log.info("{} Match entity updated to COMPLETED in database.", logPrefix);
+        log.info("{} Match entity updated to COMPLETED in database with final results.", logPrefix);
 
-        Map<Long, UserStats> statsMap = userStatsRepository.findAllById(Arrays.asList(p1Id, p2Id))
-                .stream()
-                .collect(Collectors.toMap(UserStats::getUserId, Function.identity()));
+        Map<Long, UserStats> statsMap = userStatsRepository.findAllById(Arrays.asList(p1Id, p2Id)).stream().collect(Collectors.toMap(UserStats::getUserId, Function.identity()));
 
-        UserStats p1Stats = statsMap.computeIfAbsent(p1Id, id -> {
-            UserStats newUserStats = new UserStats();
-            newUserStats.setUserId(id);
-            return newUserStats;
-        });
-
-        UserStats p2Stats = statsMap.computeIfAbsent(p2Id, id -> {
-            UserStats newUserStats = new UserStats();
-            newUserStats.setUserId(id);
-            return newUserStats;
-        });
-
+        UserStats p1Stats = statsMap.computeIfAbsent(p1Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
+        UserStats p2Stats = statsMap.computeIfAbsent(p2Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
 
         p1Stats.setDuelsPlayed(p1Stats.getDuelsPlayed() + 1);
         p2Stats.setDuelsPlayed(p2Stats.getDuelsPlayed() + 1);
 
-        if (isDraw) {
-            p1Stats.setDuelsDrawn(p1Stats.getDuelsDrawn() + 1);
-            p2Stats.setDuelsDrawn(p2Stats.getDuelsDrawn() + 1);
-        } else {
-            if (winnerId.equals(p1Id)) {
-                p1Stats.setDuelsWon(p1Stats.getDuelsWon() + 1);
-                p2Stats.setDuelsLost(p2Stats.getDuelsLost() + 1);
-            } else {
-                p2Stats.setDuelsWon(p2Stats.getDuelsWon() + 1);
-                p1Stats.setDuelsLost(p1Stats.getDuelsLost() + 1);
-            }
-        }
+        if (isDraw) { p1Stats.setDuelsDrawn(p1Stats.getDuelsDrawn() + 1); p2Stats.setDuelsDrawn(p2Stats.getDuelsDrawn() + 1); } else { if (winnerId.equals(p1Id)) { p1Stats.setDuelsWon(p1Stats.getDuelsWon() + 1); p2Stats.setDuelsLost(p2Stats.getDuelsLost() + 1); } else { p2Stats.setDuelsWon(p2Stats.getDuelsWon() + 1); p1Stats.setDuelsLost(p1Stats.getDuelsLost() + 1); } }
 
         userStatsRepository.saveAll(Arrays.asList(p1Stats, p2Stats));
+
+
         log.info("{} User stats updated for both players.", logPrefix);
+
 
         liveMatchStateRepository.deleteById(matchId);
         log.info("{} Live state for match removed from Redis.", logPrefix);
@@ -275,9 +242,8 @@ public class MatchServiceImpl implements MatchService {
 
         List<Submission> allSubmissions = submissionRepository.findByMatchIdOrderByCreatedAtAsc(matchId);
 
-        PlayerResultDTO playerOneResult = buildPlayerResult(match.getPlayerOneId(), match.getStartedAt(), allSubmissions);
-        PlayerResultDTO playerTwoResult = buildPlayerResult(match.getPlayerTwoId(), match.getStartedAt(), allSubmissions);
-
+        PlayerResultDTO playerOneResult = buildPlayerResultFromStored(match.getPlayerOneId(), match, allSubmissions);
+        PlayerResultDTO playerTwoResult = buildPlayerResultFromStored(match.getPlayerTwoId(), match, allSubmissions);
 
         String outcome;
         if (match.getWinnerId() == null) {
@@ -300,41 +266,35 @@ public class MatchServiceImpl implements MatchService {
                 .build();
     }
 
-    private PlayerResultDTO buildPlayerResult(Long userId, Instant matchStartTime, List<Submission> allSubmissions) {
-        List<Submission> playerSubmissions = allSubmissions.stream()
-                .filter(s -> s.getUserId().equals(userId))
-                .collect(Collectors.toList());
 
-        Optional<Submission> firstAccepted = playerSubmissions.stream()
-                .filter(s -> "ACCEPTED".equals(s.getStatus()))
-                .findFirst();
-
-        int penalties = 0;
+    private PlayerResultDTO buildPlayerResultFromStored(Long userId, Match match, List<Submission> allSubmissions) {
         Instant finishTime;
-        Duration effectiveTime = null;
+        int penalties;
 
-        if (firstAccepted.isPresent()) {
-            Submission acceptedSubmission = firstAccepted.get();
-            finishTime = acceptedSubmission.getCreatedAt();
 
-            penalties = (int) playerSubmissions.stream()
-                    .filter(s -> s.getCreatedAt().isBefore(finishTime))
-                    .count();
-
-            Duration rawDuration = Duration.between(matchStartTime, finishTime);
-            effectiveTime = rawDuration.plus(penalties * PENALTY_MINUTES, ChronoUnit.MINUTES);
+        if (userId.equals(match.getPlayerOneId())) {
+            finishTime = match.getPlayerOneFinishTime();
+            penalties = match.getPlayerOnePenalties();
         } else {
-            finishTime = null;
+            finishTime = match.getPlayerTwoFinishTime();
+            penalties = match.getPlayerTwoPenalties();
+        }
+
+        Duration effectiveTime = null;
+        if (finishTime != null) {
+            Duration rawDuration = Duration.between(match.getStartedAt(), finishTime);
+            effectiveTime = rawDuration.plus(penalties * PENALTY_MINUTES, ChronoUnit.MINUTES);
         }
 
 
-        List<SubmissionTimelineDTO> timeline = playerSubmissions.stream()
+        List<SubmissionTimelineDTO> timeline = allSubmissions.stream()
+                .filter(s -> s.getUserId().equals(userId))
                 .map(SubmissionTimelineDTO::fromEntity)
                 .collect(Collectors.toList());
 
         return PlayerResultDTO.builder()
                 .userId(userId)
-                .solved(firstAccepted.isPresent())
+                .solved(finishTime != null)
                 .finishTime(finishTime)
                 .penalties(penalties)
                 .effectiveTime(effectiveTime)

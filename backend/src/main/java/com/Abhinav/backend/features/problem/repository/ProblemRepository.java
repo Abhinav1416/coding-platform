@@ -36,13 +36,22 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
             Pageable pageable
     );
 
+
     @Query(
             value = """
             SELECT p.id FROM problems p
-            WHERE p.points >= :minPoints AND p.points <= :maxPoints
-            AND p.id NOT IN (
-                SELECT s.problem_id FROM submissions s
-                WHERE s.status = 'ACCEPTED' AND s.user_id IN (:playerOneId, :playerTwoId)
+            WHERE p.points >= :minDifficulty AND p.points <= :maxDifficulty
+            AND NOT EXISTS (
+                SELECT 1 FROM submissions s
+                WHERE s.problem_id = p.id
+                AND s.user_id = :playerOneId
+                AND s.status = 'ACCEPTED'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM submissions s
+                WHERE s.problem_id = p.id
+                AND s.user_id = :playerTwoId
+                AND s.status = 'ACCEPTED'
             )
             ORDER BY RANDOM()
             LIMIT 1
@@ -50,8 +59,8 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
             nativeQuery = true
     )
     Optional<UUID> findRandomUnsolvedProblemForTwoUsers(
-            @Param("minPoints") Integer minPoints,
-            @Param("maxPoints") Integer maxPoints,
+            @Param("minDifficulty") Integer minDifficulty,
+            @Param("maxDifficulty") Integer maxDifficulty,
             @Param("playerOneId") Long playerOneId,
             @Param("playerTwoId") Long playerTwoId
     );

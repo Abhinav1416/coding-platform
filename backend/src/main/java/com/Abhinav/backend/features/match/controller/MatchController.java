@@ -32,9 +32,8 @@ public class MatchController {
 
     @PostMapping("/join")
     public ResponseEntity<JoinDuelResponse> joinDuel(
-                                                      @Valid @RequestBody JoinDuelRequest request,
-                                                      @RequestAttribute("authenticatedUser") AuthenticationUser user) {
-
+            @Valid @RequestBody JoinDuelRequest request,
+            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
         JoinDuelResponse response = matchService.joinDuel(request, user.getId());
 
         return ResponseEntity.ok(response);

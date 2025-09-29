@@ -34,6 +34,7 @@ dependencies {
 
 	// CHANGED: The database driver is only needed at runtime
 	runtimeOnly("org.postgresql:postgresql:42.6.0")
+	implementation ("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
 	// Your code should only depend on the API. The implementation and JSON mapper are runtime details.
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")

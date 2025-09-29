@@ -21,13 +21,13 @@ public class CreateDuelRequest {
 
 
     @NotNull(message = "Start delay is required")
-    @Min(value = 15, message = "Duel must start in at least 15 minutes")
-    @Max(value = 1440, message = "Duel must start within 24 hours")
+    @Min(value = 2, message = "Duel must start in at least 15 minutes")
+    @Max(value = 4, message = "Duel must start within 24 hours")
     private Integer startDelayInMinutes;
 
 
     @NotNull(message = "Match duration is required")
-    @Min(value = 5, message = "Match duration must be at least 5 minutes")
-    @Max(value = 60, message = "Match duration cannot exceed 60 minutes")
+    @Min(value = 1, message = "Match duration must be at least 5 minutes")
+    @Max(value = 2, message = "Match duration cannot exceed 60 minutes")
     private Integer durationInMinutes;
 }

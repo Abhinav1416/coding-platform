@@ -53,6 +53,18 @@ public class Match {
     @Column(name = "winner_id")
     private Long winnerId;
 
+    @Column(name = "player_one_penalties")
+    private Integer playerOnePenalties;
+
+    @Column(name = "player_two_penalties")
+    private Integer playerTwoPenalties;
+
+    @Column(name = "player_one_finish_time")
+    private Instant playerOneFinishTime;
+
+    @Column(name = "player_two_finish_time")
+    private Instant playerTwoFinishTime;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

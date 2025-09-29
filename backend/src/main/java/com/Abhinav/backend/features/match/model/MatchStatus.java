@@ -5,5 +5,6 @@ public enum MatchStatus {
     SCHEDULED,
     ACTIVE,
     COMPLETED,
-    CANCELED
+    CANCELED,
+    EXPIRED
 }

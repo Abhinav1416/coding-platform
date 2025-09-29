@@ -15,7 +15,6 @@ import java.util.UUID;
 public class ProblemDetailResponse {
 
     private UUID id;
-    private Long authorId;
     private String status;
     private String slug;
     private String title;
@@ -26,6 +25,8 @@ public class ProblemDetailResponse {
     private Integer memoryLimitKb;
     private Instant createdAt;
     private Object sampleTestCases;
+
+
 
     public static ProblemDetailResponse fromEntity(Problem problem) {
         Object parsedSampleTestCases = null;
@@ -39,7 +40,6 @@ public class ProblemDetailResponse {
 
         return ProblemDetailResponse.builder()
                 .id(problem.getId())
-                .authorId(problem.getAuthorId())
                 .status(problem.getStatus())
                 .slug(problem.getSlug())
                 .title(problem.getTitle())
