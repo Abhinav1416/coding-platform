@@ -14,6 +14,7 @@ import com.Abhinav.backend.features.problem.dto.ProblemDetailResponse;
 import com.Abhinav.backend.features.problem.model.Problem;
 import com.Abhinav.backend.features.problem.repository.ProblemRepository;
 import com.Abhinav.backend.features.submission.model.Submission;
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import com.Abhinav.backend.features.submission.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -121,7 +122,7 @@ public class MatchServiceImpl implements MatchService {
 
 
     @Override
-    public void processDuelSubmissionResult(UUID matchId, Long userId, String submissionStatus) {
+    public void processDuelSubmissionResult(UUID matchId, Long userId, SubmissionStatus submissionStatus) {
         String logPrefix = String.format("[DUEL_SUBMISSION_PROCESS matchId=%s userId=%d]", matchId, userId);
         log.info("{} Received submission result with status: {}", logPrefix, submissionStatus);
 
@@ -133,7 +134,7 @@ public class MatchServiceImpl implements MatchService {
             return;
         }
 
-        if ("ACCEPTED".equals(submissionStatus)) {
+        if (submissionStatus.equals(SubmissionStatus.ACCEPTED)) {
             log.info("{} Submission was ACCEPTED. Triggering 'sudden death' match completion.", logPrefix);
 
             if (userId.equals(liveState.getPlayerOneId()) && liveState.getPlayerOneFinishTime() == null) {

@@ -3,6 +3,7 @@ package com.Abhinav.backend.features.submission.dto;
 
 import com.Abhinav.backend.features.submission.model.Language;
 import com.Abhinav.backend.features.submission.model.Submission;
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,7 +15,7 @@ import java.util.UUID;
 public class SubmissionSummaryDTO {
     private UUID id;
     private UUID matchId;
-    private String status;
+    private SubmissionStatus status;
     private Language language;
     private Integer runtimeMs;
     private Instant createdAt;

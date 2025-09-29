@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.problem.dto;
 
 import com.Abhinav.backend.features.problem.model.Problem;
+import com.Abhinav.backend.features.problem.model.ProblemStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
@@ -15,7 +16,7 @@ import java.util.UUID;
 public class ProblemDetailResponse {
 
     private UUID id;
-    private String status;
+    private ProblemStatus status;
     private String slug;
     private String title;
     private String description;

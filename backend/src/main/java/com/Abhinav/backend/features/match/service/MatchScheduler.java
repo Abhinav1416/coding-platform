@@ -53,7 +53,6 @@ public class MatchScheduler {
 
             if (problemIdOpt.isEmpty()) {
                 log.warn("Could not find a suitable problem for match {}. Canceling match.", match.getId());
-                // VVVV --- CHANGE 2: Using your exact CANCELED enum value --- VVVV
                 match.setStatus(MatchStatus.CANCELED);
                 matchRepository.save(match);
                 // TODO: Send WebSocket notification that match was canceled

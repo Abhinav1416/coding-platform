@@ -5,6 +5,7 @@ import com.Abhinav.backend.features.exception.AuthorizationException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
 import com.Abhinav.backend.features.problem.dto.*;
 import com.Abhinav.backend.features.problem.model.Problem;
+import com.Abhinav.backend.features.problem.model.ProblemStatus;
 import com.Abhinav.backend.features.problem.model.Tag;
 import com.Abhinav.backend.features.problem.repository.ProblemRepository;
 import com.Abhinav.backend.features.problem.repository.TagRepository;
@@ -72,7 +73,7 @@ public class ProblemServiceImpl implements ProblemService {
         problem.setMemoryLimitKb(requestDto.getMemoryLimitKb());
         problem.setAuthorId(userId);
         problem.setTags(problemTags);
-        problem.setStatus("PENDING_TEST_CASES");
+        problem.setStatus(ProblemStatus.PENDING_TEST_CASES);
 
         try {
             problem.setSampleTestCases(objectMapper.writeValueAsString(requestDto.getSampleTestCases()));
@@ -93,13 +94,14 @@ public class ProblemServiceImpl implements ProblemService {
         return new ProblemInitiationResponse(savedProblem.getId(), uploadUrl);
     }
 
+
     @Override
     @Transactional
     public ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Problem with ID '" + problemId + "' not found."));
 
-        if (!"PENDING_TEST_CASES".equals(problem.getStatus())) {
+        if (problem.getStatus() != ProblemStatus.PENDING_TEST_CASES) {
             throw new IllegalStateException("Problem is not in PENDING_TEST_CASES state and cannot be finalized.");
         }
 
@@ -108,7 +110,7 @@ public class ProblemServiceImpl implements ProblemService {
         }
 
         problem.setHiddenTestCasesS3Key(s3Key);
-        problem.setStatus("PUBLISHED");
+        problem.setStatus(ProblemStatus.PUBLISHED);
 
         Problem finalizedProblem = problemRepository.save(problem);
         return ProblemDetailResponse.fromEntity(finalizedProblem);

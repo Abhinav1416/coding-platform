@@ -1,5 +1,6 @@
 package com.Abhinav.backend.features.submission.dto;
 
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import lombok.Builder;
 import lombok.Data;
 import java.time.Instant;
@@ -13,7 +14,7 @@ public class SubmissionDetailsDTO {
     private UUID matchId;
     private String problemTitle;
     private String problemSlug;
-    private String status;
+    private SubmissionStatus status;
     private String language;
     private String code;
     private Integer runtimeMs;

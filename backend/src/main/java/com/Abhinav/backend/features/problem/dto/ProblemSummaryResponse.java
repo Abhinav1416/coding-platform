@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.problem.dto;
 
 import com.Abhinav.backend.features.problem.model.Problem;
+import com.Abhinav.backend.features.problem.model.ProblemStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,7 +15,7 @@ public class ProblemSummaryResponse {
     private String slug;
     private String title;
     private Integer points;
-    private String status;
+    private ProblemStatus status;
 
     public static ProblemSummaryResponse fromEntity(Problem problem) {
         return ProblemSummaryResponse.builder()

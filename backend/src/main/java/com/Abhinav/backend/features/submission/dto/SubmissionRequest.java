@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.submission.dto;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -8,9 +9,7 @@ import lombok.Data;
 
 import java.util.UUID;
 
-/**
- * DTO for accepting a new code submission from a user.
- */
+
 @Data
 public class SubmissionRequest {
 
@@ -24,5 +23,6 @@ public class SubmissionRequest {
     @NotBlank(message = "Code cannot be blank.")
     private String code;
 
+    @JsonProperty(required = true)
     private UUID matchId;
 }

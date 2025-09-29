@@ -41,6 +41,7 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
             value = """
             SELECT p.id FROM problems p
             WHERE p.points >= :minDifficulty AND p.points <= :maxDifficulty
+            AND p.status = 'PUBLISHED' -- <-- ADD THIS LINE
             AND NOT EXISTS (
                 SELECT 1 FROM submissions s
                 WHERE s.problem_id = p.id

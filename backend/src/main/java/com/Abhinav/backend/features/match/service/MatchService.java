@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.match.service;
 
 import com.Abhinav.backend.features.match.dto.*;
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 
 import java.util.UUID;
 
@@ -12,7 +13,7 @@ public interface MatchService {
 
     DuelStateResponseDTO getDuelState(UUID matchId);
 
-    void processDuelSubmissionResult(UUID matchId, Long userId, String submissionStatus);
+    void processDuelSubmissionResult(UUID matchId, Long userId, SubmissionStatus submissionStatus);
 
     void completeMatch(UUID matchId);
 

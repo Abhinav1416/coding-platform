@@ -1,11 +1,16 @@
 package com.Abhinav.backend.features.submission.service;
 
 import com.Abhinav.backend.features.AWS.service.S3Service;
+import com.Abhinav.backend.features.exception.InvalidRequestException;
 import com.Abhinav.backend.features.judge0.service.Judge0Service;
+import com.Abhinav.backend.features.match.model.Match;
+import com.Abhinav.backend.features.match.model.MatchStatus;
+import com.Abhinav.backend.features.match.repository.MatchRepository;
 import com.Abhinav.backend.features.match.service.MatchService;
 import com.Abhinav.backend.features.notification.service.NotificationService;
 import com.Abhinav.backend.features.problem.dto.SampleTestCaseDTO;
 import com.Abhinav.backend.features.problem.model.Problem;
+import com.Abhinav.backend.features.problem.model.ProblemStatus;
 import com.Abhinav.backend.features.problem.repository.ProblemRepository;
 import com.Abhinav.backend.features.submission.dto.SubmissionDetailsDTO;
 import com.Abhinav.backend.features.submission.dto.SubmissionRequest;
@@ -13,6 +18,7 @@ import com.Abhinav.backend.features.submission.dto.SubmissionResultDTO;
 import com.Abhinav.backend.features.submission.events.SubmissionCreatedEvent;
 import com.Abhinav.backend.features.submission.model.Language;
 import com.Abhinav.backend.features.submission.model.Submission;
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import com.Abhinav.backend.features.submission.repository.SubmissionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +46,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final MatchService matchService;
     private final ObjectMapper objectMapper;
     private final Judge0Service judge0Service;
+    private final MatchRepository matchRepository;
     private final ProblemRepository problemRepository;
     private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
@@ -51,8 +58,27 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Transactional
     public Submission createSubmission(SubmissionRequest request, Long userId) {
         Problem problem = problemRepository.findById(UUID.fromString(request.getProblemId()))
-                .orElseThrow(() -> new IllegalStateException(
-                        "Problem not found for ID: " + request.getProblemId()));
+                .orElseThrow(() -> new InvalidRequestException(
+                        "Problem not found with ID: " + request.getProblemId()));
+
+        if (problem.getStatus() != ProblemStatus.PUBLISHED) {
+            throw new InvalidRequestException("Submissions are only allowed for published problems.");
+        }
+
+
+        if (request.getMatchId() != null) {
+            Match match = matchRepository.findById(request.getMatchId())
+                    .orElseThrow(() -> new InvalidRequestException(
+                            "Match not found with ID: " + request.getMatchId()));
+
+            if (match.getStatus() != MatchStatus.ACTIVE) {
+                throw new InvalidRequestException("Submissions are only allowed for active matches.");
+            }
+
+            if (!match.getPlayerOneId().equals(userId) && !match.getPlayerTwoId().equals(userId)) {
+                throw new InvalidRequestException("You are not a participant in this match.");
+            }
+        }
 
 
         String logPrefix = String.format("[CREATE_SUBMISSION userId=%d, problemId=%s]", userId, request.getProblemId());
@@ -65,7 +91,7 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .problemId(UUID.fromString(request.getProblemId()))
                 .code(request.getCode())
                 .language(Language.fromSlug(request.getLanguage()))
-                .status("PENDING")
+                .status(SubmissionStatus.PENDING)
                 .build();
 
         logger.debug("{} Saving entity to the database...", logPrefix);
@@ -93,7 +119,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
 
         logger.info("{} STEP A: Acquired submission. Setting status to PROCESSING.", logPrefix);
-        submission.setStatus("PROCESSING");
+        submission.setStatus(SubmissionStatus.PROCESSING);
         submission = submissionRepository.save(submission);
 
         UUID matchId = submission.getMatchId();
@@ -199,7 +225,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private void handleProcessingError(Submission submission, Exception e, String logPrefix) {
         logger.debug("{} Entering error handling block.", logPrefix);
         try {
-            submission.setStatus("INTERNAL_ERROR");
+            submission.setStatus(SubmissionStatus.INTERNAL_ERROR);
             String errorMessage = e.getClass().getSimpleName() + ": " + e.getMessage();
             submission.setStderr(errorMessage);
             submission.setMatchId(submission.getMatchId());

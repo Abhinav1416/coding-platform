@@ -40,12 +40,9 @@ public class Submission {
     @Column(name = "match_id")
     private UUID matchId;
 
-    /**
-     * Possible statuses: PENDING, PROCESSING, ACCEPTED, WRONG_ANSWER,
-     * TIME_LIMIT_EXCEEDED, COMPILATION_ERROR, RUNTIME_ERROR
-     */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private SubmissionStatus status;
 
     @Column(name = "runtime_ms")
     private Integer runtimeMs;

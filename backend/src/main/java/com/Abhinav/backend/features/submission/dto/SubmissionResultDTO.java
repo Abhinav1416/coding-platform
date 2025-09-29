@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.submission.dto;
 
 import com.Abhinav.backend.features.submission.model.Submission;
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +22,7 @@ public class SubmissionResultDTO {
 
     private UUID submissionId;
     private UUID matchId;
-    private String status;
+    private SubmissionStatus status;
     private Integer runtimeMs;
     private Integer memoryKb;
     private String stdout;

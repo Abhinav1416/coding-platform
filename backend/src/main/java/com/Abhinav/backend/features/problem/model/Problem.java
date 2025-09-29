@@ -29,8 +29,9 @@ public class Problem {
     @Column(name = "author_id", nullable = false)
     private Long authorId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private ProblemStatus status;
 
     @Column(nullable = false, unique = true)
     private String slug;
