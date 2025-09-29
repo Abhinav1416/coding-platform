@@ -19,39 +19,43 @@ repositories {
 
 dependencyManagement {
 	imports {
-		mavenBom("io.awspring.cloud:spring-cloud-aws-dependencies:3.1.1")
+		mavenBom("io.awspring.cloud:spring-cloud-aws-dependencies:3.2.0")
 	}
 }
-
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
-	implementation("org.apache.commons:commons-lang3:3.13.0")
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 
-	// CHANGED: The database driver is only needed at runtime
-	runtimeOnly("org.postgresql:postgresql:42.6.0")
-	implementation ("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+	implementation("org.apache.commons:commons-lang3:3.13.0")
+	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
-	// Your code should only depend on the API. The implementation and JSON mapper are runtime details.
+	runtimeOnly("org.postgresql:postgresql:42.6.0")
+
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
-	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
+
+
+	implementation("software.amazon.awssdk:s3:2.25.27")
+
+
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
 	compileOnly("org.projectlombok:lombok:1.18.34")
 	annotationProcessor("org.projectlombok:lombok:1.18.34")
-	testCompileOnly("org.projectlombok:lombok:1.18.34")
-	testAnnotationProcessor("org.projectlombok:lombok:1.18.34")
 
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.mockito:mockito-core")
+	testImplementation("org.assertj:assertj-core")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

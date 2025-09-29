@@ -35,12 +35,15 @@ public class ProblemServiceImpl implements ProblemService {
     private static final Logger logger = LoggerFactory.getLogger(ProblemServiceImpl.class);
 
 
-
     @Value("${problem.limit}")
     private int problemLimit;
 
     @Value("${aws.s3.bucket-name}")
     private String s3BucketName;
+
+    @Value("${problem.upload.max-size-kb}")
+    private long maxUploadSizeKb;
+
 
 
     @Override
@@ -116,6 +119,7 @@ public class ProblemServiceImpl implements ProblemService {
         return ProblemDetailResponse.fromEntity(finalizedProblem);
     }
 
+
     @Override
     @Transactional
     public void deleteProblem(UUID problemId, Long authorId) {
@@ -127,12 +131,13 @@ public class ProblemServiceImpl implements ProblemService {
         }
 
         String s3Key = problem.getHiddenTestCasesS3Key();
-
-        if (s3Key != null && !s3Key.isBlank()) {
-            s3Service.deleteObject(s3Key);
-        }
+        UUID id = problem.getId();
 
         problemRepository.delete(problem);
+
+        if (s3Key != null && !s3Key.isBlank()) {
+            s3Service.deleteObject(s3Key, id);
+        }
     }
 
 
@@ -161,6 +166,7 @@ public class ProblemServiceImpl implements ProblemService {
                 .build();
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public ProblemDetailResponse getProblemBySlug(String slug) {
@@ -168,6 +174,7 @@ public class ProblemServiceImpl implements ProblemService {
                 .orElseThrow(() -> new NoSuchElementException("Problem with slug '" + slug + "' not found."));
         return ProblemDetailResponse.fromEntity(problem);
     }
+
 
     @Override
     @Transactional
@@ -196,6 +203,7 @@ public class ProblemServiceImpl implements ProblemService {
         Problem updatedProblem = problemRepository.save(problem);
         return ProblemDetailResponse.fromEntity(updatedProblem);
     }
+
 
     @Override
     public ProblemCountResponse getTotalProblemCount() {

@@ -1,6 +1,5 @@
 package com.Abhinav.backend.config;
 
-// VVVV --- ADD THIS NEW IMPORT --- VVVV
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -25,15 +24,11 @@ public class RedisConfig {
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // VVVV --- THIS IS THE CRUCIAL FIX --- VVVV
-        // This line tells Jackson to include the class name in the JSON
-        // so it knows what type to deserialize it back to.
         objectMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY
         );
-        // ^^^^ --- END OF FIX --- ^^^^
 
         GenericJackson2JsonRedisSerializer jsonRedisSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 

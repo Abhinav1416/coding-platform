@@ -21,6 +21,8 @@ public class ProblemController {
 
     private final ProblemService problemService;
 
+
+
     @PostMapping("/initiate")
     public ResponseEntity<ProblemInitiationResponse> initiateProblemCreation(
             @RequestAttribute("authenticatedUser") AuthenticationUser user,

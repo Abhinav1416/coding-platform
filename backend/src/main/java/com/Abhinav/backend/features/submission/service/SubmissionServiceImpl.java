@@ -8,7 +8,6 @@ import com.Abhinav.backend.features.match.model.MatchStatus;
 import com.Abhinav.backend.features.match.repository.MatchRepository;
 import com.Abhinav.backend.features.match.service.MatchService;
 import com.Abhinav.backend.features.notification.service.NotificationService;
-import com.Abhinav.backend.features.problem.dto.SampleTestCaseDTO;
 import com.Abhinav.backend.features.problem.model.Problem;
 import com.Abhinav.backend.features.problem.model.ProblemStatus;
 import com.Abhinav.backend.features.problem.repository.ProblemRepository;
@@ -20,7 +19,6 @@ import com.Abhinav.backend.features.submission.model.Language;
 import com.Abhinav.backend.features.submission.model.Submission;
 import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import com.Abhinav.backend.features.submission.repository.SubmissionRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +30,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -65,7 +61,6 @@ public class SubmissionServiceImpl implements SubmissionService {
             throw new InvalidRequestException("Submissions are only allowed for published problems.");
         }
 
-
         if (request.getMatchId() != null) {
             Match match = matchRepository.findById(request.getMatchId())
                     .orElseThrow(() -> new InvalidRequestException(
@@ -80,11 +75,9 @@ public class SubmissionServiceImpl implements SubmissionService {
             }
         }
 
-
         String logPrefix = String.format("[CREATE_SUBMISSION userId=%d, problemId=%s]", userId, request.getProblemId());
         logger.info("{} -> Starting submission creation.", logPrefix);
 
-        logger.debug("{} Building Submission entity with PENDING status.", logPrefix);
         Submission submission = Submission.builder()
                 .userId(userId)
                 .matchId(request.getMatchId())
@@ -94,14 +87,12 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .status(SubmissionStatus.PENDING)
                 .build();
 
-        logger.debug("{} Saving entity to the database...", logPrefix);
         Submission savedSubmission = submissionRepository.save(submission);
         logger.info("{} Entity saved with ID: {}", logPrefix, savedSubmission.getId());
 
         eventPublisher.publishEvent(new SubmissionCreatedEvent(this, savedSubmission.getId()));
         logger.info("{} Published SubmissionCreatedEvent. SQS message will be sent after commit.", logPrefix);
 
-        logger.info("{} <- Submission creation successful.", logPrefix);
         return savedSubmission;
     }
 
@@ -124,7 +115,6 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         UUID matchId = submission.getMatchId();
 
-
         try {
             logger.info("{} STEP B: Fetching associated problem data.", logPrefix);
             Submission finalSubmission = submission;
@@ -136,27 +126,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             logger.info("{}   - Fetched problem '{}' (ID: {}).", logPrefix, problem.getTitle(), problem.getId());
 
             logger.info("{} STEP C: Gathering all test cases.", logPrefix);
-            List<Judge0Service.TestCase> allTestCases = new ArrayList<>();
-
-            if (problem.getSampleTestCases() != null && !problem.getSampleTestCases().isBlank()) {
-                try {
-                    List<SampleTestCaseDTO> sampleDtos = objectMapper.readValue(
-                            problem.getSampleTestCases(), new TypeReference<>() {});
-                    List<Judge0Service.TestCase> sampleCases = sampleDtos.stream()
-                            .map(dto -> new Judge0Service.TestCase(dto.getStdin(), dto.getExpected_output()))
-                            .collect(Collectors.toList());
-                    allTestCases.addAll(sampleCases);
-                    logger.info("{}   - Parsed {} sample test cases.", logPrefix, sampleCases.size());
-                } catch (Exception e) {
-                    throw new IllegalStateException("Failed to parse sample test cases JSON for problemId: " + problem.getId(), e);
-                }
-            }
-
-            if (problem.getHiddenTestCasesS3Key() != null && !problem.getHiddenTestCasesS3Key().isBlank()) {
-                List<Judge0Service.TestCase> hiddenCases = s3Service.downloadAndParseTestCases(problem.getHiddenTestCasesS3Key());
-                allTestCases.addAll(hiddenCases);
-                logger.info("{}   - Parsed {} hidden test cases from S3.", logPrefix, hiddenCases.size());
-            }
+            List<Judge0Service.TestCase> allTestCases = s3Service.getOrFetchAllTestCases(problem);
 
             if (allTestCases.isEmpty()) {
                 throw new IllegalStateException("No test cases (sample or hidden) found for problemId: " + problem.getId());
@@ -169,24 +139,19 @@ public class SubmissionServiceImpl implements SubmissionService {
                 logger.info("{}   Input='{}' | Expected='{}'", logPrefix, tc.input(), tc.expectedOutput());
             }
 
-
             if (submission.getCode() == null || submission.getCode().isBlank()) {
                 throw new IllegalStateException("Submission code is empty for submissionId: " + submission.getId());
             }
 
             String fullCode = submission.getCode();
-
             logger.info("{}   - USER CODE LENGTH: {}, FULL CODE LENGTH: {}.", logPrefix, submission.getCode().length(), fullCode.length());
 
             logger.info("{} STEP E: Sending code to Judge0 for execution.", logPrefix);
-
             SubmissionResultDTO tempResult = judge0Service.executeCode(fullCode, submission.getLanguage().getSlug(), allTestCases, matchId);
-
             logger.info("{}   - Execution complete. Status: {}, Runtime: {}ms, Memory: {}KB", logPrefix,
                     tempResult.getStatus(), tempResult.getRuntimeMs(), tempResult.getMemoryKb());
 
             logger.info("{} STEP F: Persisting final result to the database.", logPrefix);
-
             submission.setStatus(tempResult.getStatus());
             submission.setRuntimeMs(tempResult.getRuntimeMs());
             submission.setMatchId(tempResult.getMatchId());
@@ -195,7 +160,6 @@ public class SubmissionServiceImpl implements SubmissionService {
             Submission savedSubmission = submissionRepository.save(submission);
 
             logger.info("{} STEP G: Sending WebSocket notification.", logPrefix);
-
             SubmissionResultDTO finalResult = SubmissionResultDTO.fromEntity(savedSubmission);
 
             if (matchId != null) {
@@ -212,7 +176,6 @@ public class SubmissionServiceImpl implements SubmissionService {
             }
 
             notificationService.notifyUser(submission.getUserId(), submission.getId(), finalResult);
-
             logger.info("{} <- Processing workflow completed successfully.", logPrefix);
 
         } catch (Exception e) {
@@ -220,7 +183,6 @@ public class SubmissionServiceImpl implements SubmissionService {
             handleProcessingError(submission, e, logPrefix);
         }
     }
-
 
     private void handleProcessingError(Submission submission, Exception e, String logPrefix) {
         logger.debug("{} Entering error handling block.", logPrefix);
@@ -241,19 +203,16 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public Page<Submission> getSubmissionsForProblemAndUser(UUID problemId, Long userId, Pageable pageable) {
         return submissionRepository.findByProblemIdAndUserIdOrderByCreatedAtDesc(problemId, userId, pageable);
     }
 
-
     @Override
     public SubmissionDetailsDTO getSubmissionDetails(UUID submissionId) {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new EntityNotFoundException("Submission not found with id: " + submissionId));
-
 
         Problem problem = problemRepository.findById(submission.getProblemId())
                 .orElseThrow(() -> new EntityNotFoundException("Problem not found with id: " + submission.getProblemId()));
