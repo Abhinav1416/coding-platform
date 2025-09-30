@@ -1,5 +1,7 @@
 package com.Abhinav.backend.features.AWS.service;
 
+
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import com.Abhinav.backend.features.judge0.service.Judge0Service;
 import com.Abhinav.backend.features.problem.dto.SampleTestCaseDTO;
 import com.Abhinav.backend.features.problem.model.Problem;
@@ -42,6 +44,11 @@ public class S3Service {
     @Value("${aws.s3.test-case-cache-ttl-minutes}")
     private long testCaseCacheTtlMinutes;
 
+    @Value("${problem.upload.max-size-kb}")
+    private long maxUploadSizeKb;
+
+
+
     public S3Service(S3Presigner s3Presigner, S3Client s3Client, ObjectMapper objectMapper, RedisTemplate<String, Object> redisTemplate) {
         this.s3Presigner = s3Presigner;
         this.s3Client = s3Client;
@@ -49,10 +56,13 @@ public class S3Service {
         this.redisTemplate = redisTemplate;
     }
 
+
+
     @PostConstruct
     public void checkBucketNameProperty() {
         logger.info("S3Service is configured to use S3 bucket: '{}'", this.bucketName);
     }
+
 
     public String generatePresignedUploadUrl(String objectKey) {
         logger.debug("Generating presigned URL for objectKey: {}", objectKey);
@@ -72,6 +82,7 @@ public class S3Service {
         return presignedRequest.url().toString();
     }
 
+
     public boolean doesObjectExist(String objectKey) {
         try {
             HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
@@ -86,6 +97,7 @@ public class S3Service {
             return false;
         }
     }
+
 
     public void deleteObject(String objectKey, UUID problemId) {
         try {
@@ -108,6 +120,7 @@ public class S3Service {
             throw new RuntimeException("Failed to delete S3 object: " + objectKey, e);
         }
     }
+
 
     @SuppressWarnings("unchecked")
     public List<Judge0Service.TestCase> getOrFetchAllTestCases(Problem problem) {
@@ -151,6 +164,7 @@ public class S3Service {
 
         return allTestCases;
     }
+
 
     private List<Judge0Service.TestCase> downloadAndParseHiddenTestCases(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {

@@ -1,6 +1,10 @@
 package com.Abhinav.backend.features.problem.service;
 
 import com.Abhinav.backend.features.AWS.service.S3Service;
+import com.Abhinav.backend.features.admin.model.PermissionType;
+import com.Abhinav.backend.features.admin.model.TemporaryPermission;
+import com.Abhinav.backend.features.admin.repository.TemporaryPermissionRepository;
+import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.exception.AuthorizationException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
 import com.Abhinav.backend.features.problem.dto.*;
@@ -17,9 +21,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +38,7 @@ public class ProblemServiceImpl implements ProblemService {
     private final ObjectMapper objectMapper;
     private final TagRepository tagRepository;
     private final ProblemRepository problemRepository;
+    private final TemporaryPermissionRepository permissionRepository;
     private static final Logger logger = LoggerFactory.getLogger(ProblemServiceImpl.class);
 
 
@@ -48,7 +55,19 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Override
     @Transactional
-    public ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, Long userId) {
+    public ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, AuthenticationUser user) {
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            // This query specifically looks for 'CREATE_PROBLEM' permission type
+            TemporaryPermission permission = permissionRepository.findActiveCreatePermissionForUser(user.getId(), LocalDateTime.now())
+                    .orElseThrow(() -> new AccessDeniedException("User does not have a valid permission to create a problem."));
+
+            permission.setConsumed(true);
+            permissionRepository.save(permission);
+        }
+
         if (getTotalProblemCount().getTotalCount() >= problemLimit) {
             throw new IllegalStateException(
                     "Problem creation limit reached. Cannot create more than " + problemLimit + " problems."
@@ -74,7 +93,7 @@ public class ProblemServiceImpl implements ProblemService {
         problem.setPoints(requestDto.getPoints());
         problem.setTimeLimitMs(requestDto.getTimeLimitMs());
         problem.setMemoryLimitKb(requestDto.getMemoryLimitKb());
-        problem.setAuthorId(userId);
+        problem.setAuthorId(user.getId());
         problem.setTags(problemTags);
         problem.setStatus(ProblemStatus.PENDING_TEST_CASES);
 
@@ -85,7 +104,6 @@ public class ProblemServiceImpl implements ProblemService {
         }
 
         Problem savedProblem = problemRepository.save(problem);
-
 
         String s3Key = "testcases/" + savedProblem.getId().toString() + "/hidden_test_cases.zip";
         String uploadUrl = s3Service.generatePresignedUploadUrl(s3Key);
@@ -100,9 +118,19 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Override
     @Transactional
-    public ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key) {
+    public ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key, AuthenticationUser user) {
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Problem with ID '" + problemId + "' not found."));
+
+        // --- AUTHORIZATION LOGIC START ---
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        // Only the problem's original author or an admin can finalize it.
+        if (!isAdmin && !problem.getAuthorId().equals(user.getId())) {
+            throw new AuthorizationException("User is not authorized to finalize this problem.");
+        }
+        // --- AUTHORIZATION LOGIC END ---
 
         if (problem.getStatus() != ProblemStatus.PENDING_TEST_CASES) {
             throw new IllegalStateException("Problem is not in PENDING_TEST_CASES state and cannot be finalized.");
@@ -122,12 +150,24 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Override
     @Transactional
-    public void deleteProblem(UUID problemId, Long authorId) {
+    public void deleteProblem(UUID problemId, AuthenticationUser author) {
+        boolean isAdmin = author.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Problem not found with id: " + problemId));
 
-        if (!problem.getAuthorId().equals(authorId)) {
-            throw new AuthorizationException("User is not authorized to delete this problem.");
+        if (!isAdmin) {
+            // User must be the author to even check for a permission
+            if (!problem.getAuthorId().equals(author.getId())) {
+                throw new AuthorizationException("User is not authorized to delete this problem.");
+            }
+            // Check for a specific DELETE_PROBLEM permission for this problem
+            TemporaryPermission permission = permissionRepository.findActivePermissionForProblem(author.getId(), problemId, PermissionType.DELETE_PROBLEM, LocalDateTime.now())
+                    .orElseThrow(() -> new AccessDeniedException("User does not have a valid permission to delete this specific problem."));
+
+            permission.setConsumed(true);
+            permissionRepository.save(permission);
         }
 
         String s3Key = problem.getHiddenTestCasesS3Key();
@@ -178,12 +218,26 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Override
     @Transactional
-    public ProblemDetailResponse updateProblem(UUID problemId, ProblemUpdateRequest requestDto, Long authorId) {
+    public ProblemDetailResponse updateProblem(UUID problemId, ProblemUpdateRequest requestDto, AuthenticationUser author) {
+        boolean isAdmin = author.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() -> new NoSuchElementException("Problem with ID '" + problemId + "' not found."));
-        if (!problem.getAuthorId().equals(authorId)) {
-            throw new IllegalStateException("User is not authorized to edit this problem.");
+
+        if (!isAdmin) {
+            // User must be the author to even check for a permission
+            if (!problem.getAuthorId().equals(author.getId())) {
+                throw new AuthorizationException("User is not authorized to edit this problem.");
+            }
+            // Check for a specific UPDATE_PROBLEM permission for this problem
+            TemporaryPermission permission = permissionRepository.findActivePermissionForProblem(author.getId(), problemId, PermissionType.UPDATE_PROBLEM, LocalDateTime.now())
+                    .orElseThrow(() -> new AccessDeniedException("User does not have a valid permission to update this specific problem."));
+
+            permission.setConsumed(true);
+            permissionRepository.save(permission);
         }
+
         if (requestDto.getTitle() != null) problem.setTitle(requestDto.getTitle());
         if (requestDto.getSlug() != null) problem.setSlug(requestDto.getSlug());
         if (requestDto.getDescription() != null) problem.setDescription(requestDto.getDescription());

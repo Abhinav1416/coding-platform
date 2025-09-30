@@ -1,12 +1,8 @@
 package com.Abhinav.backend.features.problem.service;
 
+import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.problem.dto.*;
 import org.springframework.data.domain.Pageable;
-// REMOVED: No longer need MultipartFile
-// import org.springframework.web.multipart.MultipartFile;
-
-// REMOVED: No longer need IOException
-// import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,10 +14,10 @@ public interface ProblemService {
      * details for the test case upload.
      *
      * @param requestDto The DTO containing all initial problem data.
-     * @param userId The ID of the authenticated user creating the problem.
+     * @param user The authenticated user creating the problem.
      * @return A DTO with the new problem's ID and the upload URL.
      */
-    ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, Long userId);
+    ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, AuthenticationUser user);
 
     /**
      * Handles the second phase of problem creation. It saves the S3 key of the
@@ -29,9 +25,10 @@ public interface ProblemService {
      *
      * @param problemId The ID of the problem to finalize.
      * @param s3Key The key of the .zip file uploaded to S3.
+     * @param user The authenticated user finalizing the problem (for authorization).
      * @return The fully created and published Problem entity.
      */
-    ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key);
+    ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key, AuthenticationUser user);
 
     /**
      * Finds a single problem by its URL-friendly slug.
@@ -56,18 +53,18 @@ public interface ProblemService {
      *
      * @param problemId The ID of the problem to update.
      * @param requestDto The DTO containing the fields to update.
-     * @param authorId The ID of the user attempting the update (for authorization).
+     * @param author The user attempting the update (for authorization).
      * @return A DTO of the updated problem.
      */
-    ProblemDetailResponse updateProblem(UUID problemId, ProblemUpdateRequest requestDto, Long authorId);
+    ProblemDetailResponse updateProblem(UUID problemId, ProblemUpdateRequest requestDto, AuthenticationUser author);
 
     /**
      * Deletes a problem after verifying the author's identity.
      *
-     * @param problemId the UUID of the problem to delete
-     * @param authorId  the ID of the user attempting the deletion
+     * @param problemId the UUID of the problem to delete.
+     * @param author  the user attempting the deletion.
      */
-    void deleteProblem(UUID problemId, Long authorId);
+    void deleteProblem(UUID problemId, AuthenticationUser author);
 
     /**
      * Gets the total count of all problems.

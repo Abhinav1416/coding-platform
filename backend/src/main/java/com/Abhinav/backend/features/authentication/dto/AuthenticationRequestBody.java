@@ -5,7 +5,7 @@ import lombok.*;
 
 
 @Data
-@NoArgsConstructor // <-- ADD THIS ANNOTATION
+@NoArgsConstructor
 @AllArgsConstructor
 public class AuthenticationRequestBody {
     @NotBlank(message = "Email is mandatory")

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // <-- IMPORTANT IMPORT
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,10 +23,12 @@ public class SubmissionController {
 
     private final SubmissionService submissionService;
 
+
+
     @PostMapping
     public ResponseEntity<SubmissionResponse> createSubmission(
             @Valid @RequestBody SubmissionRequest request,
-            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+            @AuthenticationPrincipal AuthenticationUser user) {
 
         Submission submission = submissionService.createSubmission(request, user.getId());
 
@@ -41,7 +44,7 @@ public class SubmissionController {
     public ResponseEntity<PaginatedSubmissionResponse> getSubmissions(
             @PathVariable UUID problemId,
             Pageable pageable,
-            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+            @AuthenticationPrincipal AuthenticationUser user) {
 
         Page<Submission> submissionPage = submissionService.getSubmissionsForProblemAndUser(problemId, user.getId(), pageable);
 

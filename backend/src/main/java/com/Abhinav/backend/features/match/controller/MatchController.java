@@ -1,15 +1,17 @@
 package com.Abhinav.backend.features.match.controller;
 
+
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.match.dto.*;
 import com.Abhinav.backend.features.match.service.MatchService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // <-- IMPORTANT IMPORT
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.UUID;
+
 
 @RestController
 @RequestMapping("/api/duels")
@@ -23,7 +25,7 @@ public class MatchController {
     @PostMapping
     public ResponseEntity<CreateDuelResponse> createDuel(
             @Valid @RequestBody CreateDuelRequest request,
-            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+            @AuthenticationPrincipal AuthenticationUser user) {
 
         CreateDuelResponse response = matchService.createDuel(request, user.getId());
         return ResponseEntity.ok(response);
@@ -33,7 +35,7 @@ public class MatchController {
     @PostMapping("/join")
     public ResponseEntity<JoinDuelResponse> joinDuel(
             @Valid @RequestBody JoinDuelRequest request,
-            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
+            @AuthenticationPrincipal AuthenticationUser user) {
         JoinDuelResponse response = matchService.joinDuel(request, user.getId());
 
         return ResponseEntity.ok(response);

@@ -10,7 +10,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -21,13 +23,11 @@ public class ProblemController {
 
     private final ProblemService problemService;
 
-
-
     @PostMapping("/initiate")
     public ResponseEntity<ProblemInitiationResponse> initiateProblemCreation(
-            @RequestAttribute("authenticatedUser") AuthenticationUser user,
+            @AuthenticationPrincipal AuthenticationUser user,
             @Valid @RequestBody ProblemInitiationRequest requestDto) {
-        ProblemInitiationResponse response = problemService.initiateProblemCreation(requestDto, user.getId());
+        ProblemInitiationResponse response = problemService.initiateProblemCreation(requestDto, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -35,10 +35,30 @@ public class ProblemController {
     @PostMapping("/{problemId}/finalize")
     public ResponseEntity<ProblemDetailResponse> finalizeProblemCreation(
             @PathVariable UUID problemId,
-            @Valid @RequestBody FinalizeS3UploadRequest request) {
-        ProblemDetailResponse finalizedProblem = problemService.finalizeProblemCreation(problemId, request.getS3Key());
+            @Valid @RequestBody FinalizeS3UploadRequest request,
+            @AuthenticationPrincipal AuthenticationUser user) {
+        ProblemDetailResponse finalizedProblem = problemService.finalizeProblemCreation(problemId, request.getS3Key(), user);
         return ResponseEntity.ok(finalizedProblem);
     }
+
+    @PutMapping("/{problemId}")
+    public ResponseEntity<ProblemDetailResponse> updateProblem(
+            @PathVariable UUID problemId,
+            @Valid @RequestBody ProblemUpdateRequest requestDto,
+            @AuthenticationPrincipal AuthenticationUser user) {
+        ProblemDetailResponse updatedProblem = problemService.updateProblem(problemId, requestDto, user);
+        return ResponseEntity.ok(updatedProblem);
+    }
+
+
+    @DeleteMapping("/{problemId}")
+    public ResponseEntity<Void> deleteProblem(
+            @PathVariable UUID problemId,
+            @AuthenticationPrincipal AuthenticationUser author) {
+        problemService.deleteProblem(problemId, author);
+        return ResponseEntity.noContent().build();
+    }
+
 
 
     @GetMapping("/{slug}")
@@ -47,38 +67,14 @@ public class ProblemController {
         return ResponseEntity.ok(problemDto);
     }
 
-
     @GetMapping
     public ResponseEntity<PaginatedProblemResponse> getAllProblems(
             @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(required = false) List<String> tags,
             @RequestParam(defaultValue = "AND") String tagOperator) {
-
         PaginatedProblemResponse response = problemService.getAllProblems(pageable, tags, tagOperator);
         return ResponseEntity.ok(response);
     }
-
-
-    @PutMapping("/{problemId}")
-    public ResponseEntity<ProblemDetailResponse> updateProblem(
-            @PathVariable UUID problemId,
-            @Valid @RequestBody ProblemUpdateRequest requestDto,
-            @RequestAttribute("authenticatedUser") AuthenticationUser user) {
-
-        ProblemDetailResponse updatedProblem = problemService.updateProblem(problemId, requestDto, user.getId());
-        return ResponseEntity.ok(updatedProblem);
-    }
-
-
-    @DeleteMapping("/{problemId}")
-    public ResponseEntity<Void> deleteProblem(
-            @PathVariable UUID problemId,
-            @RequestAttribute("authenticatedUser") AuthenticationUser author) {
-
-        problemService.deleteProblem(problemId, author.getId());
-        return ResponseEntity.noContent().build();
-    }
-
 
     @GetMapping("/count")
     public ResponseEntity<ProblemCountResponse> getProblemCount() {
