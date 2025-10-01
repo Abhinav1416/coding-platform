@@ -1,29 +1,69 @@
 package com.Abhinav.backend.features.submission.repository;
 
+import com.Abhinav.backend.features.authentication.dto.SolvesByTagDto;
 import com.Abhinav.backend.features.submission.model.Submission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Repository
 public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
 
-    /**
-     * Finds all submissions for a given problem ID and user ID,
-     * ordered by creation time in descending order (newest first).
-     * Supports pagination.
-     *
-     * @param problemId the ID of the problem.
-     * @param userId the ID of the user.
-     * @param pageable the pagination information (page number, size).
-     * @return A paginated list of submissions.
-     */
     Page<Submission> findByProblemIdAndUserIdOrderByCreatedAtDesc(UUID problemId, Long userId, Pageable pageable);
 
-
     List<Submission> findByMatchIdOrderByCreatedAtAsc(UUID matchId);
+
+    // Add or replace these methods inside your existing SubmissionRepository interface
+
+    /**
+     * Native query for the GitHub-like heatmap.
+     * CORRECTED: Uses 'user_id' column to match your Submission entity.
+     */
+    @Query(value = """
+        SELECT CAST(s.created_at AS DATE) as date, COUNT(*) as count
+        FROM submissions s
+        WHERE s.user_id = :userId AND s.created_at >= (CURRENT_DATE - INTERVAL '1 year')
+        GROUP BY CAST(s.created_at AS DATE)
+        ORDER BY date ASC
+    """, nativeQuery = true)
+    List<Map<String, Object>> findUserActivityForHeatmap(@Param("userId") Long userId);
+
+    /**
+     * JPQL query to count the number of UNIQUE problems a user has solved successfully.
+     * CORRECTED: Uses 'userId' and 'problemId' fields directly, and assumes your SubmissionStatus enum has an 'ACCEPTED' value.
+     */
+    @Query("""
+        SELECT COUNT(DISTINCT s.problemId)
+        FROM Submission s
+        WHERE s.userId = :userId AND s.status = 'ACCEPTED'
+    """)
+    long countDistinctProblemsSolvedByUser(@Param("userId") Long userId);
+
+    /**
+     * Complex native query to count solved problems grouped by each tag.
+     * CORRECTED: Uses 'user_id' in the subquery to match your Submission entity.
+     */
+    @Query(value = """
+        SELECT
+            t.name as tagName,
+            COUNT(DISTINCT p.id) as solvedCount
+        FROM tags t
+        JOIN problem_tags pt ON t.id = pt.tag_id
+        JOIN problems p ON pt.problem_id = p.id
+        JOIN (
+            SELECT DISTINCT problem_id
+            FROM submissions
+            WHERE user_id = :userId AND status = 'ACCEPTED'
+        ) as solved_problems ON p.id = solved_problems.problem_id
+        GROUP BY t.name
+        ORDER BY solvedCount DESC, tagName ASC
+    """, nativeQuery = true)
+    List<SolvesByTagDto.SolvesByTagProjection> countSolvedProblemsByTagForUser(@Param("userId") Long userId);
 }

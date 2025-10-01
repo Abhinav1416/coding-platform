@@ -50,6 +50,8 @@ public class SecurityConfig {
                                 "/api/v1/authentication/refresh-access-token"
                         ).permitAll()
 
+                        .requestMatchers("/api/internal/**").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/api/v1/problems/**").permitAll()
 
                         .anyRequest().authenticated()

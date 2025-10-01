@@ -21,7 +21,7 @@ services:
       - '4566:4566'
       - '4510-4559:4510-4559'
     environment:
-      - SERVICES=s3,sqs,lambda
+      - SERVICES=s3,sqs,lambda,iam,logs
       - AWS_DEFAULT_REGION=ap-southeast-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test

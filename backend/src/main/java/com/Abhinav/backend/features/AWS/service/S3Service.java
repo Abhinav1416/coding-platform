@@ -122,6 +122,39 @@ public class S3Service {
     }
 
 
+    public String moveObject(String sourceKey, String destinationKey) {
+        logger.info("Moving S3 object from '{}' to '{}'", sourceKey, destinationKey);
+
+        try {
+            CopyObjectRequest copyReq = CopyObjectRequest.builder()
+                    .sourceBucket(bucketName)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(bucketName)
+                    .destinationKey(destinationKey)
+                    .build();
+
+            s3Client.copyObject(copyReq);
+            logger.debug("Successfully copied object to '{}'", destinationKey);
+
+            DeleteObjectRequest deleteReq = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(sourceKey)
+                    .build();
+
+            s3Client.deleteObject(deleteReq);
+            logger.debug("Successfully deleted original object at '{}'", sourceKey);
+
+            return destinationKey;
+
+        } catch (S3Exception e) {
+            logger.error("Failed to move S3 object from '{}' to '{}'", sourceKey, destinationKey, e);
+            // Depending on your error handling, you might want to check if the destination object exists and clean up.
+            // For now, we re-throw a runtime exception.
+            throw new RuntimeException("Error moving S3 object", e);
+        }
+    }
+
+
     @SuppressWarnings("unchecked")
     public List<Judge0Service.TestCase> getOrFetchAllTestCases(Problem problem) {
         String cacheKey = "testcases:problem:" + problem.getId().toString();

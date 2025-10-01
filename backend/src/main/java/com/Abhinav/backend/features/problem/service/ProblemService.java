@@ -20,15 +20,24 @@ public interface ProblemService {
     ProblemInitiationResponse initiateProblemCreation(ProblemInitiationRequest requestDto, AuthenticationUser user);
 
     /**
-     * Handles the second phase of problem creation. It saves the S3 key of the
-     * uploaded test cases and updates the problem's status to 'PUBLISHED'.
+     * MODIFIED: This is now an internal method called by an automated process (e.g., AWS Lambda)
+     * after a successful S3 upload. It finalizes the problem by moving the S3 object
+     * and updating the problem's status to 'PUBLISHED'.
      *
      * @param problemId The ID of the problem to finalize.
-     * @param s3Key The key of the .zip file uploaded to S3.
-     * @param user The authenticated user finalizing the problem (for authorization).
-     * @return The fully created and published Problem entity.
+     * @param providedSecret A secret key to ensure the caller is trusted.
      */
-    ProblemDetailResponse finalizeProblemCreation(UUID problemId, String s3Key, AuthenticationUser user);
+    void finalizeProblem(UUID problemId, String providedSecret);
+
+
+    /**
+     * ADDED: A new method to be called by the Redis listener when a pending problem's
+     * TTL expires. It handles the deletion of the abandoned problem record.
+     *
+     * @param problemId The ID of the expired pending problem to clean up.
+     */
+    void cleanupPendingProblem(UUID problemId);
+
 
     /**
      * Finds a single problem by its URL-friendly slug.

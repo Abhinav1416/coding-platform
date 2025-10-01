@@ -31,15 +31,8 @@ public class ProblemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-
-    @PostMapping("/{problemId}/finalize")
-    public ResponseEntity<ProblemDetailResponse> finalizeProblemCreation(
-            @PathVariable UUID problemId,
-            @Valid @RequestBody FinalizeS3UploadRequest request,
-            @AuthenticationPrincipal AuthenticationUser user) {
-        ProblemDetailResponse finalizedProblem = problemService.finalizeProblemCreation(problemId, request.getS3Key(), user);
-        return ResponseEntity.ok(finalizedProblem);
-    }
+    // REMOVED: The POST /{problemId}/finalize endpoint is no longer needed
+    // as this process is now handled automatically by the S3 -> Lambda trigger.
 
     @PutMapping("/{problemId}")
     public ResponseEntity<ProblemDetailResponse> updateProblem(
