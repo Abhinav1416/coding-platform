@@ -21,7 +21,7 @@ public class JwtService {
     @Value("${jwt.secret.key}")
     private String secret;
 
-    private static final long ACCESS_TOKEN_EXPIRATION = 20 * 60 * 1000; // 20 min
+    private static final long ACCESS_TOKEN_EXPIRATION = 10 * 1000; // 2 min
     private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     // --- Core Public Methods ---

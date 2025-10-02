@@ -86,6 +86,7 @@ public class AuthenticationService {
         return generateTokensForUser(user);
     }
 
+
     public void sendEmailVerificationToken(String email) {
         AuthenticationUser user = authenticationUserRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User with the specified email was not found."));

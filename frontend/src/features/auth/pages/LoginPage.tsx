@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../core/context/ThemeContext';
 import type { AuthResponse } from "../types/auth";
@@ -8,11 +9,35 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const handleAuthenticated = (data: AuthResponse) => {
-    console.log('Authentication successful:', data.accessToken);
-    // In a real app, you would save the tokens to your AuthContext here
+  useEffect(() => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+      navigate('/home', { replace: true });
+    }
+  }, []);
+
+// In your LoginPage.tsx file
+
+const handleAuthenticated = (data: AuthResponse) => {
+  // Log 1: Show the raw data received from the login API call
+  console.log("1. Data received by handleAuthenticated:", data);
+
+  if (data.accessToken && data.refreshToken) {
+    // Log 2: Confirm that we are entering the 'if' block
+    console.log("2. Both tokens found. Attempting to save...");
+    
+    // Log 3: Show the exact token being saved
+    console.log("3. Saving refreshToken:", data.refreshToken);
+
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    
     navigate('/home');
-  };
+  } else {
+    // Log 4: This will run if the tokens are missing
+    console.error("4. ERROR: One or both tokens were missing from the response data.");
+  }
+};
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-100'}`}>
