@@ -9,23 +9,27 @@ import com.Abhinav.backend.features.authentication.repository.RoleRepository;
 import com.Abhinav.backend.features.authentication.utils.EmailService;
 import com.Abhinav.backend.features.authentication.utils.JwtService;
 import com.Abhinav.backend.features.authentication.utils.PasswordValidator;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class AuthenticationService {
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
     private final int DURATION_IN_MINUTES = 10;
-
 
     private final AuthenticationUserRepository authenticationUserRepository;
     private final RoleRepository roleRepository;
@@ -33,18 +37,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
-
-
-
-    public AuthenticationService(AuthenticationUserRepository authenticationUserRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, JwtService jwtService, EmailService emailService, AuthenticationManager authenticationManager) {
-        this.authenticationUserRepository = authenticationUserRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.emailService = emailService;
-        this.authenticationManager = authenticationManager;
-    }
-
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public AuthenticationResponseBody register(RegisterRequest request) {
         if (authenticationUserRepository.findByEmail(request.email()).isPresent()) {
@@ -53,53 +46,54 @@ public class AuthenticationService {
         if (!PasswordValidator.isValid(request.password())) {
             throw new IllegalArgumentException("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.");
         }
-
         var user = new AuthenticationUser();
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-
         Role userRole = roleRepository.findByName(RoleType.ROLE_USER)
                 .orElseThrow(() -> new IllegalStateException("ROLE_USER not found in database."));
-
         user.setRoles(new HashSet<>(Set.of(userRole)));
-
         AuthenticationUser savedUser = authenticationUserRepository.save(user);
         sendEmailVerificationToken(savedUser.getEmail());
-
         return new AuthenticationResponseBody(null, null, "User registered successfully. Please check your email to verify your account.");
     }
-
 
     public AuthenticationResponseBody login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
-
         AuthenticationUser user = getUser(request.email());
-
         if (user.getTwoFactorEnabled()) {
             String code = generateAndSaveTwoFactorCode(user);
             emailService.sendTwoFactorCode(user.getEmail(), code);
             return new AuthenticationResponseBody(null, null, "2FA code sent to your email.");
         }
-
         return generateTokensForUser(user);
     }
 
+    public void logout(String token) {
+        Date expirationDate = jwtService.extractExpiration(token);
+        long remainingMillis = expirationDate.getTime() - System.currentTimeMillis();
+        if (remainingMillis > 0) {
+            String redisKey = "blocklist:" + token;
+            redisTemplate.opsForValue().set(
+                    redisKey,
+                    "logged_out",
+                    Duration.ofMillis(remainingMillis)
+            );
+            logger.info("Token blocklisted for logout. Key: {}", redisKey);
+        }
+    }
 
     public void sendEmailVerificationToken(String email) {
         AuthenticationUser user = authenticationUserRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User with the specified email was not found."));
-
         if (Boolean.TRUE.equals(user.getEmailVerified())) {
             throw new IllegalArgumentException("This email address has already been verified.");
         }
-
         String emailVerificationToken = generateRandomToken();
         user.setEmailVerificationToken(passwordEncoder.encode(emailVerificationToken));
         user.setEmailVerificationTokenExpiryDate(LocalDateTime.now().plusMinutes(DURATION_IN_MINUTES));
         authenticationUserRepository.save(user);
-
         try {
             String subject = "Email Verification";
             String body = "Your verification code is: " + emailVerificationToken;
@@ -128,12 +122,10 @@ public class AuthenticationService {
     public void sendPasswordResetToken(String email) {
         AuthenticationUser user = authenticationUserRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User with the specified email was not found."));
-
         String passwordResetToken = generateRandomToken();
         user.setPasswordResetToken(passwordEncoder.encode(passwordResetToken));
         user.setPasswordResetTokenExpiryDate(LocalDateTime.now().plusMinutes(DURATION_IN_MINUTES));
         authenticationUserRepository.save(user);
-
         try {
             String subject = "Password Reset";
             String body = "Your password reset code is: " + passwordResetToken;
@@ -158,7 +150,6 @@ public class AuthenticationService {
         if (!PasswordValidator.isValid(newPassword)) {
             throw new IllegalArgumentException("Password does not meet strength requirements.");
         }
-
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetToken(null);
         user.setPasswordResetTokenExpiryDate(null);
@@ -167,7 +158,6 @@ public class AuthenticationService {
 
     public AuthenticationResponseBody verifyTwoFactor(TwoFactorRequest request) {
         AuthenticationUser user = getUser(request.getEmail());
-
         if (!Boolean.TRUE.equals(user.isTwoFactorTokenRequested())) {
             throw new IllegalArgumentException("You must login first before verifying 2FA.");
         }
@@ -179,7 +169,6 @@ public class AuthenticationService {
         if (!user.getTwoFactorToken().equals(request.getToken())) {
             throw new IllegalArgumentException("Invalid 2FA code.");
         }
-
         user.setTwoFactorToken(null);
         user.setTwoFactorTokenExpiryDate(null);
         user.setTwoFactorTokenRequested(false);
@@ -190,13 +179,11 @@ public class AuthenticationService {
     public AuthenticationResponseBody refreshAccessToken(String refreshToken) {
         String email = jwtService.extractUsername(refreshToken);
         AuthenticationUser user = getUser(email);
-
         if (!jwtService.isTokenValid(refreshToken, user) || !refreshToken.equals(user.getRefreshToken())) {
             user.setRefreshToken(null);
             authenticationUserRepository.save(user);
             throw new IllegalArgumentException("Invalid or expired refresh token. Please log in again.");
         }
-
         String newAccessToken = jwtService.generateAccessToken(user);
         return new AuthenticationResponseBody(newAccessToken, refreshToken, "Access token refreshed successfully.");
     }
@@ -214,10 +201,8 @@ public class AuthenticationService {
     public AuthenticationResponseBody generateTokensForUser(AuthenticationUser user) {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-
         user.setRefreshToken(refreshToken);
         authenticationUserRepository.save(user);
-
         return new AuthenticationResponseBody(accessToken, refreshToken, "Authentication succeeded.");
     }
 

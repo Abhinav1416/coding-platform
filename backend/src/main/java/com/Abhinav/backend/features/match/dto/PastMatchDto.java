@@ -1,0 +1,20 @@
+package com.Abhinav.backend.features.match.dto;
+
+import com.Abhinav.backend.features.match.model.MatchStatus;
+import lombok.Builder;
+import lombok.Data;
+
+import java.time.Instant;
+import java.util.UUID;
+
+@Data
+@Builder
+public class PastMatchDto {
+    private UUID matchId;
+    private MatchStatus status;
+    private String result;
+    private Long opponentId;
+    private UUID problemId;
+    private Instant endedAt;
+    private Instant createdAt;
+}

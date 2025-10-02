@@ -3,7 +3,7 @@ package com.Abhinav.backend.features.match.service;
 import com.Abhinav.backend.features.match.dto.LiveMatchStateDTO;
 import com.Abhinav.backend.features.match.model.Match;
 import com.Abhinav.backend.features.match.model.MatchStatus;
-import com.Abhinav.backend.features.match.repository.LiveMatchStateRepository; // <-- Import this
+import com.Abhinav.backend.features.match.repository.LiveMatchStateRepository;
 import com.Abhinav.backend.features.match.repository.MatchRepository;
 import com.Abhinav.backend.features.problem.repository.ProblemRepository;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +76,7 @@ public class MatchScheduler {
                     .durationInMinutes(match.getDurationInMinutes())
                     .build();
 
+            // Reverted to call the original .save() method
             liveMatchStateRepository.save(liveState);
 
             log.info("Successfully started match ID: {}. Problem ID: {}. Live state created in Redis.", match.getId(), problemId);

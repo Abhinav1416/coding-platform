@@ -21,28 +21,27 @@ public class JwtService {
     @Value("${jwt.secret.key}")
     private String secret;
 
-    private static final long ACCESS_TOKEN_EXPIRATION = 10 * 1000; // 2 min
+    private static final long ACCESS_TOKEN_EXPIRATION = 30 * 60 * 1000; // 30 min
     private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-    // --- Core Public Methods ---
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
     public String generateAccessToken(UserDetails userDetails) {
-        // This method will now automatically include the user's roles
         Map<String, Object> extraClaims = new HashMap<>();
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
         extraClaims.put("roles", roles);
-
         return buildToken(extraClaims, userDetails, ACCESS_TOKEN_EXPIRATION);
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        // Refresh tokens typically don't need extra claims
         return buildToken(new HashMap<>(), userDetails, REFRESH_TOKEN_EXPIRATION);
     }
 
@@ -50,8 +49,6 @@ public class JwtService {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
-
-    // --- Private Helper Methods ---
 
     private SecretKey getKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
@@ -73,10 +70,6 @@ public class JwtService {
 
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

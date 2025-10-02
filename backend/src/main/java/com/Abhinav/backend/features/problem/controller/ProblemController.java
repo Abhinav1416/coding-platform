@@ -23,6 +23,8 @@ public class ProblemController {
 
     private final ProblemService problemService;
 
+
+
     @PostMapping("/initiate")
     public ResponseEntity<ProblemInitiationResponse> initiateProblemCreation(
             @AuthenticationPrincipal AuthenticationUser user,
@@ -31,8 +33,6 @@ public class ProblemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // REMOVED: The POST /{problemId}/finalize endpoint is no longer needed
-    // as this process is now handled automatically by the S3 -> Lambda trigger.
 
     @PutMapping("/{problemId}")
     public ResponseEntity<ProblemDetailResponse> updateProblem(
