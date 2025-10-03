@@ -43,7 +43,6 @@ public class MatchServiceImpl implements MatchService {
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
     private final UserStatsRepository userStatsRepository;
-    private final LeaderboardService leaderboardService; // <-- 1. INJECT THE LEADERBOARD SERVICE
     public static final long PENALTY_MINUTES = 5;
 
     @Value("${app.frontend.url}")
@@ -176,9 +175,6 @@ public class MatchServiceImpl implements MatchService {
         if (isDraw) { p1Stats.setDuelsDrawn(p1Stats.getDuelsDrawn() + 1); p2Stats.setDuelsDrawn(p2Stats.getDuelsDrawn() + 1); } else { if (winnerId.equals(p1Id)) { p1Stats.setDuelsWon(p1Stats.getDuelsWon() + 1); p2Stats.setDuelsLost(p2Stats.getDuelsLost() + 1); } else { p2Stats.setDuelsWon(p2Stats.getDuelsWon() + 1); p1Stats.setDuelsLost(p1Stats.getDuelsLost() + 1); } }
         userStatsRepository.saveAll(Arrays.asList(p1Stats, p2Stats));
         log.info("{} User stats updated for both players.", logPrefix);
-
-        leaderboardService.evictLeaderboardCache(); // <-- 2. EVICT THE LEADERBOARD CACHE
-
         liveMatchStateRepository.deleteById(matchId);
         log.info("{} Live state for match removed from Redis.", logPrefix);
         log.info("{} <- Match completion process finished successfully.", logPrefix);

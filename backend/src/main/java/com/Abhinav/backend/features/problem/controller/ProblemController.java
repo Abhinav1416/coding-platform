@@ -74,4 +74,11 @@ public class ProblemController {
         ProblemCountResponse countResponse = problemService.getTotalProblemCount();
         return ResponseEntity.ok(countResponse);
     }
+
+
+    @GetMapping("/{problemId}/status")
+    public ResponseEntity<ProblemStatusDto> getProblemStatus(@PathVariable UUID problemId) {
+        ProblemStatusDto statusDto = problemService.getProblemStatus(problemId);
+        return ResponseEntity.ok(statusDto);
+    }
 }

@@ -316,7 +316,15 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Override
     public ProblemCountResponse getTotalProblemCount() {
-        long count = problemRepository.count();
+        long count = problemRepository.countByStatus(ProblemStatus.PUBLISHED);
         return new ProblemCountResponse(count);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProblemStatusDto getProblemStatus(UUID problemId) {
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Problem with ID '" + problemId + "' not found."));
+        return new ProblemStatusDto(problem.getStatus());
     }
 }

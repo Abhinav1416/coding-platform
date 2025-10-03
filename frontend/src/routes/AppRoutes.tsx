@@ -2,28 +2,39 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import RegisterPage from "../features/auth/pages/RegisterPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ForgotPasswordPage from "../features/auth/pages/ForgotPasswordPage";
-
 import NotFoundPage from "../pages/NotFound";
-import HomePage from "../pages/Home";
+import Home from "../pages/Home";
 import MainLayout from "../components/layout/MainLayout";
+import ProblemsPage from "../features/problem/pages/ProblemsPage";
+import AdminRoute from "../core/components/AdminRoute";
+import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
+
 
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        {/* Public Routes (no layout) */}
+
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* Protected/Layout Routes */}
-        <Route path="/home" element={<MainLayout><HomePage /></MainLayout>} />
-        <Route path="/problems" element={<MainLayout><div>Problems Page Content</div></MainLayout>} />
+        <Route element={<AdminRoute />}>
+          <Route 
+            path="/admin" 
+            element={<MainLayout><AdminDashboardPage /></MainLayout>} 
+          />
+        </Route>
+
+
+        <Route path="/home" element={<MainLayout><Home /></MainLayout>} />
+        <Route path="/problems" element={<MainLayout><ProblemsPage /></MainLayout>} />
+        <Route path="/problems/:slug" element={<MainLayout><div>Individual Problem Detail Page</div></MainLayout>} />
         <Route path="/matches" element={<MainLayout><div>Matches Page Content</div></MainLayout>} />
         <Route path="/profile" element={<MainLayout><div>Profile Page Content</div></MainLayout>} />
 
-        {/* 404 Page */}
+
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>

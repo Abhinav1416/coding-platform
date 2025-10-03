@@ -1,6 +1,7 @@
 package com.Abhinav.backend.features.problem.repository;
 
 import com.Abhinav.backend.features.problem.model.Problem;
+import com.Abhinav.backend.features.problem.model.ProblemStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -65,4 +66,7 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
             @Param("playerOneId") Long playerOneId,
             @Param("playerTwoId") Long playerTwoId
     );
+
+
+    long countByStatus(ProblemStatus status);
 }

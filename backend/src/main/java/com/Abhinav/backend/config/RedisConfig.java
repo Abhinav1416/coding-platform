@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching; // <-- ADDITION
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -25,10 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
-@EnableCaching
 public class RedisConfig {
-
-    public static final String LEADERBOARD_CACHE = "leaderboard";
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -54,6 +50,7 @@ public class RedisConfig {
 
     @Bean
     public RedisMessageListenerContainer keyExpirationListenerContainer(RedisConnectionFactory connectionFactory, ProblemService problemService) {
+        // ... no changes to this method ...
         RedisMessageListenerContainer listenerContainer = new RedisMessageListenerContainer();
         listenerContainer.setConnectionFactory(connectionFactory);
         listenerContainer.addMessageListener(
@@ -78,19 +75,10 @@ public class RedisConfig {
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer));
 
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
-
-        // Your existing configuration for "userProfiles"
         cacheConfigurations.put(
                 "userProfiles",
                 defaultConfig.entryTtl(Duration.ofMinutes(30))
         );
-
-        // <-- ADDITION: New configuration for the leaderboard cache with a 10-minute TTL
-        cacheConfigurations.put(
-                LEADERBOARD_CACHE,
-                defaultConfig.entryTtl(Duration.ofMinutes(10))
-        );
-
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)

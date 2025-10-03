@@ -81,4 +81,7 @@ public interface ProblemService {
      * @return A DTO containing the total problem count.
      */
     ProblemCountResponse getTotalProblemCount();
+
+
+    ProblemStatusDto getProblemStatus(UUID problemId);
 }
