@@ -28,7 +28,6 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // 1. Get the refresh token from local storage.
         const refreshToken = localStorage.getItem('refreshToken');
 
         if (!refreshToken) {
@@ -36,10 +35,9 @@ api.interceptors.response.use(
             throw new Error("No refresh token"); 
         }
 
-        // 2. Make the refresh call, sending the token in the BODY.
         const refreshResponse = await axios.post(
           "http://localhost:8080/api/v1/authentication/refresh-access-token",
-          { refreshToken: refreshToken } // <-- THE FIX IS HERE
+          { refreshToken: refreshToken }
         );
         
         const { accessToken } = refreshResponse.data;
@@ -51,7 +49,6 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error("Token refresh failed, logging out:", refreshError);
         localStorage.removeItem('accessToken');
-        // Also remove the failed refresh token
         localStorage.removeItem('refreshToken'); 
         
         window.location.href = '/login?sessionExpired=true';

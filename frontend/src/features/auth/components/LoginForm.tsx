@@ -24,7 +24,6 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
     handleVerifySubmit,
   } = useLogin(onAuthenticated);
 
-  // ... (styles and 2FA step are unchanged) ...
   const inputClasses =
     theme === 'dark'
       ? 'bg-slate-700 text-white border-slate-600 placeholder-slate-400 focus:ring-indigo-500 focus:border-indigo-500'
@@ -33,7 +32,6 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
 
   if (step === 'verify-2fa') {
     return (
-      // The 2FA verification form remains the same
       <div className="w-full">
         <div className="text-center mb-6">
           <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Enter 2FA Code</h2>

@@ -16,17 +16,15 @@ const LoginPage = () => {
     }
   }, []);
 
-// In your LoginPage.tsx file
+
 
 const handleAuthenticated = (data: AuthResponse) => {
-  // Log 1: Show the raw data received from the login API call
   console.log("1. Data received by handleAuthenticated:", data);
 
   if (data.accessToken && data.refreshToken) {
-    // Log 2: Confirm that we are entering the 'if' block
     console.log("2. Both tokens found. Attempting to save...");
     
-    // Log 3: Show the exact token being saved
+
     console.log("3. Saving refreshToken:", data.refreshToken);
 
     localStorage.setItem('accessToken', data.accessToken);
@@ -34,7 +32,6 @@ const handleAuthenticated = (data: AuthResponse) => {
     
     navigate('/home');
   } else {
-    // Log 4: This will run if the tokens are missing
     console.error("4. ERROR: One or both tokens were missing from the response data.");
   }
 };

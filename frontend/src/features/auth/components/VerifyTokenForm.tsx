@@ -49,7 +49,7 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
   };
 
   const handleResendToken = async () => {
-    if (cooldown > 0) return; // guard
+    if (cooldown > 0) return;
     setError('');
     setSuccessMessage('');
     setResending(true);
@@ -58,7 +58,7 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
       setSuccessMessage(response.message || 'A new token has been sent.');
       setIsTokenExpired(false);
       setToken('');
-      setCooldown(30); // start 30s cooldown
+      setCooldown(30);
     } catch (err: any) {
       setError(err.message || 'Failed to resend token. Please try again.');
     } finally {
@@ -119,7 +119,6 @@ const VerifyTokenForm = ({ email, onVerified, theme }: Props) => {
               {loading ? 'Verifying...' : 'Verify Email'}
             </button>
 
-            {/* "Didn't receive token?" link with cooldown */}
             <button
               type="button"
               onClick={handleResendToken}

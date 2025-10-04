@@ -1,9 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-// Icons remain the same
 import { FaCode, FaTrophy, FaChartBar, FaAngleRight } from 'react-icons/fa';
 
-// --- TYPE DEFINITIONS for TypeScript ---
+
 type UserStats = {
   problemsSolved: number;
   duelsWon: number;
@@ -19,11 +18,9 @@ type Duel = {
   result: DuelResult;
   time: string;
 };
-// --- END TYPE DEFINITIONS ---
 
 
-// --- MOCK DATA ---
-// We apply our types to the mock data for type safety
+
 const userStats: UserStats = {
   problemsSolved: 42,
   duelsWon: 15,
@@ -35,7 +32,6 @@ const mockRecentDuels: Duel[] = [
   { id: 2, problem: 'Reverse Linked List', opponent: 'user_beta', result: 'Loss', time: '1d ago' },
   { id: 3, problem: 'FizzBuzz', opponent: 'user_gamma', result: 'Win', time: '2d ago' },
 ];
-// --- END MOCK DATA ---
 
 
 const Home: React.FC = () => {
@@ -43,7 +39,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="space-y-12">
-      {/* Section 1: Hero & Call to Action */}
       <section className="text-center bg-zinc-900/50 p-8 rounded-lg border border-white/10">
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
           Welcome Back, Coder!
@@ -53,7 +48,7 @@ const Home: React.FC = () => {
         </p>
         <div className="flex justify-center gap-4">
           <button 
-            onClick={() => alert('Navigate to Duel matchmaking page!')} // Replace with: navigate('/duel/new')
+            onClick={() => alert('Navigate to Duel matchmaking page!')}
             className="bg-[#F97316] hover:bg-[#EA580C] text-white font-bold py-3 px-6 rounded-md transition-transform transform hover:scale-105"
           >
             Start New Duel
@@ -66,12 +61,11 @@ const Home: React.FC = () => {
           </button>
         </div>
       </section>
-
-      {/* Section 2: User Stats */}
+      
       <section>
         <h2 className="text-2xl font-semibold mb-6 text-white">Your Stats</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Stat Card 1 */}
+      
           <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4">
             <FaCode className="text-[#F97316] text-3xl"/>
             <div>
@@ -79,7 +73,7 @@ const Home: React.FC = () => {
               <p className="text-2xl font-bold text-white">{userStats.problemsSolved}</p>
             </div>
           </div>
-          {/* Stat Card 2 */}
+      
           <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4">
             <FaTrophy className="text-[#F97316] text-3xl"/>
             <div>
@@ -87,7 +81,7 @@ const Home: React.FC = () => {
               <p className="text-2xl font-bold text-white">{userStats.duelsWon}</p>
             </div>
           </div>
-          {/* Stat Card 3 */}
+
           <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4">
             <FaChartBar className="text-[#F97316] text-3xl"/>
             <div>
@@ -98,7 +92,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Section 3: Recent Duels */}
+
       <section>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-white">Recent Duels</h2>

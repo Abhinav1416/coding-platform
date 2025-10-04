@@ -52,7 +52,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/internal/**").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/problems/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/problems/**").permitAll()
 
                         .anyRequest().authenticated()
                 )

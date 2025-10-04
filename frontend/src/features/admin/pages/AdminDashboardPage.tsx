@@ -9,7 +9,8 @@ import {
   type GrantScopedFormValues 
 } from '../types/admin';
 
-// Reusable Form Input Component
+
+
 const FormInput = ({ id, label, register, error, ...rest }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
@@ -23,7 +24,8 @@ const FormInput = ({ id, label, register, error, ...rest }: any) => (
   </div>
 );
 
-// Reusable Form Component for Scoped Permissions
+
+
 const GrantScopedPermissionForm: React.FC<{
   title: string;
   onSubmit: SubmitHandler<GrantScopedFormValues>;
@@ -73,7 +75,6 @@ const AdminDashboardPage: React.FC = () => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Grant Create Permission */}
         <div className="bg-zinc-900 p-6 rounded-lg border border-white/10">
           <h3 className="text-xl font-semibold mb-4 text-white">Grant Create Permission</h3>
           <form onSubmit={handleSubmitCreate(handleCreateSubmit)} className="space-y-4">
@@ -84,14 +85,12 @@ const AdminDashboardPage: React.FC = () => {
           </form>
         </div>
 
-        {/* Grant Update Permission */}
         <GrantScopedPermissionForm
           title="Grant Update Permission"
           onSubmit={(data) => grantUpdate(data)}
           isLoading={isUpdating}
         />
 
-        {/* Grant Delete Permission */}
         <GrantScopedPermissionForm
           title="Grant Delete Permission"
           onSubmit={(data) => grantDelete(data)}

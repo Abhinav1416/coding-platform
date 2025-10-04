@@ -2,10 +2,7 @@ import { useState } from 'react';
 import type { AuthResponse } from "../types/auth";
 import { login, verify2fa } from '../services/authService';
 
-/**
- * Manages the entire state and logic for the multi-step login process.
- * @param onAuthenticated - Callback function to execute on successful authentication.
- */
+
 export const useLogin = (
   onAuthenticated: (data: AuthResponse) => void
 ) => {

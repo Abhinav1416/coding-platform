@@ -53,12 +53,12 @@ public class ProblemController {
     }
 
 
-
     @GetMapping("/{slug}")
     public ResponseEntity<ProblemDetailResponse> getProblemBySlug(@PathVariable String slug) {
         ProblemDetailResponse problemDto = problemService.getProblemBySlug(slug);
         return ResponseEntity.ok(problemDto);
     }
+
 
     @GetMapping
     public ResponseEntity<PaginatedProblemResponse> getAllProblems(
@@ -68,6 +68,7 @@ public class ProblemController {
         PaginatedProblemResponse response = problemService.getAllProblems(pageable, tags, tagOperator);
         return ResponseEntity.ok(response);
     }
+
 
     @GetMapping("/count")
     public ResponseEntity<ProblemCountResponse> getProblemCount() {

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,4 +29,7 @@ public interface TemporaryPermissionRepository extends JpaRepository<TemporaryPe
 
 
     void deleteAllByExpiryTimestampBefore(LocalDateTime expiryTimestamp);
+
+
+    List<TemporaryPermission> findByUserIdAndExpiryTimestampAfter(Long userId, LocalDateTime now);
 }

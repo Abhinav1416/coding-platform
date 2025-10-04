@@ -78,3 +78,15 @@ export const getCurrentUser = async (): Promise<User | null> => {
   const res = await api.get(`${AUTH_BASE_PATH}/me`);
   return res.data?.user ?? null;
 };
+
+
+
+export const fetchMyPermissions = async (): Promise<string[]> => {
+    try {
+        const response = await api.get<string[]>('/api/users/me/permissions');
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch user permissions:", error);
+        return [];
+    }
+};

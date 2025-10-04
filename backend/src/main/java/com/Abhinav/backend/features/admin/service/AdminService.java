@@ -21,6 +21,8 @@ public class AdminService {
     @Value("${permissions.expiry-minutes}")
     private long permissionExpiryMinutes;
 
+
+
     public void grantCreatePermission(String email) {
         AuthenticationUser user = findUserByEmail(email);
         TemporaryPermission permission = new TemporaryPermission();
@@ -29,6 +31,7 @@ public class AdminService {
         permission.setExpiryTimestamp(LocalDateTime.now().plusMinutes(permissionExpiryMinutes));
         permissionRepository.save(permission);
     }
+
 
     public void grantUpdatePermission(String email, UUID problemId) {
         AuthenticationUser user = findUserByEmail(email);
@@ -40,7 +43,7 @@ public class AdminService {
         permissionRepository.save(permission);
     }
 
-    // CHANGE: Method now accepts String email
+
     public void grantDeletePermission(String email, UUID problemId) {
         AuthenticationUser user = findUserByEmail(email);
         TemporaryPermission permission = new TemporaryPermission();
@@ -51,7 +54,7 @@ public class AdminService {
         permissionRepository.save(permission);
     }
 
-    // CHANGE: New helper method to find by email
+
     private AuthenticationUser findUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
