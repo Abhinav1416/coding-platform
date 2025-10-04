@@ -53,7 +53,6 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     @Transactional
-    // ADDED: This annotation will clear the userProfiles cache after a submission is successfully created.
     @CacheEvict(value = "userProfiles", allEntries = true)
     public Submission createSubmission(SubmissionRequest request, Long userId) {
         Problem problem = problemRepository.findById(UUID.fromString(request.getProblemId()))
@@ -186,6 +185,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             handleProcessingError(submission, e, logPrefix);
         }
     }
+
 
     private void handleProcessingError(Submission submission, Exception e, String logPrefix) {
         logger.debug("{} Entering error handling block.", logPrefix);

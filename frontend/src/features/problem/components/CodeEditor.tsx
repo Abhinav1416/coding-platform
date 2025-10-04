@@ -51,18 +51,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ language, setLanguage, code, se
                         onPause={timer.handlePause}
                         onReset={timer.handleReset}
                     />
-
-                    <button 
-                        onClick={() => alert('Run Code feature is not yet implemented!')}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        title="Run Code"
-                    >
-                
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                            <path d="M6.3 2.841A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.269l9.344-5.89a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z" />
-                        </svg>
-                        Run
-                    </button>
                     
                     <button 
                         onClick={onSubmit}
@@ -70,7 +58,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ language, setLanguage, code, se
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors"
                         title={isSubmittingDisabled ? 'Submissions Disabled' : 'Submit Solution'}
                     >
-
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                           <path d="M9.309 3.14c-.094-.323-.527-.323-.62 0L4.363 8.32c-.2.685.028 1.488.544 1.838l3.187 2.126a2.25 2.25 0 0 0 2.373 0l3.187-2.126c.516-.35.744-1.153.544-1.838L9.309 3.14Z" />
                           <path fillRule="evenodd" d="M11.664 12.84a2.25 2.25 0 0 1-3.328 0 2.25 2.25 0 0 0-2.373 0l-3.187 2.126c-.516.35-.744 1.153-.544 1.838L4.363 17.68c.094.323.527.323.62 0l4.326-5.18a2.25 2.25 0 0 1 2.373 0l4.326 5.18c.094.323.527.323.62 0l1.414-4.949c.2-.685-.028-1.488-.544-1.838L11.664 12.84Z" clipRule="evenodd" />
@@ -79,7 +66,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ language, setLanguage, code, se
                     </button>
                 </div>
             </div>
-
             <div className="flex-grow">
                 <Editor
                     height="100%"

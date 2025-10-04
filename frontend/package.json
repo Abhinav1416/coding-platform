@@ -15,6 +15,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
+    "@stomp/stompjs": "^7.2.0",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/react-query": "^5.90.2",
     "axios": "^1.11.0",
@@ -26,6 +27,7 @@
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.8.2",
+    "sockjs-client": "^1.6.1",
     "tailwindcss": "^4.1.13",
     "three": "^0.180.0",
     "zod": "^4.1.11"
@@ -34,6 +36,7 @@
     "@eslint/js": "^9.33.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
+    "@types/sockjs-client": "^1.5.4",
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",

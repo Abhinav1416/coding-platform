@@ -18,7 +18,6 @@ export interface ProblemDetail {
     sampleTestCases: SampleTestCase[];
 }
 
-
 export interface SubmissionRequest {
     problemId: string;
     language: string;
@@ -38,4 +37,21 @@ export interface PaginatedSubmissionResponse {
     currentPage: number;
     totalPages: number;
     totalItems: number;
+}
+
+// Added based on your SubmissionDetailsDTO backend class
+export interface SubmissionDetails {
+    id: string;
+    problemId: string;
+    matchId: string | null;
+    problemTitle: string;
+    problemSlug: string;
+    status: string;
+    language: string;
+    code: string;
+    runtimeMs: number | null;
+    memoryKb: number | null;
+    stdout: string | null;
+    stderr: string | null;
+    createdAt: string;
 }
