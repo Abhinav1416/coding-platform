@@ -13,12 +13,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/topic", "/queue");
-
         registry.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").setAllowedOrigins("*");
+        // --- THIS IS THE FIX ---
+        // Replace setAllowedOrigins("*") with the specific URL of your frontend.
+        // Using allowedOriginPatterns is slightly more flexible and recommended.
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("http://localhost:5173") // Change 3000 if your port is different
+                .withSockJS();
     }
 }

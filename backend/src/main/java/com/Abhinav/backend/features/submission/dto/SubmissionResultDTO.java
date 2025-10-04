@@ -10,10 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * A detailed DTO representing the final result of a submission.
- * This is the object that will be pushed to the client via WebSockets.
- */
+
 @Data
 @Builder
 @NoArgsConstructor
