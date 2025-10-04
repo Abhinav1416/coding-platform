@@ -1,13 +1,13 @@
 import React from 'react';
 import type { SubmissionSummary } from '../types/problem';
 
+
 interface SubmissionsListProps {
     submissions: SubmissionSummary[];
-    onSubmissionClick: (submissionId: string) => void; // To handle opening details later
+    onSubmissionClick: (submissionId: string) => void;
 }
 
-// A helper component to give the status a nice, colored badge
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     const statusStyles: { [key: string]: string } = {
         ACCEPTED: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
         WRONG_ANSWER: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
@@ -20,7 +20,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     };
     
     const style = statusStyles[status] || 'bg-gray-200 text-gray-900';
-    const formattedStatus = status.replace(/_/g, ' '); // Replace underscores with spaces
+    const formattedStatus = status.replace(/_/g, ' ');
 
     return <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${style}`}>{formattedStatus}</span>;
 };
@@ -45,6 +45,9 @@ const SubmissionsList: React.FC<SubmissionsListProps> = ({ submissions, onSubmis
                             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {new Date(sub.createdAt).toLocaleString()}
                             </span>
+                            {/* --- FIX IS HERE --- */}
+                            {/* Because 'sub.language' is now a string, we render it directly. */}
+                            {/* We no longer need to access '.name'. */}
                             <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {sub.language}
                             </span>

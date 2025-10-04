@@ -6,11 +6,11 @@ import ProblemDetails from '../components/ProblemDetails';
 import CodeEditor from '../components/CodeEditor';
 import SubmissionsList from '../components/SubmissionsList';
 
+import Tabs from '../../../core/components/Tabs';
 import { createSubmission, getProblemSubmissions, getSubmissionDetails } from '../services/problemService';
-import * as stompClient from '../../../core/sockets/stompClient';
-import type { SubmissionDetails, SubmissionSummary } from '../types/problem';
+import { stompService } from '../../../core/sockets/stompClient';
+import type { SubmissionSummary, SubmissionDetails } from '../types/problem';
 import SubmissionDetailModal from '../SubmissionDetailModal';
-
 
 const LoadingSpinner = () => (
     <div className="flex justify-center items-center h-full">
@@ -31,9 +31,11 @@ const ProblemPage: React.FC = () => {
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetails | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Memoize the update function to prevent re-subscriptions
+    const [activeTab, setActiveTab] = useState(0);
+
     const handleRealTimeUpdate = useCallback((result: { status: string; submissionId: string }) => {
-        console.log('Received result:', result);
+        console.log("!!!!!!!!!! WEB SOCKET MESSAGE RECEIVED !!!!!!!!!!");
+        console.log("Received data:", result);
         setSubmissions(prevSubs => 
             prevSubs.map(sub => 
                 sub.id === result.submissionId ? { ...sub, status: result.status } : sub
@@ -41,33 +43,29 @@ const ProblemPage: React.FC = () => {
         );
     }, []);
 
-    // Effect to fetch initial submissions and manage WebSocket connection
     useEffect(() => {
+        stompService.connect();
         if (problem) {
             getProblemSubmissions(problem.id).then(response => {
                 setSubmissions(response.submissions);
-            });
-            
-            stompClient.connect(() => {
-                // If there are pending submissions on load, re-subscribe
-                submissions.forEach(sub => {
+                response.submissions.forEach(sub => {
                     if (sub.status === 'PENDING' || sub.status === 'PROCESSING') {
-                        stompClient.subscribeToSubmissionResult(sub.id, handleRealTimeUpdate);
+                        stompService.subscribeToSubmissionResult(sub.id, handleRealTimeUpdate);
                     }
                 });
             });
         }
-        // Disconnect from WebSocket on component unmount
         return () => {
-            stompClient.disconnect();
+            stompService.disconnect();
         };
-    }, [problem, submissions, handleRealTimeUpdate]);
+    }, [problem, handleRealTimeUpdate]);
 
 
     const handleSubmit = async () => {
         if (!problem || isSubmitting) return;
 
         setIsSubmitting(true);
+        setActiveTab(1);
         try {
             const response = await createSubmission({
                 problemId: problem.id,
@@ -81,13 +79,14 @@ const ProblemPage: React.FC = () => {
             const newSubmission: SubmissionSummary = {
                 id: submissionId,
                 status: 'PENDING',
-                language: language.toUpperCase(),
+                language: language.charAt(0).toUpperCase() + language.slice(1),
+                runtimeMs: null,
                 createdAt: new Date().toISOString(),
+                matchId: null
             };
             setSubmissions(prev => [newSubmission, ...prev]);
             
-            // Subscribe to the result topic for this new submission
-            stompClient.subscribeToSubmissionResult(submissionId, handleRealTimeUpdate);
+            stompService.subscribeToSubmissionResult(submissionId, handleRealTimeUpdate);
 
         } catch (err) {
             console.error("Submission failed:", err);
@@ -114,20 +113,24 @@ const ProblemPage: React.FC = () => {
 
     const isSubmissionDisabled = problem.status !== 'PUBLISHED' || isSubmitting;
 
+    const leftPanelTabs = [
+        {
+            label: 'Description',
+            content: <ProblemDetails problem={problem} />,
+        },
+        {
+            label: 'Submissions',
+            content: <SubmissionsList submissions={submissions} onSubmissionClick={handleSubmissionClick} />,
+        }
+    ];
+
     return (
         <>
             <div className="flex h-[calc(100vh-4rem)]">
-                {/* Left Panel: Problem Details and Submission History */}
-                <div className="w-1/2 flex flex-col">
-                    <div className="flex-1 overflow-y-auto">
-                        <ProblemDetails problem={problem} />
-                    </div>
-                    <div className="flex-shrink-0 h-1/3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                        <SubmissionsList submissions={submissions} onSubmissionClick={handleSubmissionClick} />
-                    </div>
+                <div className="w-1/2 border-r border-gray-200 dark:border-gray-700">
+                    <Tabs tabs={leftPanelTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
 
-                {/* Right Panel: Code Editor */}
                 <div className="w-1/2">
                     <CodeEditor 
                         language={language} 

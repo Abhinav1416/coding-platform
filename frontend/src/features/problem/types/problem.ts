@@ -55,3 +55,50 @@ export interface SubmissionDetails {
     stderr: string | null;
     createdAt: string;
 }
+
+// ... (ProblemDetail and SampleTestCase interfaces remain the same) ...
+
+export interface SubmissionRequest {
+    problemId: string;
+    language: string;
+    code: string;
+    matchId: string | null;
+}
+
+
+export interface SubmissionSummary {
+    id: string;
+    matchId: string | null;
+    status: string;
+
+    language: string;
+    runtimeMs: number | null;
+    createdAt: string;
+}
+
+
+
+
+export interface PaginatedSubmissionResponse {
+    submissions: SubmissionSummary[];
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+}
+
+
+export interface SubmissionDetails {
+    id: string;
+    problemId: string;
+    matchId: string | null;
+    problemTitle: string;
+    problemSlug: string;
+    status: string;
+    language: string;
+    code: string;
+    runtimeMs: number | null;
+    memoryKb: number | null;
+    stdout: string | null;
+    stderr: string | null;
+    createdAt: string;
+}
