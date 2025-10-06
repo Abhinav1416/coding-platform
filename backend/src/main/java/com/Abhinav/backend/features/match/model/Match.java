@@ -53,11 +53,12 @@ public class Match {
     @Column(name = "winner_id")
     private Long winnerId;
 
+
     @Column(name = "player_one_penalties")
-    private Integer playerOnePenalties;
+    private Integer playerOnePenalties = 0;
 
     @Column(name = "player_two_penalties")
-    private Integer playerTwoPenalties;
+    private Integer playerTwoPenalties = 0;
 
     @Column(name = "player_one_finish_time")
     private Instant playerOneFinishTime;

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -14,4 +15,7 @@ public interface AuthenticationUserRepository extends JpaRepository<Authenticati
 
     @Query("SELECT u FROM users u WHERE u.email LIKE :username || '@%'")
     Optional<AuthenticationUser> findByUsername(@Param("username") String username);
+
+
+    List<AuthenticationUser> findByIdIn(List<Long> userIds);
 }

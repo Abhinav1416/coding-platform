@@ -1,5 +1,7 @@
 package com.Abhinav.backend.features.match.service;
 
+import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
+import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
 import com.Abhinav.backend.features.exception.InvalidRequestException;
 import com.Abhinav.backend.features.exception.ResourceConflictException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
@@ -20,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager; // <-- IMPORT THIS
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,10 +46,25 @@ public class MatchServiceImpl implements MatchService {
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
     private final UserStatsRepository userStatsRepository;
+    private final MatchNotificationService matchNotificationService;
+    private final AuthenticationUserRepository userRepository;
+    private final CacheManager cacheManager; // <-- 1. INJECT THE CACHE MANAGER
+
+
     public static final long PENALTY_MINUTES = 5;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    // A helper to extract username from email safely.
+    private String getUsernameFromEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return "anonymous";
+        }
+        return email.substring(0, email.indexOf("@"));
+    }
+
+    // ... (no changes to createDuel, joinDuel, getDuelState, processDuelSubmissionResult, completeMatch) ...
 
     @Override
     public CreateDuelResponse createDuel(CreateDuelRequest request, Long creatorId) {
@@ -64,7 +82,7 @@ public class MatchServiceImpl implements MatchService {
                 .durationInMinutes(request.getDurationInMinutes())
                 .build();
         Match savedMatch = matchRepository.save(match);
-        String shareableLink = frontendUrl + "/duels/join?roomCode=" + roomCode;
+        String shareableLink = frontendUrl + "/match/join?roomCode=" + roomCode; // Corrected path
         return new CreateDuelResponse(savedMatch.getId(), roomCode, shareableLink);
     }
 
@@ -72,10 +90,10 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public JoinDuelResponse joinDuel(JoinDuelRequest request, Long joiningUserId) {
         Match match = matchRepository.findByRoomCode(request.getRoomCode().toUpperCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Duel room not found with code: " + request.getRoomCode()));
+                .orElseThrow(() -> new ResourceNotFoundException("Match room not found with code: " + request.getRoomCode()));
 
         if (match.getStatus() != MatchStatus.WAITING_FOR_OPPONENT) {
-            throw new ResourceConflictException("This duel is not waiting for an opponent.");
+            throw new ResourceConflictException("This match is not waiting for an opponent.");
         }
         if (Objects.equals(match.getPlayerOneId(), joiningUserId)) {
             throw new InvalidRequestException("You cannot join a room you created.");
@@ -85,13 +103,16 @@ public class MatchServiceImpl implements MatchService {
         Instant scheduledTime = Instant.now().plus(match.getStartDelayInMinutes(), ChronoUnit.MINUTES);
         match.setScheduledAt(scheduledTime);
         Match savedMatch = matchRepository.save(match);
+
+        matchNotificationService.notifyPlayerJoined(savedMatch.getId(), joiningUserId);
+
         return new JoinDuelResponse(savedMatch.getId(), savedMatch.getScheduledAt());
     }
 
     @Override
     public DuelStateResponseDTO getDuelState(UUID matchId) {
         LiveMatchStateDTO liveState = liveMatchStateRepository.findById(matchId)
-                .orElseThrow(() -> new ResourceNotFoundException("Active duel not found in cache for match ID: " + matchId));
+                .orElseThrow(() -> new ResourceNotFoundException("Active match not found in cache for match ID: " + matchId));
         Problem problemEntity = problemRepository.findById(liveState.getProblemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Problem not found for ID: " + liveState.getProblemId()));
         ProblemDetailResponse problemDTO = ProblemDetailResponse.fromEntity(problemEntity);
@@ -103,7 +124,7 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     public void processDuelSubmissionResult(UUID matchId, Long userId, SubmissionStatus submissionStatus) {
-        String logPrefix = String.format("[DUEL_SUBMISSION_PROCESS matchId=%s userId=%d]", matchId, userId);
+        String logPrefix = String.format("[SUBMISSION_PROCESS matchId=%s userId=%d]", matchId, userId);
         log.info("{} Received submission result with status: {}", logPrefix, submissionStatus);
         LiveMatchStateDTO liveState = liveMatchStateRepository.findById(matchId).orElse(null);
 
@@ -118,7 +139,7 @@ public class MatchServiceImpl implements MatchService {
             } else if (userId.equals(liveState.getPlayerTwoId()) && liveState.getPlayerTwoFinishTime() == null) {
                 liveState.setPlayerTwoFinishTime(Instant.now());
             }
-            liveMatchStateRepository.save(liveState); // Reverted
+            liveMatchStateRepository.save(liveState, null);
             this.completeMatch(matchId);
         } else {
             log.info("{} Submission was not accepted. Updating penalties.", logPrefix);
@@ -127,8 +148,10 @@ public class MatchServiceImpl implements MatchService {
             } else if (userId.equals(liveState.getPlayerTwoId())) {
                 liveState.setPlayerTwoPenalties(liveState.getPlayerTwoPenalties() + 1);
             }
-            liveMatchStateRepository.save(liveState); // Reverted
-            log.info("{} Penalties updated in Redis.", logPrefix);
+            liveMatchStateRepository.save(liveState, null);
+
+            matchNotificationService.notifyMatchUpdate(matchId, liveState);
+            log.info("{} Penalties updated in Redis and notification sent.", logPrefix);
         }
     }
 
@@ -144,8 +167,17 @@ public class MatchServiceImpl implements MatchService {
             log.warn("{} Match is already completed. Aborting.", logPrefix);
             return;
         }
-        LiveMatchStateDTO liveState = liveMatchStateRepository.findById(matchId)
-                .orElseThrow(() -> new ResourceNotFoundException("Live match state not found in Redis for ID: " + matchId));
+        Optional<LiveMatchStateDTO> liveStateOpt = liveMatchStateRepository.findById(matchId);
+        if (liveStateOpt.isEmpty()) {
+            log.warn("{} Live match state not found in Redis. Assuming timeout completion.", logPrefix);
+            match.setStatus(MatchStatus.COMPLETED);
+            match.setEndedAt(Instant.now());
+            matchRepository.save(match);
+            updateUserStatsForDraw(match.getPlayerOneId(), match.getPlayerTwoId());
+            return;
+        }
+
+        LiveMatchStateDTO liveState = liveStateOpt.get();
 
         Long p1Id = liveState.getPlayerOneId();
         Long p2Id = liveState.getPlayerTwoId();
@@ -167,17 +199,61 @@ public class MatchServiceImpl implements MatchService {
         match.setPlayerTwoFinishTime(liveState.getPlayerTwoFinishTime());
         matchRepository.save(match);
         log.info("{} Match entity updated to COMPLETED in database with final results.", logPrefix);
+        updateUserStats(p1Id, p2Id, winnerId, isDraw);
+        log.info("{} User stats updated for both players.", logPrefix);
+
+        MatchResultDTO results = this.buildMatchResults(match);
+
+        liveMatchStateRepository.deleteById(matchId);
+        log.info("{} Live state for match removed from Redis.", logPrefix);
+
+        matchNotificationService.notifyMatchEnd(matchId, results);
+
+        log.info("{} <- Match completion process finished successfully.", logPrefix);
+    }
+
+
+    /**
+     * Helper method to update user stats.
+     * This method is now also responsible for evicting the user profiles from the cache.
+     */
+    private void updateUserStats(Long p1Id, Long p2Id, Long winnerId, boolean isDraw) {
         Map<Long, UserStats> statsMap = userStatsRepository.findAllById(Arrays.asList(p1Id, p2Id)).stream().collect(Collectors.toMap(UserStats::getUserId, Function.identity()));
         UserStats p1Stats = statsMap.computeIfAbsent(p1Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
         UserStats p2Stats = statsMap.computeIfAbsent(p2Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
+
         p1Stats.setDuelsPlayed(p1Stats.getDuelsPlayed() + 1);
         p2Stats.setDuelsPlayed(p2Stats.getDuelsPlayed() + 1);
-        if (isDraw) { p1Stats.setDuelsDrawn(p1Stats.getDuelsDrawn() + 1); p2Stats.setDuelsDrawn(p2Stats.getDuelsDrawn() + 1); } else { if (winnerId.equals(p1Id)) { p1Stats.setDuelsWon(p1Stats.getDuelsWon() + 1); p2Stats.setDuelsLost(p2Stats.getDuelsLost() + 1); } else { p2Stats.setDuelsWon(p2Stats.getDuelsWon() + 1); p1Stats.setDuelsLost(p1Stats.getDuelsLost() + 1); } }
+
+        if (isDraw) {
+            p1Stats.setDuelsDrawn(p1Stats.getDuelsDrawn() + 1);
+            p2Stats.setDuelsDrawn(p2Stats.getDuelsDrawn() + 1);
+        } else {
+            if (winnerId.equals(p1Id)) {
+                p1Stats.setDuelsWon(p1Stats.getDuelsWon() + 1);
+                p2Stats.setDuelsLost(p2Stats.getDuelsLost() + 1);
+            } else {
+                p2Stats.setDuelsWon(p2Stats.getDuelsWon() + 1);
+                p1Stats.setDuelsLost(p1Stats.getDuelsLost() + 1);
+            }
+        }
         userStatsRepository.saveAll(Arrays.asList(p1Stats, p2Stats));
-        log.info("{} User stats updated for both players.", logPrefix);
-        liveMatchStateRepository.deleteById(matchId);
-        log.info("{} Live state for match removed from Redis.", logPrefix);
-        log.info("{} <- Match completion process finished successfully.", logPrefix);
+
+        // ***** 2. EVICT CACHE AFTER UPDATING STATS *****
+        // We need the usernames to evict them from the 'userProfiles' cache.
+        List<AuthenticationUser> users = userRepository.findAllById(Arrays.asList(p1Id, p2Id));
+        for (AuthenticationUser user : users) {
+            String username = getUsernameFromEmail(user.getEmail());
+            log.info("Evicting profile from cache for username: {}", username);
+            // Evict the user's profile, forcing the next request to fetch from the DB
+            Objects.requireNonNull(cacheManager.getCache("userProfiles")).evict(username);
+        }
+        // ***********************************************
+    }
+
+    private void updateUserStatsForDraw(Long p1Id, Long p2Id) {
+        if (p1Id == null || p2Id == null) return;
+        updateUserStats(p1Id, p2Id, null, true);
     }
 
     @Override
@@ -188,7 +264,11 @@ public class MatchServiceImpl implements MatchService {
         if (match.getStatus() != MatchStatus.COMPLETED) {
             throw new InvalidRequestException("Match results are not available until the match is completed.");
         }
-        List<Submission> allSubmissions = submissionRepository.findByMatchIdOrderByCreatedAtAsc(matchId);
+        return buildMatchResults(match);
+    }
+
+    private MatchResultDTO buildMatchResults(Match match) {
+        List<Submission> allSubmissions = submissionRepository.findByMatchIdOrderByCreatedAtAsc(match.getId());
         PlayerResultDTO playerOneResult = buildPlayerResultFromStored(match.getPlayerOneId(), match, allSubmissions);
         PlayerResultDTO playerTwoResult = buildPlayerResultFromStored(match.getPlayerTwoId(), match, allSubmissions);
         String outcome;
@@ -212,6 +292,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private PlayerResultDTO buildPlayerResultFromStored(Long userId, Match match, List<Submission> allSubmissions) {
+        if (userId == null) return null;
         Instant finishTime;
         int penalties;
         if (userId.equals(match.getPlayerOneId())) {
@@ -222,7 +303,7 @@ public class MatchServiceImpl implements MatchService {
             penalties = match.getPlayerTwoPenalties();
         }
         Duration effectiveTime = null;
-        if (finishTime != null) {
+        if (finishTime != null && match.getStartedAt() != null) {
             Duration rawDuration = Duration.between(match.getStartedAt(), finishTime);
             effectiveTime = rawDuration.plus(penalties * PENALTY_MINUTES, ChronoUnit.MINUTES);
         }
@@ -251,6 +332,37 @@ public class MatchServiceImpl implements MatchService {
     public Page<PastMatchDto> getPastMatchesForUser(Long userId, Pageable pageable) {
         Page<Match> matchesPage = matchRepository.findUserMatchesByStatus(userId, PAST_MATCH_STATUSES, pageable);
         return matchesPage.map(match -> convertToDto(match, userId));
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public LobbyStateDTO getLobbyState(UUID matchId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found with id: " + matchId));
+
+        List<Long> userIds = new ArrayList<>();
+        userIds.add(match.getPlayerOneId());
+        if (match.getPlayerTwoId() != null) {
+            userIds.add(match.getPlayerTwoId());
+        }
+
+        Map<Long, String> usernameMap = userRepository.findByIdIn(userIds).stream()
+                .collect(Collectors.toMap(
+                        AuthenticationUser::getId,
+                        user -> getUsernameFromEmail(user.getEmail())
+                ));
+
+        return new LobbyStateDTO(
+                match.getId(),
+                match.getPlayerOneId(),
+                usernameMap.get(match.getPlayerOneId()),
+                match.getPlayerTwoId(),
+                usernameMap.get(match.getPlayerTwoId()),
+                match.getStatus(),
+                match.getScheduledAt(),
+                match.getDurationInMinutes()
+        );
     }
 
     private PastMatchDto convertToDto(Match match, Long currentUserId) {

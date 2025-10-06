@@ -22,4 +22,6 @@ public interface MatchService {
     MatchResultDTO getMatchResults(UUID matchId);
 
     Page<PastMatchDto> getPastMatchesForUser(Long userId, Pageable pageable);
+
+    LobbyStateDTO getLobbyState(UUID matchId);
 }

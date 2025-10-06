@@ -12,7 +12,7 @@ interface CodeEditorProps {
     setCode: (code: string) => void;
     onSubmit: () => void;
     isSubmittingDisabled: boolean;
-    timer: {
+    timer?: {
         time: number;
         isActive: boolean;
         handleStart: () => void;
@@ -44,13 +44,16 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ language, setLanguage, code, se
                 </select>
                 
                 <div className="flex items-center gap-4">
-                    <Timer 
-                        time={timer.time}
-                        isActive={timer.isActive}
-                        onStart={timer.handleStart}
-                        onPause={timer.handlePause}
-                        onReset={timer.handleReset}
-                    />
+                    {/* This will only render the Timer if the timer prop exists */}
+                    {timer && (
+                        <Timer 
+                            time={timer.time}
+                            isActive={timer.isActive}
+                            onStart={timer.handleStart}
+                            onPause={timer.handlePause}
+                            onReset={timer.handleReset}
+                        />
+                    )}
                     
                     <button 
                         onClick={onSubmit}

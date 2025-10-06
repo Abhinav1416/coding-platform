@@ -9,6 +9,8 @@ import AdminRoute from "../core/components/AdminRoute";
 import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
 import ProblemPage from "../features/problem/pages/ProblemPage";
 
+
+
 const AppRoutes = () => {
   return (
     <Router>
@@ -18,6 +20,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
+
         <Route element={<AdminRoute />}>
           <Route 
             path="/admin" 
@@ -25,15 +28,15 @@ const AppRoutes = () => {
           />
         </Route>
 
+
         <Route path="/home" element={<MainLayout><Home /></MainLayout>} />
         <Route path="/matches" element={<MainLayout><div>Matches Page Content</div></MainLayout>} />
         <Route path="/profile" element={<MainLayout><div>Profile Page Content</div></MainLayout>} />
 
         <Route 
           path="/problems/:slug" 
-          element={<MainLayout><ProblemPage /></MainLayout>} 
+          element={<MainLayout><ProblemPage mode="SOLO" /></MainLayout>} 
         />
-
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>

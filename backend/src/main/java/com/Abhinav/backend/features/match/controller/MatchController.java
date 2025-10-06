@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/match") // Changed from /api/duels
+@RequestMapping("/api/match")
 @RequiredArgsConstructor
 public class MatchController {
 
@@ -55,5 +55,12 @@ public class MatchController {
             @PageableDefault(size = 10) Pageable pageable) {
         Page<PastMatchDto> pastMatches = matchService.getPastMatchesForUser(user.getId(), pageable);
         return ResponseEntity.ok(pastMatches);
+    }
+
+
+    @GetMapping("/lobby/{matchId}")
+    public ResponseEntity<LobbyStateDTO> getLobbyState(@PathVariable UUID matchId) {
+        LobbyStateDTO lobbyState = matchService.getLobbyState(matchId);
+        return ResponseEntity.ok(lobbyState);
     }
 }
