@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getProblemBySlug } from '../services/problemService';
 import type { ProblemDetail } from '../types/problem';
 
-export const useProblem = (slug: string, p0: boolean) => {
+export const useProblem = (slug: string) => {
     const [problem, setProblem] = useState<ProblemDetail | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
