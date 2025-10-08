@@ -69,3 +69,8 @@ export interface SubmissionDetails {
     stderr: string | null;
     createdAt: string;
 }
+
+
+export interface ProblemCountResponse {
+    totalCount: number;
+}

@@ -133,3 +133,27 @@ export type MatchEvent =
     | MatchStartPayload
     | MatchEndPayload
     | MatchCanceledPayload;
+
+
+
+export interface Page<T> {
+    content: T[];
+    totalPages: number;
+    totalElements: number;
+    size: number;
+    number: number;
+    first: boolean;
+    last: boolean;
+    numberOfElements: number;
+    empty: boolean;
+}
+
+
+export interface PastMatch {
+    matchId: string;
+    status: string;
+    result: 'WIN' | 'LOSS' | 'DRAW';
+    opponentUsername: string;
+    problemTitle: string;
+    endedAt: string;
+}

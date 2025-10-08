@@ -427,12 +427,29 @@ public class MatchServiceImpl implements MatchService {
         Long opponentId = Objects.equals(match.getPlayerOneId(), currentUserId)
                 ? match.getPlayerTwoId()
                 : match.getPlayerOneId();
+
+        String opponentUsername = "Unknown";
+        if (opponentId != null) {
+            opponentUsername = userRepository.findById(opponentId)
+                    .map(user -> getUsernameFromEmail(user.getEmail()))
+                    .orElse("Unknown");
+        }
+
+        String problemTitle = "Unknown Problem";
+        if (match.getProblemId() != null) {
+            problemTitle = problemRepository.findById(match.getProblemId())
+                    .map(Problem::getTitle)
+                    .orElse("Unknown Problem");
+        }
+
         return PastMatchDto.builder()
                 .matchId(match.getId())
                 .status(match.getStatus())
                 .result(determineResult(match, currentUserId))
                 .opponentId(opponentId)
+                .opponentUsername(opponentUsername) // ✅ Set the username
                 .problemId(match.getProblemId())
+                .problemTitle(problemTitle)       // ✅ Set the title
                 .endedAt(match.getEndedAt())
                 .createdAt(match.getCreatedAt())
                 .build();

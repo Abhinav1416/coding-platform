@@ -1,5 +1,5 @@
 import api from '../../../core/api/api';
-import type { ProblemDetail, SubmissionRequest, PaginatedSubmissionResponse, SubmissionDetails } from '../types/problem';
+import type { ProblemDetail, SubmissionRequest, PaginatedSubmissionResponse, SubmissionDetails, ProblemCountResponse } from '../types/problem';
 
 
 
@@ -42,5 +42,11 @@ export const getProblemSubmissions = async (problemId: string): Promise<Paginate
 
 export const getSubmissionDetails = async (submissionId: string): Promise<SubmissionDetails> => {
     const response = await api.get<SubmissionDetails>(`/api/submissions/${submissionId}`);
+    return response.data;
+};
+
+
+export const getProblemCount = async (): Promise<ProblemCountResponse> => {
+    const response = await api.get<ProblemCountResponse>('/api/problems/count');
     return response.data;
 };

@@ -14,7 +14,9 @@ public class PastMatchDto {
     private MatchStatus status;
     private String result;
     private Long opponentId;
+    private String opponentUsername;
     private UUID problemId;
+    private String problemTitle;
     private Instant endedAt;
     private Instant createdAt;
 }

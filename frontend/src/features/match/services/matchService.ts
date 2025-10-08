@@ -1,4 +1,6 @@
 import api from '../../../core/api/api';
+import type { Page, PastMatch } from '../types/match';
+
 
 // Import all necessary types from your match types file
 import type {
@@ -68,5 +70,23 @@ export const getMatchResult = async (matchId: string): Promise<MatchResult> => {
  */
 export const getPlayerStats = async (userId: number): Promise<UserStats> => {
     const response = await api.get<UserStats>(`${API_STATS_URL}/${userId}`);
+    return response.data;
+};
+
+
+
+/**
+ * Fetches the paginated match history for the current user.
+ */
+export const getMatchHistory = async (pageable: { page: number, size: number }): Promise<Page<PastMatch>> => {
+    const response = await api.get<Page<PastMatch>>(`${API_BASE_URL}/history`, {
+        params: pageable
+    });
+    return response.data;
+};
+
+
+export const getCurrentUserStats = async (): Promise<UserStats> => {
+    const response = await api.get<UserStats>(`${API_STATS_URL}/me`);
     return response.data;
 };

@@ -21,6 +21,9 @@ public class MatchController {
 
     private final MatchService matchService;
 
+
+
+
     @PostMapping
     public ResponseEntity<CreateDuelResponse> createDuel(
             @Valid @RequestBody CreateDuelRequest request,
@@ -49,6 +52,7 @@ public class MatchController {
         return ResponseEntity.ok(results);
     }
 
+
     @GetMapping("/history")
     public ResponseEntity<Page<PastMatchDto>> getMatchHistory(
             @AuthenticationPrincipal AuthenticationUser user,
@@ -63,5 +67,4 @@ public class MatchController {
         LobbyStateDTO lobbyState = matchService.getLobbyState(matchId);
         return ResponseEntity.ok(lobbyState);
     }
-
 }

@@ -26,8 +26,8 @@ const Navbar = () => {
         {isAuthenticated && (
           <nav className="hidden md:flex gap-8">
             <Link to="/home" className={navLinkColor}>Home</Link>
-            <Link to="/problems" className={navLinkColor}>Problems</Link>
-            <Link to="/matches" className={navLinkColor}>Matches</Link>
+            {/* ✅ "Problems" link has been removed */}
+            <Link to="/matches/history" className={navLinkColor}>Matches</Link>
           </nav>
         )}
 
