@@ -9,4 +9,7 @@ import lombok.Data;
 public class DuelStateResponseDTO {
     private LiveMatchStateDTO liveState;
     private ProblemDetailResponse problemDetails;
+
+    private String playerOneUsername;
+    private String playerTwoUsername;
 }

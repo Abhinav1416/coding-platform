@@ -3,6 +3,7 @@ package com.Abhinav.backend.features.match.service;
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
 import com.Abhinav.backend.features.exception.InvalidRequestException;
+import com.Abhinav.backend.features.exception.MatchAlreadyCompletedException;
 import com.Abhinav.backend.features.exception.ResourceConflictException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
 import com.Abhinav.backend.features.match.dto.*;
@@ -109,16 +110,44 @@ public class MatchServiceImpl implements MatchService {
         return new JoinDuelResponse(savedMatch.getId(), savedMatch.getScheduledAt());
     }
 
+    // in class com.Abhinav.backend.features.match.service.MatchServiceImpl
+
+    // in class com.Abhinav.backend.features.match.service.MatchServiceImpl
+
     @Override
     public DuelStateResponseDTO getDuelState(UUID matchId) {
+        // --- ADD THIS CHECK AT THE TOP ---
+        // First, check the definitive status from the main database
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found with id: " + matchId));
+
+        // If the match is already completed, throw our new specific exception.
+        if (match.getStatus() == MatchStatus.COMPLETED) {
+            throw new MatchAlreadyCompletedException("Match " + matchId + " is already completed.");
+        }
+        // --- END OF NEW CODE ---
+
+        // The rest of the method only runs if the match is active
         LiveMatchStateDTO liveState = liveMatchStateRepository.findById(matchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active match not found in cache for match ID: " + matchId));
+
         Problem problemEntity = problemRepository.findById(liveState.getProblemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Problem not found for ID: " + liveState.getProblemId()));
+
         ProblemDetailResponse problemDTO = ProblemDetailResponse.fromEntity(problemEntity);
+
+        List<Long> userIds = List.of(liveState.getPlayerOneId(), liveState.getPlayerTwoId());
+        Map<Long, String> usernameMap = userRepository.findByIdIn(userIds).stream()
+                .collect(Collectors.toMap(
+                        AuthenticationUser::getId,
+                        user -> getUsernameFromEmail(user.getEmail())
+                ));
+
         return DuelStateResponseDTO.builder()
                 .liveState(liveState)
                 .problemDetails(problemDTO)
+                .playerOneUsername(usernameMap.get(liveState.getPlayerOneId()))
+                .playerTwoUsername(usernameMap.get(liveState.getPlayerTwoId()))
                 .build();
     }
 

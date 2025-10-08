@@ -8,7 +8,7 @@ interface ProblemDetailsProps {
 
 const ProblemDetails: React.FC<ProblemDetailsProps> = ({ problem }) => {
     const timeInSeconds = problem.timeLimitMs / 1000;
-    const memoryInMegabytes = (problem.memoryLimitKb / 1024).toFixed(2);
+    const memoryInMegabytes = (problem.memoryLimitKb / 1000).toFixed(2);
 
     const formatTestCase = (data: any): string => {
         if (typeof data === 'string') {

@@ -31,6 +31,7 @@ public class MatchScheduler {
     private final LiveMatchStateRepository liveMatchStateRepository;
     private final MatchNotificationService matchNotificationService;
     private final AuthenticationUserRepository userRepository;
+    private final MatchService matchService; // --- 1. INJECT THE MATCH SERVICE ---
 
     /**
      * Extracts the username part from an email address.
@@ -45,15 +46,12 @@ public class MatchScheduler {
     }
 
     /**
-     * Periodically checks for matches that are scheduled to start,
-     * assigns them a problem, and transitions them to an active state in Redis with a TTL.
+     * Periodically checks for matches that are scheduled to start.
      */
-    @Scheduled(fixedRate = 15000) // Correctly configured to run periodically.
-    @Transactional // Correctly wraps the logic in a transaction.
+    @Scheduled(fixedRate = 15000)
+    @Transactional
     public void startScheduledMatches() {
         log.info("Scheduler running: Looking for matches to start...");
-
-        // This query correctly finds all matches that are ready to begin.
         List<Match> matchesToStart = matchRepository.findAllByStatusAndScheduledAtBefore(
                 MatchStatus.SCHEDULED,
                 Instant.now()
@@ -66,9 +64,7 @@ public class MatchScheduler {
 
         for (Match match : matchesToStart) {
             log.info("Scheduler: Attempting to start match ID: {}", match.getId());
-
             try {
-                // Logic to find a suitable problem is sound.
                 Optional<UUID> problemIdOpt = problemRepository.findRandomUnsolvedProblemForTwoUsers(
                         match.getDifficultyMin(),
                         match.getDifficultyMax(),
@@ -76,30 +72,24 @@ public class MatchScheduler {
                         match.getPlayerTwoId()
                 );
 
-                // This is a great edge case to handle: canceling the match if no problem is found.
                 if (problemIdOpt.isEmpty()) {
                     log.warn("Could not find a suitable problem for match {}. Canceling match.", match.getId());
                     match.setStatus(MatchStatus.CANCELED);
                     matchRepository.save(match);
-
                     String reason = "Could not find a suitable problem for both players.";
                     matchNotificationService.notifyMatchCanceled(match.getId(), reason);
                     continue;
                 }
 
                 UUID problemId = problemIdOpt.get();
-
-                // Correctly prepares data for the notification.
                 Map<Long, String> usernameMap = userRepository.findByIdIn(List.of(match.getPlayerOneId(), match.getPlayerTwoId())).stream()
                         .collect(Collectors.toMap(AuthenticationUser::getId, user -> getUsernameFromEmail(user.getEmail())));
 
-                // Updates the main database record for the match. This is correct.
                 match.setStatus(MatchStatus.ACTIVE);
                 match.setProblemId(problemId);
                 match.setStartedAt(Instant.now());
                 matchRepository.save(match);
 
-                // Prepares the DTO for Redis.
                 LiveMatchStateDTO liveState = LiveMatchStateDTO.builder()
                         .matchId(match.getId())
                         .problemId(problemId)
@@ -109,8 +99,6 @@ public class MatchScheduler {
                         .durationInMinutes(match.getDurationInMinutes())
                         .build();
 
-                // This is the most critical part, and it is correct.
-                // It saves the live state to Redis with a dynamic TTL, which enables our timeout logic.
                 liveMatchStateRepository.save(liveState, (long) match.getDurationInMinutes());
                 log.info(
                         "Successfully started match ID: {}. Live state created in Redis with TTL: {} minutes.",
@@ -118,22 +106,56 @@ public class MatchScheduler {
                         match.getDurationInMinutes()
                 );
 
-                // Notifies the frontend that the match has begun.
                 matchNotificationService.notifyMatchStart(
                         match.getId(),
                         liveState,
                         usernameMap.get(match.getPlayerOneId()),
                         usernameMap.get(match.getPlayerTwoId())
                 );
-
             } catch (Exception e) {
-                // Robust error handling ensures one failed match doesn't break the whole scheduler.
                 log.error("Scheduler: Unexpected error starting match ID: {}. Canceling.", match.getId(), e);
                 match.setStatus(MatchStatus.CANCELED);
                 matchRepository.save(match);
-
                 String reason = "An internal error occurred while starting the match.";
                 matchNotificationService.notifyMatchCanceled(match.getId(), reason);
+            }
+        }
+    }
+
+
+    // --- 2. ADD THIS NEW METHOD ---
+
+    /**
+     * Periodically checks for active matches whose live state in Redis has expired (timed out).
+     * When a timeout is detected, it triggers the full match completion logic.
+     */
+    @Scheduled(fixedRate = 30000) // Run every 30 seconds
+    @Transactional
+    public void completeTimedOutMatches() {
+        log.info("Scheduler running: Looking for timed-out matches to complete...");
+
+        // 1. Find all matches that are still marked as ACTIVE in the main database.
+        List<Match> activeMatches = matchRepository.findAllByStatus(MatchStatus.ACTIVE);
+
+        if (activeMatches.isEmpty()) {
+            log.info("Scheduler: No active matches found to check for timeout.");
+            return;
+        }
+
+        for (Match match : activeMatches) {
+            // 2. For each active match, check if its live state still exists in Redis.
+            Optional<LiveMatchStateDTO> liveStateOpt = liveMatchStateRepository.findById(match.getId());
+
+            // 3. If the live state is MISSING, it means the Redis key has expired (timed out).
+            if (liveStateOpt.isEmpty()) {
+                log.info("Scheduler: Timeout detected for match ID: {}. Triggering completion.", match.getId());
+                try {
+                    // 4. Call the main completeMatch logic to finalize the score, update stats,
+                    // and send the MATCH_END notification.
+                    matchService.completeMatch(match.getId());
+                } catch (Exception e) {
+                    log.error("Scheduler: Error while completing timed-out match ID: {}. It may need manual review.", match.getId(), e);
+                }
             }
         }
     }

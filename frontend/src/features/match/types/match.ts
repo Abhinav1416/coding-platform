@@ -1,3 +1,6 @@
+import type { ProblemDetail } from '../../problem/types/problem';
+
+
 // --- Types for Creating & Joining a Match ---
 
 export interface CreateMatchRequest {
@@ -25,7 +28,6 @@ export interface JoinMatchResponse {
 
 // --- Types for the Pre-Match Lobby ---
 
-// This interface matches your backend LobbyStateDTO
 export interface LobbyState {
   matchId: string;
   playerOneId: number;
@@ -37,16 +39,14 @@ export interface LobbyState {
   durationInMinutes: number;
 }
 
-// This type is for the response from your /api/stats/{userId} endpoint
 export interface UserStats {
   userId: number;
-  duelsPlayed: number;
+  duelsPlayed: number; // Assuming this is for "matches"
   duelsWon: number;
   duelsLost: number;
   duelsDrawn: number;
 }
 
-// A full representation of a player's details, combining user info and stats
 export interface Player {
   userId: number;
   username: string;
@@ -57,23 +57,48 @@ export interface Player {
   duelsDrawn: number;
 }
 
-// This represents the LiveMatchStateDTO sent with the MATCH_START event
+
+
+
+// This matches your backend's LiveMatchStateDTO
 export interface LiveMatchState {
-  matchId: string;
-  problemId: string;
-  playerOneId: number;
-  playerTwoId: number | null;
-  playerOneScore: number;
-  playerTwoScore: number;
-  status: 'WAITING_FOR_OPPONENT' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
-  scheduledAt: string | null;
-  startedAt: string | null;
-  durationInMinutes: number;
-  roomCode: string;
+    matchId: string;
+    problemId: string;
+    playerOneId: number;
+    playerTwoId: number;
+    playerOnePenalties: number;
+    playerTwoPenalties: number;
+    playerOneFinishTime: string | null; // Instants are sent as ISO strings
+    playerTwoFinishTime: string | null;
+    startedAt: string;
+    durationInMinutes: number;
 }
 
 
-// --- Types for WebSocket Payloads ---
+export interface ArenaData {
+    liveState: LiveMatchState;
+    problemDetails: ProblemDetail;
+    // --- ADD THESE TWO FIELDS ---
+    playerOneUsername: string;
+    playerTwoUsername: string;
+}
+
+export interface MatchDetails {
+    id: string;
+    problem: ProblemDetail;
+    durationSeconds: number;
+    status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
+    playerOneId: number;
+    playerTwoId: number | null;
+}
+
+export interface MatchResult {
+    winnerId: number | null;
+    winnerUsername?: string;
+    reason: string;
+}
+
+// --- WebSocket Event Payload Interfaces ---
 
 export interface PlayerJoinedPayload {
   eventType: 'PLAYER_JOINED';
@@ -82,9 +107,14 @@ export interface PlayerJoinedPayload {
 
 export interface MatchStartPayload {
     eventType: 'MATCH_START';
-    liveState: LiveMatchState;
+    liveState: LiveMatchState; // Using the full, correct LiveMatchState
     playerOneUsername: string;
     playerTwoUsername: string;
+}
+
+export interface MatchEndPayload {
+    eventType: 'MATCH_END';
+    result: MatchResult;
 }
 
 export interface MatchCanceledPayload {
@@ -92,5 +122,15 @@ export interface MatchCanceledPayload {
     reason: string;
 }
 
-// A union type to handle any possible message from the match topic
-export type MatchEvent = PlayerJoinedPayload | MatchStartPayload | MatchCanceledPayload;
+
+// --- THE SINGLE, CORRECTED DISCRIMINATED UNION ---
+
+/**
+ * A union type to handle any possible message from the match topic.
+ * This should be the only declaration of MatchEvent.
+ */
+export type MatchEvent =
+    | PlayerJoinedPayload
+    | MatchStartPayload
+    | MatchEndPayload
+    | MatchCanceledPayload;

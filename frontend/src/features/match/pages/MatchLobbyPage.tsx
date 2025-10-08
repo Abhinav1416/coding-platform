@@ -2,11 +2,31 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
-import { useCountdown } from '../../../core/hooks/useCountdown';
+// Make sure you have this hook or similar
+// import { useCountdown } from '../../../core/hooks/useCountdown'; 
 import { PlayerCard } from '../components/PlayerCard';
-import type { LobbyState, Player, MatchEvent } from '../types/match';
+import type { LobbyState, Player, MatchEvent, UserStats } from '../types/match';
 import { getMatchLobbyState, getPlayerDetails } from '../services/matchService';
 import { stompService } from '../../../core/sockets/stompClient';
+
+// A simple countdown hook placeholder if you don't have one
+const useCountdown = (targetDate: string) => {
+    const countDownDate = new Date(targetDate).getTime();
+    const [countDown, setCountDown] = useState(countDownDate - new Date().getTime());
+
+    useEffect(() => {
+        if (!targetDate) return;
+        const interval = setInterval(() => {
+            setCountDown(countDownDate - new Date().getTime());
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [countDownDate, targetDate]);
+
+    const minutes = Math.floor((countDown % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((countDown % (1000 * 60)) / 1000);
+    return { minutes, seconds };
+};
+
 
 const MatchLobbyPage = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -26,14 +46,30 @@ const MatchLobbyPage = () => {
       const state = await getMatchLobbyState(matchId);
       setLobbyState(state);
 
-      const p1Promise = getPlayerDetails(state.playerOneId);
-      const p2Promise = state.playerTwoId ? getPlayerDetails(state.playerTwoId) : Promise.resolve(null);
+      // --- THIS IS THE CORRECTED LOGIC ---
+      // 1. Fetch stats for each player concurrently. getPlayerDetails now returns UserStats.
+      const p1StatsPromise = getPlayerDetails(state.playerOneId);
+      const p2StatsPromise = state.playerTwoId ? getPlayerDetails(state.playerTwoId) : Promise.resolve(null);
       
-      const [player1, player2] = await Promise.all([p1Promise, p2Promise]);
+      const [p1Stats, p2Stats] = await Promise.all([p1StatsPromise, p2StatsPromise]);
+
+      // 2. Construct the full Player object using the username from the lobby state.
+      const player1: Player = {
+          username: state.playerOneUsername,
+          email: '', // Not needed for the card
+          ...(p1Stats as UserStats)
+      };
+      
+      const player2: Player | null = p2Stats && state.playerTwoUsername ? {
+          username: state.playerTwoUsername,
+          email: '', // Not needed for the card
+          ...(p2Stats as UserStats)
+      } : null;
+
       setPlayers([player1, player2]);
 
-    } catch (err) {
-      setError('Could not find the match lobby. It may have expired or is invalid.');
+    } catch (err: any) {
+      setError(err.message || 'Could not find the match lobby. It may have expired or is invalid.');
     } finally {
       setIsLoading(false);
     }
@@ -41,11 +77,10 @@ const MatchLobbyPage = () => {
 
   useEffect(() => {
     fetchFullLobbyData();
+    stompService.connect();
     
-    const subscription = stompService.subscribe(`/topic/match/${matchId}`, (message) => {
-      const event: MatchEvent = JSON.parse(message.body);
-
-      // Handle all possible events from the server
+    // Using subscribeToMatchUpdates for type safety
+    const subscription = stompService.subscribeToMatchUpdates(matchId!, (event: MatchEvent) => {
       switch (event.eventType) {
         case 'PLAYER_JOINED':
           console.log("Opponent joined! Re-fetching lobby state.");
@@ -60,10 +95,7 @@ const MatchLobbyPage = () => {
         case 'MATCH_CANCELED':
           console.log(`Match canceled by server. Reason: ${event.reason}`);
           setError(`Match Canceled: ${event.reason}`);
-          // Redirect the user back home after a few seconds
-          setTimeout(() => {
-            navigate('/home');
-          }, 5000); // 5-second delay
+          setTimeout(() => navigate('/home'), 5000);
           break;
       }
     });
@@ -86,13 +118,12 @@ const MatchLobbyPage = () => {
     );
   }
 
-  // If the match was canceled, show a dedicated screen
   if (error) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-center p-4">
-        <h2 className="text-3xl font-bold text-red-500 mb-4">Match Canceled</h2>
-        <p className="text-lg text-gray-300 mb-8">{error.replace('Match Canceled: ', '')}</p>
-        <p className="text-gray-500">Redirecting you home shortly...</p>
+        <h2 className="text-3xl font-bold text-red-500 mb-4">An Error Occurred</h2>
+        <p className="text-lg text-gray-300 mb-8">{error}</p>
+        <p className="text-gray-500">{error.includes("Canceled") && "Redirecting you home shortly..."}</p>
       </div>
     );
   }
@@ -111,9 +142,11 @@ const MatchLobbyPage = () => {
         <div className="text-center mb-8">
           {lobbyState.status === 'SCHEDULED' ? (
             <>
-              <p className="text-gray-400">Match starting soon...</p>
-              <h1 className="text-6xl font-bold text-white tracking-wider">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</h1>
-              <p className="text-gray-500 mt-2">Waiting for server to begin the match.</p>
+              <p className="text-gray-400 text-xl">Match starts in</p>
+              <h1 className="text-6xl font-bold text-white tracking-wider my-2">
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </h1>
+              <p className="text-gray-500 mt-2">The arena will open automatically.</p>
             </>
           ) : (
             <h1 className="text-4xl font-bold text-[#F97316]">Waiting for Opponent</h1>

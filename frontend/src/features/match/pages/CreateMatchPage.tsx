@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Copy, Check } from 'lucide-react';
-import { useCreateMatch } from '../hooks/useCreateMatch';
-import type { CreateMatchRequest, CreateMatchResponse } from '../types/match';
-import { stompService } from '../../../core/sockets/stompClient'; // Adjust path if needed
+import type { CreateMatchRequest, CreateMatchResponse, MatchEvent } from '../types/match';
+import { stompService } from '../../../core/sockets/stompClient';
+// Assuming you have a real useCreateMatch hook, otherwise this mock will work.
+import { useCreateMatch } from '../hooks/useCreateMatch'; 
 
-// Main component
+// --- Main Component ---
 const CreateMatchPage = () => {
   const { createMatchMutation, isLoading, error, createdMatchData } = useCreateMatch();
   const [formData, setFormData] = useState<CreateMatchRequest>({
@@ -43,7 +44,7 @@ const CreateMatchPage = () => {
           <>
             <h2 className="text-3xl font-bold text-center text-white mb-8">Create a New Match</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Form content */}
+              {/* Form content remains the same */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="difficultyMin" className={labelStyles}>Min Difficulty</label>
@@ -57,11 +58,11 @@ const CreateMatchPage = () => {
               {formError && <p className="text-red-400 text-xs -mt-4 text-center">{formError}</p>}
               <div>
                 <label htmlFor="startDelayInMinutes" className={labelStyles}>Start Delay (minutes)</label>
-                <input type="number" id="startDelayInMinutes" name="startDelayInMinutes" value={formData.startDelayInMinutes} onChange={handleChange} min="5" max="60" required className={inputStyles} />
+                <input type="number" id="startDelayInMinutes" name="startDelayInMinutes" value={formData.startDelayInMinutes} onChange={handleChange} min="1" max="60" required className={inputStyles} />
               </div>
               <div>
                 <label htmlFor="durationInMinutes" className={labelStyles}>Match Duration (minutes)</label>
-                <input type="number" id="durationInMinutes" name="durationInMinutes" value={formData.durationInMinutes} onChange={handleChange} min="5" max="45" required className={inputStyles} />
+                <input type="number" id="durationInMinutes" name="durationInMinutes" value={formData.durationInMinutes} onChange={handleChange} min="1" max="45" required className={inputStyles} />
               </div>
               <div>
                 <button type="submit" disabled={isLoading} className="w-full flex justify-center items-center bg-[#F97316] hover:bg-[#EA580C] text-white font-bold py-3 px-4 rounded-md transition-transform transform hover:scale-105 disabled:bg-orange-900/50 disabled:cursor-not-allowed disabled:transform-none">
@@ -83,9 +84,12 @@ const WaitingForOpponent = ({ data }: { data: CreateMatchResponse }) => {
   const [copiedItem, setCopiedItem] = useState<'link' | 'code' | null>(null);
 
   useEffect(() => {
-    // Use your stompService to subscribe
-    const subscription = stompService.subscribe(`/topic/match/${data.matchId}`, (message) => {
-      const event = JSON.parse(message.body);
+    // 1. Ensure the WebSocket client is activated
+    stompService.connect();
+
+    // 2. Use the specific, type-safe subscription method
+    const subscription = stompService.subscribeToMatchUpdates(data.matchId, (event: MatchEvent) => {
+      // The JSON parsing is now handled by the service
       if (event.eventType === 'PLAYER_JOINED') {
         console.log("Opponent joined event received! Navigating to lobby.");
         navigate(`/match/lobby/${data.matchId}`);
@@ -93,8 +97,13 @@ const WaitingForOpponent = ({ data }: { data: CreateMatchResponse }) => {
     });
 
     return () => {
-      console.log(`Unsubscribing from /topic/match/${data.matchId}`);
-      subscription.unsubscribe();
+      console.log(`Cleaning up subscription for /topic/match/${data.matchId}`);
+      
+      // 3. --- THE FIX ---
+      // Safely unsubscribe only if the subscription object was successfully created.
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [data.matchId, navigate]);
 

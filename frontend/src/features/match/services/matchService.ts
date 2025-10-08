@@ -1,18 +1,22 @@
-import api from '../../../core/api/api'; // Adjust path if needed
+import api from '../../../core/api/api'; // Adjust this path to your api.ts file
+
+// Import all necessary types from your match types file
 import type {
   CreateMatchRequest,
   CreateMatchResponse,
   JoinMatchRequest,
   JoinMatchResponse,
   LobbyState,
-  Player,
-  UserStats
+  UserStats,
+  ArenaData
 } from '../types/match';
 
 const API_BASE_URL = '/api/match';
 
 /**
  * Sends a request to the backend to create a new match.
+ * Used by the CreateMatchPage.
+ * @param requestData The parameters for the new match.
  */
 export const createMatch = async (requestData: CreateMatchRequest): Promise<CreateMatchResponse> => {
   const response = await api.post<CreateMatchResponse>(API_BASE_URL, requestData);
@@ -20,7 +24,9 @@ export const createMatch = async (requestData: CreateMatchRequest): Promise<Crea
 };
 
 /**
- * Sends a request for the current user to join an existing match.
+ * Sends a request for the current user to join an existing match using a room code.
+ * Used by the JoinMatchPage.
+ * @param requestData The room code for the match to join.
  */
 export const joinMatch = async (requestData: JoinMatchRequest): Promise<JoinMatchResponse> => {
   const response = await api.post<JoinMatchResponse>(`${API_BASE_URL}/join`, requestData);
@@ -28,8 +34,9 @@ export const joinMatch = async (requestData: JoinMatchRequest): Promise<JoinMatc
 };
 
 /**
- * Fetches the current state of a match lobby using the specific lobby endpoint.
- * @param matchId The unique ID for the match.
+ * Fetches the current state of a match lobby.
+ * Used by the MatchLobbyPage.
+ * @param matchId The unique ID of the match.
  */
 export const getMatchLobbyState = async (matchId: string): Promise<LobbyState> => {
   const response = await api.get<LobbyState>(`${API_BASE_URL}/lobby/${matchId}`);
@@ -37,37 +44,33 @@ export const getMatchLobbyState = async (matchId: string): Promise<LobbyState> =
 };
 
 /**
- * Fetches full player details by combining user info with their duel stats.
- * @param userId The ID of the user to fetch.
+ * Fetches the detailed data required for the match arena, including the full problem details.
+ * Used by the MatchArenaPage.
+ * @param matchId The unique ID of the match.
  */
-export const getPlayerDetails = async (userId: number): Promise<Player> => {
-  // This function makes two API calls in parallel for efficiency:
-  // 1. Gets the user's duel stats from the real /api/stats/{userId} endpoint.
-  // 2. Gets the user's basic info (like email). This part is mocked for now.
-  
-  const [statsResponse, userInfoMock] = await Promise.all([
-    // REAL API CALL to your new stats endpoint
-    api.get<UserStats>(`/api/stats/${userId}`), 
+export const getArenaData = async (matchId: string): Promise<ArenaData> => {
+    try {
+        // This endpoint matches your MatchController's getDuelState method
+        const response = await api.get<ArenaData>(`${API_BASE_URL}/${matchId}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Failed to fetch arena data for match ${matchId}`, error);
+        throw new Error("Could not load match data. It might have expired or is invalid.");
+    }
+};
 
-    // MOCK: Replace this with a real API call to an endpoint like `/api/users/{userId}`
-    Promise.resolve({ 
-        email: `user_${userId}@gmail.com`, 
-        username: `user_${userId}`
-    })
-  ]);
-
-  const userStats = statsResponse.data;
-
-  // Combine the results into the complete Player object that the UI expects
-  const player: Player = {
-    userId: userStats.userId,
-    username: userInfoMock.username,
-    email: userInfoMock.email,
-    duelsPlayed: userStats.duelsPlayed,
-    duelsWon: userStats.duelsWon,
-    duelsLost: userStats.duelsLost,
-    duelsDrawn: userStats.duelsDrawn
-  };
-
-  return player;
+/**
+ * Fetches ONLY the competitive stats for a given user.
+ * Used by the MatchLobbyPage to build the PlayerCard.
+ * @param userId The ID of the user to fetch stats for.
+ */
+export const getPlayerDetails = async (userId: number): Promise<UserStats> => {
+    try {
+        // This call correctly points to your /api/stats/{userId} endpoint
+        const response = await api.get<UserStats>(`/api/stats/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Failed to fetch stats for user ${userId}`, error);
+        throw new Error(`Could not load stats for user ${userId}.`);
+    }
 };
