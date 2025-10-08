@@ -1,37 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-
-// Make sure you have this hook or similar
-// import { useCountdown } from '../../../core/hooks/useCountdown'; 
+import { useCountdown } from '../../../core/hooks/useCountdown';
 import { PlayerCard } from '../components/PlayerCard';
 import type { LobbyState, Player, MatchEvent, UserStats } from '../types/match';
-import { getMatchLobbyState, getPlayerDetails } from '../services/matchService';
+import { getMatchLobbyState, getPlayerStats } from '../services/matchService';
 import { stompService } from '../../../core/sockets/stompClient';
-
-// A simple countdown hook placeholder if you don't have one
-const useCountdown = (targetDate: string) => {
-    const countDownDate = new Date(targetDate).getTime();
-    const [countDown, setCountDown] = useState(countDownDate - new Date().getTime());
-
-    useEffect(() => {
-        if (!targetDate) return;
-        const interval = setInterval(() => {
-            setCountDown(countDownDate - new Date().getTime());
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [countDownDate, targetDate]);
-
-    const minutes = Math.floor((countDown % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((countDown % (1000 * 60)) / 1000);
-    return { minutes, seconds };
-};
-
 
 const MatchLobbyPage = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
   const [players, setPlayers] = useState<(Player | null)[]>([null, null]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,27 +24,29 @@ const MatchLobbyPage = () => {
       const state = await getMatchLobbyState(matchId);
       setLobbyState(state);
 
-      // --- THIS IS THE CORRECTED LOGIC ---
-      // 1. Fetch stats for each player concurrently. getPlayerDetails now returns UserStats.
-      const p1StatsPromise = getPlayerDetails(state.playerOneId);
-      const p2StatsPromise = state.playerTwoId ? getPlayerDetails(state.playerTwoId) : Promise.resolve(null);
+      const p1StatsPromise = getPlayerStats(state.playerOneId);
+      const p2StatsPromise = state.playerTwoId ? getPlayerStats(state.playerTwoId) : Promise.resolve(null);
       
       const [p1Stats, p2Stats] = await Promise.all([p1StatsPromise, p2StatsPromise]);
 
-      // 2. Construct the full Player object using the username from the lobby state.
-      const player1: Player = {
-          username: state.playerOneUsername,
-          email: '', // Not needed for the card
-          ...(p1Stats as UserStats)
-      };
-      
-      const player2: Player | null = p2Stats && state.playerTwoUsername ? {
-          username: state.playerTwoUsername,
-          email: '', // Not needed for the card
-          ...(p2Stats as UserStats)
-      } : null;
+      // --- THIS IS THE CORRECTED LOGIC ---
+      if (p1Stats) {
+        // ✅ FIX: Spread the stats object first, then add the missing properties.
+        const player1: Player = {
+            ...p1Stats, // Contains userId and all duel stats
+            username: state.playerOneUsername,
+            email: '', // Placeholder as it's not needed for the card
+        };
+        
+        const player2: Player | null = p2Stats && state.playerTwoUsername ? {
+            ...p2Stats, // Contains userId and all duel stats
+            username: state.playerTwoUsername,
+            email: '', // Placeholder
+        } : null;
 
-      setPlayers([player1, player2]);
+        setPlayers([player1, player2]);
+      }
+      // --- END OF FIX ---
 
     } catch (err: any) {
       setError(err.message || 'Could not find the match lobby. It may have expired or is invalid.');
@@ -77,34 +57,23 @@ const MatchLobbyPage = () => {
 
   useEffect(() => {
     fetchFullLobbyData();
-    stompService.connect();
     
-    // Using subscribeToMatchUpdates for type safety
     const subscription = stompService.subscribeToMatchUpdates(matchId!, (event: MatchEvent) => {
       switch (event.eventType) {
         case 'PLAYER_JOINED':
-          console.log("Opponent joined! Re-fetching lobby state.");
           fetchFullLobbyData();
           break;
-        
         case 'MATCH_START':
-          console.log("Match is starting! Navigating to arena...");
           navigate(`/match/arena/${matchId}`);
           break;
-
         case 'MATCH_CANCELED':
-          console.log(`Match canceled by server. Reason: ${event.reason}`);
           setError(`Match Canceled: ${event.reason}`);
           setTimeout(() => navigate('/home'), 5000);
           break;
       }
     });
 
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+    return () => { if (subscription) subscription.unsubscribe(); };
   }, [matchId, fetchFullLobbyData, navigate]);
   
   const [player1, player2] = players;
@@ -142,7 +111,7 @@ const MatchLobbyPage = () => {
         <div className="text-center mb-8">
           {lobbyState.status === 'SCHEDULED' ? (
             <>
-              <p className="text-gray-400 text-xl">Match starts in</p>
+              <p className="text-gray-400 text-xl">Match starting soon...</p>
               <h1 className="text-6xl font-bold text-white tracking-wider my-2">
                 {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
               </h1>

@@ -57,6 +57,7 @@ public class MatchServiceImpl implements MatchService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
+
     private String getUsernameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
             return "anonymous";
@@ -64,8 +65,6 @@ public class MatchServiceImpl implements MatchService {
         return email.substring(0, email.indexOf("@"));
     }
 
-    // No changes needed in createDuel, joinDuel, getDuelState, etc.
-    // ... (all methods before buildMatchResults are unchanged) ...
 
     @Override
     public CreateDuelResponse createDuel(CreateDuelRequest request, Long creatorId) {
@@ -86,6 +85,7 @@ public class MatchServiceImpl implements MatchService {
         String shareableLink = frontendUrl + "/match/join?roomCode=" + roomCode;
         return new CreateDuelResponse(savedMatch.getId(), roomCode, shareableLink);
     }
+
 
     @Override
     @Transactional
@@ -110,6 +110,7 @@ public class MatchServiceImpl implements MatchService {
         return new JoinDuelResponse(savedMatch.getId(), savedMatch.getScheduledAt());
     }
 
+
     @Override
     public DuelStateResponseDTO getDuelState(UUID matchId) {
         Match match = matchRepository.findById(matchId)
@@ -127,7 +128,11 @@ public class MatchServiceImpl implements MatchService {
 
         ProblemDetailResponse problemDTO = ProblemDetailResponse.fromEntity(problemEntity);
 
-        List<Long> userIds = List.of(liveState.getPlayerOneId(), liveState.getPlayerTwoId());
+        // This is safer to prevent NullPointerException if player two hasn't joined yet
+        List<Long> userIds = new ArrayList<>();
+        if (liveState.getPlayerOneId() != null) userIds.add(liveState.getPlayerOneId());
+        if (liveState.getPlayerTwoId() != null) userIds.add(liveState.getPlayerTwoId());
+
         Map<Long, String> usernameMap = userRepository.findByIdIn(userIds).stream()
                 .collect(Collectors.toMap(
                         AuthenticationUser::getId,
@@ -141,6 +146,7 @@ public class MatchServiceImpl implements MatchService {
                 .playerTwoUsername(usernameMap.get(liveState.getPlayerTwoId()))
                 .build();
     }
+
 
     @Override
     public void processDuelSubmissionResult(UUID matchId, Long userId, SubmissionStatus submissionStatus) {
@@ -174,6 +180,7 @@ public class MatchServiceImpl implements MatchService {
             log.info("{} Penalties updated in Redis and notification sent.", logPrefix);
         }
     }
+
 
     @Override
     @Transactional
@@ -236,6 +243,7 @@ public class MatchServiceImpl implements MatchService {
         log.info("{} <- Match completion process finished successfully.", logPrefix);
     }
 
+
     private void updateUserStats(Long p1Id, Long p2Id, Long winnerId, boolean isDraw) {
         Map<Long, UserStats> statsMap = userStatsRepository.findAllById(Arrays.asList(p1Id, p2Id)).stream().collect(Collectors.toMap(UserStats::getUserId, Function.identity()));
         UserStats p1Stats = statsMap.computeIfAbsent(p1Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
@@ -266,10 +274,12 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
+
     private void updateUserStatsForDraw(Long p1Id, Long p2Id) {
         if (p1Id == null || p2Id == null) return;
         updateUserStats(p1Id, p2Id, null, true);
     }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -282,7 +292,6 @@ public class MatchServiceImpl implements MatchService {
         return buildMatchResults(match);
     }
 
-    // in class com.Abhinav.backend.features.match.service.MatchServiceImpl
 
     private MatchResultDTO buildMatchResults(Match match) {
         List<Submission> allSubmissions = submissionRepository.findByMatchIdOrderByCreatedAtAsc(match.getId());
@@ -291,18 +300,14 @@ public class MatchServiceImpl implements MatchService {
 
         String outcome;
         String winnerUsername = null;
+        Long winnerId = match.getWinnerId();
 
-        if (match.getWinnerId() == null) {
+        if (winnerId == null) {
             outcome = "DRAW";
         } else {
-            Long winnerId = match.getWinnerId();
-
-            // --- THIS IS THE FIX ---
-            // Instead of a method reference, use a lambda to specify the input.
             winnerUsername = userRepository.findById(winnerId)
-                    // 'user' is the AuthenticationUser object from the Optional
                     .map(user -> this.getUsernameFromEmail(user.getEmail()))
-                    .orElse("Unknown Player"); // Fallback in case user is not found
+                    .orElse("Unknown Player");
 
             if (winnerId.equals(match.getPlayerOneId())) {
                 outcome = "PLAYER_ONE_WIN";
@@ -311,19 +316,35 @@ public class MatchServiceImpl implements MatchService {
             }
         }
 
-        // This part was already correct, but ensure winnerUsername is included
+        UUID winningSubmissionId = null;
+        if (winnerId != null) {
+            // Use the repository method to find the winner's first accepted submission
+            List<Submission> winnerSubmissions = submissionRepository
+                    .findByMatchIdAndUserIdAndStatusOrderByCreatedAtAsc(
+                            match.getId(),
+                            winnerId,
+                            SubmissionStatus.ACCEPTED
+                    );
+
+            if (!winnerSubmissions.isEmpty()) {
+                winningSubmissionId = winnerSubmissions.get(0).getId();
+            }
+        }
+
         return MatchResultDTO.builder()
                 .matchId(match.getId())
                 .problemId(match.getProblemId())
                 .startedAt(match.getStartedAt())
                 .endedAt(match.getEndedAt())
                 .winnerId(match.getWinnerId())
-                .winnerUsername(winnerUsername) // Add the username to the DTO
+                .winnerUsername(winnerUsername)
                 .outcome(outcome)
                 .playerOne(playerOneResult)
                 .playerTwo(playerTwoResult)
+                .winningSubmissionId(winningSubmissionId)
                 .build();
     }
+
 
     private PlayerResultDTO buildPlayerResultFromStored(Long userId, Match match, List<Submission> allSubmissions) {
         if (userId == null) return null;
@@ -355,11 +376,13 @@ public class MatchServiceImpl implements MatchService {
                 .build();
     }
 
+
     private static final Set<MatchStatus> PAST_MATCH_STATUSES = EnumSet.of(
             MatchStatus.COMPLETED,
             MatchStatus.CANCELED,
             MatchStatus.EXPIRED
     );
+
 
     @Override
     @Transactional(readOnly = true)

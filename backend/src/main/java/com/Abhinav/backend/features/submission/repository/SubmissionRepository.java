@@ -2,6 +2,7 @@ package com.Abhinav.backend.features.submission.repository;
 
 import com.Abhinav.backend.features.authentication.dto.SolvesByTagDto;
 import com.Abhinav.backend.features.submission.model.Submission;
+import com.Abhinav.backend.features.submission.model.SubmissionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -66,4 +67,8 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
         ORDER BY solvedCount DESC, tagName ASC
     """, nativeQuery = true)
     List<SolvesByTagDto.SolvesByTagProjection> countSolvedProblemsByTagForUser(@Param("userId") Long userId);
+
+
+    List<Submission> findByMatchIdAndUserIdAndStatusOrderByCreatedAtAsc(UUID matchId, Long userId, SubmissionStatus status);
 }
+

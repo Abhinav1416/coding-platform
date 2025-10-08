@@ -63,4 +63,5 @@ public class MatchController {
         LobbyStateDTO lobbyState = matchService.getLobbyState(matchId);
         return ResponseEntity.ok(lobbyState);
     }
+
 }

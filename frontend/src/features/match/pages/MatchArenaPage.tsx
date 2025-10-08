@@ -1,13 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { Loader2 } from 'lucide-react';
 
 // Hooks
 import { useMatchTimer } from '../hooks/useMatchTimer';
+import { useAuth } from '../../../core/hooks/useAuth';
 
 // Components
 import MatchHeader from '../components/MatchHeader';
-import MatchResultOverlay from '../components/MatchResultOverlay';
+import { MatchResultOverlay } from '../components/MatchResultOverlay';
 import ProblemDetails from '../../problem/components/ProblemDetails';
 import CodeEditor from '../../problem/components/CodeEditor';
 import SubmissionsList from '../../problem/components/SubmissionsList';
@@ -21,7 +23,8 @@ import { stompService } from '../../../core/sockets/stompClient';
 import type { ArenaData, MatchEvent, MatchResult } from '../types/match';
 import type { SubmissionSummary, SubmissionDetails } from '../../problem/types/problem';
 
-// --- Helper Hooks (no changes needed here, included for completeness) ---
+// --- Helper Hooks (Full Implementation) ---
+
 const useArenaData = (matchId: string | undefined) => {
     const [arenaData, setArenaData] = useState<ArenaData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +43,7 @@ const useArenaData = (matchId: string | undefined) => {
                 setArenaData(data);
             } catch (err: any) {
                 if (err instanceof AxiosError && err.response?.status === 409) {
+                    // 409 Conflict can mean the match is already over
                     setShouldRedirect(true);
                 } else {
                     setError(err.message || "Failed to load match data.");
@@ -76,7 +80,7 @@ const useMatchEvents = (
 
 const LoadingSpinner = () => (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+        <Loader2 className="animate-spin text-[#F97316]" size={48} />
         <p className="mt-4 text-white">Loading Arena...</p>
     </div>
 );
@@ -85,6 +89,7 @@ const LoadingSpinner = () => (
 const MatchArenaPage: React.FC = () => {
     const { matchId } = useParams<{ matchId: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const { arenaData, isLoading, error, shouldRedirect } = useArenaData(matchId);
 
@@ -92,6 +97,17 @@ const MatchArenaPage: React.FC = () => {
     const [playerUsernames, setPlayerUsernames] = useState({ p1: 'Player 1', p2: 'Player 2' });
     const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
     
+    // Local UI State for editor and submissions
+    const [language, setLanguage] = useState<'cpp' | 'java' | 'python'>('cpp');
+    const [code, setCode] = useState<string>('// Good luck!');
+    const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetails | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState(0);
+
+    // --- Effects ---
+
     useEffect(() => {
         if (shouldRedirect && matchId) {
             navigate(`/match/results/${matchId}`, { replace: true });
@@ -113,7 +129,6 @@ const MatchArenaPage: React.FC = () => {
     const durationInSeconds = (arenaData?.liveState.durationInMinutes || 0) * 60;
     const { timeLeft } = useMatchTimer(durationInSeconds, matchState);
 
-    // --- FIX #1: Watch the timer and update state when it hits zero ---
     useEffect(() => {
         if (timeLeft <= 0 && matchState === 'IN_PROGRESS') {
             console.log("Timer hit zero. Awaiting final result from server...");
@@ -121,26 +136,18 @@ const MatchArenaPage: React.FC = () => {
         }
     }, [timeLeft, matchState]);
 
-    // --- FIX #2: Watch for completion and automatically navigate ---
     useEffect(() => {
         if (matchState === 'COMPLETED' && matchId) {
             console.log("Match completed. Redirecting to results page in 4 seconds...");
             const timer = setTimeout(() => {
                 navigate(`/match/results/${matchId}`);
-            }, 4000); // 4-second delay to show the result overlay
+            }, 4000);
 
-            return () => clearTimeout(timer); // Cleanup timer if component unmounts
+            return () => clearTimeout(timer);
         }
     }, [matchState, matchId, navigate]);
 
-    // Local UI State
-    const [language, setLanguage] = useState<'cpp' | 'java' | 'python'>('cpp');
-    const [code, setCode] = useState<string>('// Good luck!');
-    const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetails | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState(0);
+    // --- Handlers ---
 
     const handleSubmissionUpdate = useCallback((update: { submissionId: string; status: string }) => {
         setSubmissions(prev => prev.map(sub => sub.id === update.submissionId ? { ...sub, status: update.status } : sub));
@@ -177,6 +184,8 @@ const MatchArenaPage: React.FC = () => {
         setIsModalOpen(true);
     };
 
+    // --- Render Logic ---
+
     if (isLoading) return <LoadingSpinner />;
     if (shouldRedirect) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
@@ -186,7 +195,6 @@ const MatchArenaPage: React.FC = () => {
     if (error) return <div className="text-red-500 text-center p-8 text-xl">{error}</div>;
     if (!arenaData?.problemDetails) return <div className="text-center p-8">Match data or problem could not be found.</div>;
 
-    // The editor is now disabled if the match is not *exactly* IN_PROGRESS
     const isEditorDisabled = matchState !== 'IN_PROGRESS' || isSubmitting;
     const { problemDetails } = arenaData;
 
@@ -197,18 +205,18 @@ const MatchArenaPage: React.FC = () => {
 
     return (
         <>
-            <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
+            <div className="flex flex-col h-screen bg-gray-900 text-white">
                 <MatchHeader
                     timeLeft={timeLeft}
                     playerOneUsername={playerUsernames.p1}
                     playerTwoUsername={playerUsernames.p2}
                     status={matchState}
                 />
-                <div className="flex flex-grow overflow-auto">
-                    <div className="w-1-2 border-r border-gray-200 dark:border-gray-700">
+                <div className="flex flex-grow overflow-hidden">
+                    <div className="w-1/2 border-r border-gray-700">
                         <Tabs tabs={leftPanelTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </div>
-                    <div className="w-1-2">
+                    <div className="w-1/2">
                         <CodeEditor
                             language={language} setLanguage={setLanguage}
                             code={code} setCode={setCode}
@@ -217,10 +225,11 @@ const MatchArenaPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-            {/* The overlay now has no button, as redirection is automatic */}
+            
             {matchState === 'COMPLETED' && matchResult && (
-                <MatchResultOverlay result={matchResult} onClose={() => {}} />
+                <MatchResultOverlay result={matchResult} currentUserEmail={user?.email} />
             )}
+
             {isModalOpen && (
                 <SubmissionDetailModal submission={selectedSubmission} onClose={() => setIsModalOpen(false)} />
             )}

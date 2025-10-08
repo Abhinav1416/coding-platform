@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Copy, Check } from 'lucide-react';
+import { useCreateMatch } from '../hooks/useCreateMatch';
 import type { CreateMatchRequest, CreateMatchResponse, MatchEvent } from '../types/match';
 import { stompService } from '../../../core/sockets/stompClient';
-// Assuming you have a real useCreateMatch hook, otherwise this mock will work.
-import { useCreateMatch } from '../hooks/useCreateMatch'; 
 
 // --- Main Component ---
 const CreateMatchPage = () => {
@@ -12,9 +11,9 @@ const CreateMatchPage = () => {
   const [formData, setFormData] = useState<CreateMatchRequest>({
     difficultyMin: 1200,
     difficultyMax: 1600,
-    startDelayInMinutes: 5,
-    durationInMinutes: 15,
-  });
+    startDelayInMinutes: 1, // Defaulting to 1 as per your request
+    durationInMinutes: 1, // Defaulting to 1 as per your request
+  }); 
   const [formError, setFormError] = useState<string | null>(null);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +43,6 @@ const CreateMatchPage = () => {
           <>
             <h2 className="text-3xl font-bold text-center text-white mb-8">Create a New Match</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Form content remains the same */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="difficultyMin" className={labelStyles}>Min Difficulty</label>
@@ -84,12 +82,9 @@ const WaitingForOpponent = ({ data }: { data: CreateMatchResponse }) => {
   const [copiedItem, setCopiedItem] = useState<'link' | 'code' | null>(null);
 
   useEffect(() => {
-    // 1. Ensure the WebSocket client is activated
-    stompService.connect();
+    if (!data.matchId) return;
 
-    // 2. Use the specific, type-safe subscription method
     const subscription = stompService.subscribeToMatchUpdates(data.matchId, (event: MatchEvent) => {
-      // The JSON parsing is now handled by the service
       if (event.eventType === 'PLAYER_JOINED') {
         console.log("Opponent joined event received! Navigating to lobby.");
         navigate(`/match/lobby/${data.matchId}`);
@@ -97,10 +92,6 @@ const WaitingForOpponent = ({ data }: { data: CreateMatchResponse }) => {
     });
 
     return () => {
-      console.log(`Cleaning up subscription for /topic/match/${data.matchId}`);
-      
-      // 3. --- THE FIX ---
-      // Safely unsubscribe only if the subscription object was successfully created.
       if (subscription) {
         subscription.unsubscribe();
       }

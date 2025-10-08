@@ -1,4 +1,4 @@
-import api from '../../../core/api/api'; // Adjust this path to your api.ts file
+import api from '../../../core/api/api';
 
 // Import all necessary types from your match types file
 import type {
@@ -8,15 +8,15 @@ import type {
   JoinMatchResponse,
   LobbyState,
   UserStats,
-  ArenaData
+  ArenaData,
+  MatchResult
 } from '../types/match';
 
 const API_BASE_URL = '/api/match';
+const API_STATS_URL = '/api/stats';
 
 /**
  * Sends a request to the backend to create a new match.
- * Used by the CreateMatchPage.
- * @param requestData The parameters for the new match.
  */
 export const createMatch = async (requestData: CreateMatchRequest): Promise<CreateMatchResponse> => {
   const response = await api.post<CreateMatchResponse>(API_BASE_URL, requestData);
@@ -25,8 +25,6 @@ export const createMatch = async (requestData: CreateMatchRequest): Promise<Crea
 
 /**
  * Sends a request for the current user to join an existing match using a room code.
- * Used by the JoinMatchPage.
- * @param requestData The room code for the match to join.
  */
 export const joinMatch = async (requestData: JoinMatchRequest): Promise<JoinMatchResponse> => {
   const response = await api.post<JoinMatchResponse>(`${API_BASE_URL}/join`, requestData);
@@ -35,8 +33,6 @@ export const joinMatch = async (requestData: JoinMatchRequest): Promise<JoinMatc
 
 /**
  * Fetches the current state of a match lobby.
- * Used by the MatchLobbyPage.
- * @param matchId The unique ID of the match.
  */
 export const getMatchLobbyState = async (matchId: string): Promise<LobbyState> => {
   const response = await api.get<LobbyState>(`${API_BASE_URL}/lobby/${matchId}`);
@@ -45,12 +41,9 @@ export const getMatchLobbyState = async (matchId: string): Promise<LobbyState> =
 
 /**
  * Fetches the detailed data required for the match arena, including the full problem details.
- * Used by the MatchArenaPage.
- * @param matchId The unique ID of the match.
  */
 export const getArenaData = async (matchId: string): Promise<ArenaData> => {
     try {
-        // This endpoint matches your MatchController's getDuelState method
         const response = await api.get<ArenaData>(`${API_BASE_URL}/${matchId}`);
         return response.data;
     } catch (error) {
@@ -60,17 +53,20 @@ export const getArenaData = async (matchId: string): Promise<ArenaData> => {
 };
 
 /**
+ * Fetches the final result of a completed match.
+ * @param matchId The unique ID of the match.
+ */
+export const getMatchResult = async (matchId: string): Promise<MatchResult> => {
+  // This URL now correctly matches your backend controller's endpoint
+  const response = await api.get<MatchResult>(`${API_BASE_URL}/${matchId}/results`);
+  return response.data;
+};
+
+/**
  * Fetches ONLY the competitive stats for a given user.
- * Used by the MatchLobbyPage to build the PlayerCard.
  * @param userId The ID of the user to fetch stats for.
  */
-export const getPlayerDetails = async (userId: number): Promise<UserStats> => {
-    try {
-        // This call correctly points to your /api/stats/{userId} endpoint
-        const response = await api.get<UserStats>(`/api/stats/${userId}`);
-        return response.data;
-    } catch (error) {
-        console.error(`Failed to fetch stats for user ${userId}`, error);
-        throw new Error(`Could not load stats for user ${userId}.`);
-    }
+export const getPlayerStats = async (userId: number): Promise<UserStats> => {
+    const response = await api.get<UserStats>(`${API_STATS_URL}/${userId}`);
+    return response.data;
 };

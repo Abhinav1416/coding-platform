@@ -16,7 +16,7 @@ import CreateMatchPage from "../features/match/pages/CreateMatchPage";
 import JoinMatchPage from "../features/match/pages/JoinMatchPage";
 import MatchLobbyPage from "../features/match/pages/MatchLobbyPage";
 import MatchArenaPage from "../features/match/pages/MatchArenaPage";
-import MatchResultPage from "../features/match/pages/MatchResultPage";
+import MatchResultsPage from "../features/match/pages/MatchResultsPage";
 
 
 
@@ -54,7 +54,7 @@ const AppRoutes = () => {
         <Route path="/match/lobby/:matchId" element={<MatchLobbyPage />} />
         <Route path="/match/arena/:matchId" element={<MatchArenaPage />} />
 
-        <Route path="/match/results/:matchId" element={<MatchResultPage />} />
+        <Route path="/match/results/:matchId" element={<MatchResultsPage />} />
 
 
         

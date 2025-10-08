@@ -14,7 +14,6 @@ public class UserStatsDTO {
     private int duelsLost;
     private int duelsDrawn;
 
-    // A handy static method to convert an Entity to a DTO
     public static UserStatsDTO fromEntity(UserStats entity) {
         return UserStatsDTO.builder()
                 .userId(entity.getUserId())

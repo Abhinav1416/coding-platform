@@ -18,4 +18,5 @@ public class MatchResultDTO {
     private String winnerUsername;
     private PlayerResultDTO playerOne;
     private PlayerResultDTO playerTwo;
+    private UUID winningSubmissionId;
 }
