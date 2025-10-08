@@ -196,7 +196,6 @@ public class SubmissionServiceImpl implements SubmissionService {
             submission.setMatchId(submission.getMatchId());
             Submission savedSubmission = submissionRepository.save(submission);
             logger.info("{}   - Submission status updated to INTERNAL_ERROR in database.", logPrefix);
-
             logger.debug("{}   - Sending error notification.", logPrefix);
             SubmissionResultDTO errorResult = SubmissionResultDTO.fromEntity(savedSubmission);
             notificationService.notifyUser(submission.getUserId(), submission.getId(), errorResult);

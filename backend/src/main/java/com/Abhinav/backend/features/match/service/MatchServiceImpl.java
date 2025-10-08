@@ -23,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.CacheManager; // <-- IMPORT THIS
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -49,7 +49,7 @@ public class MatchServiceImpl implements MatchService {
     private final UserStatsRepository userStatsRepository;
     private final MatchNotificationService matchNotificationService;
     private final AuthenticationUserRepository userRepository;
-    private final CacheManager cacheManager; // <-- 1. INJECT THE CACHE MANAGER
+    private final CacheManager cacheManager;
 
 
     public static final long PENALTY_MINUTES = 5;
@@ -57,7 +57,6 @@ public class MatchServiceImpl implements MatchService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
-    // A helper to extract username from email safely.
     private String getUsernameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
             return "anonymous";
@@ -65,7 +64,8 @@ public class MatchServiceImpl implements MatchService {
         return email.substring(0, email.indexOf("@"));
     }
 
-    // ... (no changes to createDuel, joinDuel, getDuelState, processDuelSubmissionResult, completeMatch) ...
+    // No changes needed in createDuel, joinDuel, getDuelState, etc.
+    // ... (all methods before buildMatchResults are unchanged) ...
 
     @Override
     public CreateDuelResponse createDuel(CreateDuelRequest request, Long creatorId) {
@@ -83,7 +83,7 @@ public class MatchServiceImpl implements MatchService {
                 .durationInMinutes(request.getDurationInMinutes())
                 .build();
         Match savedMatch = matchRepository.save(match);
-        String shareableLink = frontendUrl + "/match/join?roomCode=" + roomCode; // Corrected path
+        String shareableLink = frontendUrl + "/match/join?roomCode=" + roomCode;
         return new CreateDuelResponse(savedMatch.getId(), roomCode, shareableLink);
     }
 
@@ -110,24 +110,15 @@ public class MatchServiceImpl implements MatchService {
         return new JoinDuelResponse(savedMatch.getId(), savedMatch.getScheduledAt());
     }
 
-    // in class com.Abhinav.backend.features.match.service.MatchServiceImpl
-
-    // in class com.Abhinav.backend.features.match.service.MatchServiceImpl
-
     @Override
     public DuelStateResponseDTO getDuelState(UUID matchId) {
-        // --- ADD THIS CHECK AT THE TOP ---
-        // First, check the definitive status from the main database
         Match match = matchRepository.findById(matchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Match not found with id: " + matchId));
 
-        // If the match is already completed, throw our new specific exception.
         if (match.getStatus() == MatchStatus.COMPLETED) {
             throw new MatchAlreadyCompletedException("Match " + matchId + " is already completed.");
         }
-        // --- END OF NEW CODE ---
 
-        // The rest of the method only runs if the match is active
         LiveMatchStateDTO liveState = liveMatchStateRepository.findById(matchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active match not found in cache for match ID: " + matchId));
 
@@ -197,10 +188,14 @@ public class MatchServiceImpl implements MatchService {
             return;
         }
         Optional<LiveMatchStateDTO> liveStateOpt = liveMatchStateRepository.findById(matchId);
+
+
         if (liveStateOpt.isEmpty()) {
             log.warn("{} Live match state not found in Redis. Assuming timeout completion.", logPrefix);
             match.setStatus(MatchStatus.COMPLETED);
             match.setEndedAt(Instant.now());
+            MatchResultDTO results = this.buildMatchResults(match);
+            matchNotificationService.notifyMatchEnd(matchId, results);
             matchRepository.save(match);
             updateUserStatsForDraw(match.getPlayerOneId(), match.getPlayerTwoId());
             return;
@@ -241,11 +236,6 @@ public class MatchServiceImpl implements MatchService {
         log.info("{} <- Match completion process finished successfully.", logPrefix);
     }
 
-
-    /**
-     * Helper method to update user stats.
-     * This method is now also responsible for evicting the user profiles from the cache.
-     */
     private void updateUserStats(Long p1Id, Long p2Id, Long winnerId, boolean isDraw) {
         Map<Long, UserStats> statsMap = userStatsRepository.findAllById(Arrays.asList(p1Id, p2Id)).stream().collect(Collectors.toMap(UserStats::getUserId, Function.identity()));
         UserStats p1Stats = statsMap.computeIfAbsent(p1Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
@@ -268,16 +258,12 @@ public class MatchServiceImpl implements MatchService {
         }
         userStatsRepository.saveAll(Arrays.asList(p1Stats, p2Stats));
 
-        // ***** 2. EVICT CACHE AFTER UPDATING STATS *****
-        // We need the usernames to evict them from the 'userProfiles' cache.
         List<AuthenticationUser> users = userRepository.findAllById(Arrays.asList(p1Id, p2Id));
         for (AuthenticationUser user : users) {
             String username = getUsernameFromEmail(user.getEmail());
             log.info("Evicting profile from cache for username: {}", username);
-            // Evict the user's profile, forcing the next request to fetch from the DB
             Objects.requireNonNull(cacheManager.getCache("userProfiles")).evict(username);
         }
-        // ***********************************************
     }
 
     private void updateUserStatsForDraw(Long p1Id, Long p2Id) {
@@ -296,24 +282,43 @@ public class MatchServiceImpl implements MatchService {
         return buildMatchResults(match);
     }
 
+    // in class com.Abhinav.backend.features.match.service.MatchServiceImpl
+
     private MatchResultDTO buildMatchResults(Match match) {
         List<Submission> allSubmissions = submissionRepository.findByMatchIdOrderByCreatedAtAsc(match.getId());
         PlayerResultDTO playerOneResult = buildPlayerResultFromStored(match.getPlayerOneId(), match, allSubmissions);
         PlayerResultDTO playerTwoResult = buildPlayerResultFromStored(match.getPlayerTwoId(), match, allSubmissions);
+
         String outcome;
+        String winnerUsername = null;
+
         if (match.getWinnerId() == null) {
             outcome = "DRAW";
-        } else if (match.getWinnerId().equals(match.getPlayerOneId())) {
-            outcome = "PLAYER_ONE_WIN";
         } else {
-            outcome = "PLAYER_TWO_WIN";
+            Long winnerId = match.getWinnerId();
+
+            // --- THIS IS THE FIX ---
+            // Instead of a method reference, use a lambda to specify the input.
+            winnerUsername = userRepository.findById(winnerId)
+                    // 'user' is the AuthenticationUser object from the Optional
+                    .map(user -> this.getUsernameFromEmail(user.getEmail()))
+                    .orElse("Unknown Player"); // Fallback in case user is not found
+
+            if (winnerId.equals(match.getPlayerOneId())) {
+                outcome = "PLAYER_ONE_WIN";
+            } else {
+                outcome = "PLAYER_TWO_WIN";
+            }
         }
+
+        // This part was already correct, but ensure winnerUsername is included
         return MatchResultDTO.builder()
                 .matchId(match.getId())
                 .problemId(match.getProblemId())
                 .startedAt(match.getStartedAt())
                 .endedAt(match.getEndedAt())
                 .winnerId(match.getWinnerId())
+                .winnerUsername(winnerUsername) // Add the username to the DTO
                 .outcome(outcome)
                 .playerOne(playerOneResult)
                 .playerTwo(playerTwoResult)
@@ -394,6 +399,7 @@ public class MatchServiceImpl implements MatchService {
         );
     }
 
+
     private PastMatchDto convertToDto(Match match, Long currentUserId) {
         Long opponentId = Objects.equals(match.getPlayerOneId(), currentUserId)
                 ? match.getPlayerTwoId()
@@ -408,6 +414,7 @@ public class MatchServiceImpl implements MatchService {
                 .createdAt(match.getCreatedAt())
                 .build();
     }
+
 
     private String determineResult(Match match, Long currentUserId) {
         switch (match.getStatus()) {

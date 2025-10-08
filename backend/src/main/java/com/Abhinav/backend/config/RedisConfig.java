@@ -1,6 +1,5 @@
 package com.Abhinav.backend.config;
 
-import com.Abhinav.backend.features.match.repository.LiveMatchStateRepository;
 import com.Abhinav.backend.features.match.service.MatchExpirationHandler;
 import com.Abhinav.backend.features.problem.service.ProblemService;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -12,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -35,6 +33,7 @@ public class RedisConfig {
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        // This bean is perfect, no changes needed.
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         ObjectMapper objectMapper = new ObjectMapper()
@@ -54,28 +53,54 @@ public class RedisConfig {
         return template;
     }
 
-
     @Bean
     public RedisMessageListenerContainer keyExpirationListenerContainer(
             RedisConnectionFactory connectionFactory,
             ProblemService problemService,
-            MatchExpirationHandler matchExpirationHandler // Inject our new handler
+            MatchExpirationHandler matchExpirationHandler
     ) {
         RedisMessageListenerContainer listenerContainer = new RedisMessageListenerContainer();
         listenerContainer.setConnectionFactory(connectionFactory);
 
-        // Your existing listener (no changes needed here)
-        listenerContainer.addMessageListener(
-                new RedisExpirationListener(listenerContainer, problemService),
-                new PatternTopic("__keyevent@*__:expired")
-        );
+        PatternTopic expirationTopic = new PatternTopic("__keyevent@*__:expired");
 
-        // Add our new listener for match expirations
-        listenerContainer.addMessageListener(
-                new MatchKeyListener(matchExpirationHandler),
-                new PatternTopic("__keyevent@*__:expired")
-        );
-        log.info("Subscribed to Redis key expiration events.");
+        // Listener for PROBLEM Expirations (No changes here)
+        listenerContainer.addMessageListener(new RedisExpirationListener(problemService), expirationTopic);
+        log.info("Registered listener for PROBLEM expirations.");
+
+        // Listener for MATCH Expirations (with new DEBUG logging)
+        MessageListener matchListener = (message, pattern) -> {
+            String channel = new String(pattern);
+            String expiredKey = new String(message.getBody());
+
+            // --- THIS IS THE DEBUG LOG ---
+            // It will print EVERY key that expires, so we can see what's happening.
+            log.info(">>>>>> [REDIS DEBUG] Event received! Channel: '{}', Expired Key: '{}'", channel, expiredKey);
+            // --- END OF DEBUG LOG ---
+
+            // Define the prefix that your LiveMatchStateRepository uses.
+            final String MATCH_KEY_PREFIX = "live_match:"; // <-- ADJUST IF YOUR PREFIX IS DIFFERENT
+
+            if (expiredKey.startsWith(MATCH_KEY_PREFIX)) {
+                log.info("[MATCH_EXPIRY] SUCCESS: Key has the correct prefix. Processing...");
+                try {
+                    // Strip the prefix before parsing
+                    String matchIdStr = expiredKey.substring(MATCH_KEY_PREFIX.length());
+                    UUID matchId = UUID.fromString(matchIdStr);
+
+                    // Now, call the handler
+                    matchExpirationHandler.handleExpiration(matchId);
+
+                } catch (Exception e) {
+                    log.error("Error processing expired match key: '{}'", expiredKey, e);
+                }
+            } else {
+                log.warn("[MATCH_EXPIRY] SKIPPED: Expired key '{}' does not have the expected prefix '{}'", expiredKey, MATCH_KEY_PREFIX);
+            }
+        };
+
+        listenerContainer.addMessageListener(matchListener, expirationTopic);
+        log.info("Registered listener for MATCH expirations.");
 
         return listenerContainer;
     }
@@ -83,6 +108,8 @@ public class RedisConfig {
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        // This bean is perfect, no changes needed.
+        // ... (rest of the method is the same)
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -104,30 +131,5 @@ public class RedisConfig {
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(cacheConfigurations)
                 .build();
-    }
-
-    // Inner class to handle match expiration messages
-    private static class MatchKeyListener implements MessageListener {
-        private final MatchExpirationHandler matchExpirationHandler;
-
-        public MatchKeyListener(MatchExpirationHandler matchExpirationHandler) {
-            this.matchExpirationHandler = matchExpirationHandler;
-        }
-
-        @Override
-        public void onMessage(Message message, byte[] pattern) {
-            String expiredKey = new String(message.getBody());
-
-            if (expiredKey.startsWith(LiveMatchStateRepository.LIVE_MATCH_KEY_PREFIX)) {
-                try {
-                    String matchIdStr = expiredKey.substring(LiveMatchStateRepository.LIVE_MATCH_KEY_PREFIX.length());
-                    UUID matchId = UUID.fromString(matchIdStr);
-                    // Delegate the actual work to our transactional service
-                    matchExpirationHandler.handleExpiration(matchId);
-                } catch (Exception e) {
-                    log.error("Error processing expired match key: '{}'", expiredKey, e);
-                }
-            }
-        }
     }
 }

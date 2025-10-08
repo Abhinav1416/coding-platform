@@ -15,7 +15,7 @@ public class MatchResultDTO {
     private Instant endedAt;
     private Long winnerId;
     private String outcome;
-
+    private String winnerUsername;
     private PlayerResultDTO playerOne;
     private PlayerResultDTO playerTwo;
 }

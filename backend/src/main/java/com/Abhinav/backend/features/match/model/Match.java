@@ -53,12 +53,21 @@ public class Match {
     @Column(name = "winner_id")
     private Long winnerId;
 
-
+    /**
+     * Changed from Integer to primitive int.
+     * This solves both the NullPointerException on match timeout and the
+     * Lombok @Builder warning, as 'int' cannot be null and defaults to 0.
+     */
     @Column(name = "player_one_penalties")
-    private Integer playerOnePenalties = 0;
+    private int playerOnePenalties;
 
+    /**
+     * Changed from Integer to primitive int.
+     * This solves both the NullPointerException on match timeout and the
+     * Lombok @Builder warning, as 'int' cannot be null and defaults to 0.
+     */
     @Column(name = "player_two_penalties")
-    private Integer playerTwoPenalties = 0;
+    private int playerTwoPenalties;
 
     @Column(name = "player_one_finish_time")
     private Instant playerOneFinishTime;
