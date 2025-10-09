@@ -52,16 +52,18 @@ public class AuthenticationController {
         return new Response("Password reset token sent successfully.");
     }
 
-    @PutMapping("/reset-password")
-    public Response resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authenticationService.resetPassword(request.getEmail(), request.getNewPassword(), request.getToken());
-        return new Response("Password reset successfully.");
+    @PutMapping("/change-password")
+    public ResponseEntity<Response> changePassword(
+            @AuthenticationPrincipal AuthenticationUser user,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authenticationService.changePassword(user, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(new Response("Password changed successfully."));
     }
 
     @PostMapping("/2fa/toggle")
-    public ResponseEntity<String> toggle2FA(@AuthenticationPrincipal AuthenticationUser currentUser) {
-        authenticationService.toggleTwoFactor(currentUser);
-        return ResponseEntity.ok("2FA " + (currentUser.getTwoFactorEnabled() ? "enabled" : "disabled"));
+    public ResponseEntity<AuthenticationResponseBody> toggle2FA(@AuthenticationPrincipal AuthenticationUser currentUser) {
+        AuthenticationResponseBody responseBody = authenticationService.toggleTwoFactor(currentUser);
+        return ResponseEntity.ok(responseBody);
     }
 
     @PostMapping("/verify-2fa")

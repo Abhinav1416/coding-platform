@@ -60,7 +60,12 @@ export interface PasswordResetRequest {
   newPassword: string;
 }
 
-export interface User {
+export interface ChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+}
+
+export interface UserDetails {
   id: string;
   email: string;
 }

@@ -2,8 +2,6 @@ import api from "../../../core/api/api";
 import type {
   RegisterPayload,
   RegisterResponse,
-  Toggle2FAPayload,
-  Toggle2FAResponse,
   VerifyEmailPayload,
   VerifyEmailResponse,
   AuthResponse,
@@ -12,7 +10,8 @@ import type {
   ResendTokenPayload,
   PasswordResetRequest,
   SendPasswordResetTokenRequest,
-  User,
+  UserDetails,
+  ChangePasswordRequest,
 } from "../types/auth";
 
 const AUTH_BASE_PATH = "/api/v1/authentication";
@@ -21,13 +20,6 @@ export const register = async (
   payload: RegisterPayload
 ): Promise<RegisterResponse> => {
   const { data } = await api.post<RegisterResponse>(`${AUTH_BASE_PATH}/register`, payload);
-  return data;
-};
-
-export const toggle2FA = async (
-  payload: Toggle2FAPayload
-): Promise<Toggle2FAResponse> => {
-  const { data } = await api.post<Toggle2FAResponse>(`${AUTH_BASE_PATH}/2fa/toggle`, payload);
   return data;
 };
 
@@ -74,12 +66,16 @@ export const resetPassword = async (
   await api.put(`${AUTH_BASE_PATH}/reset-password`, data);
 };
 
-export const getCurrentUser = async (): Promise<User | null> => {
+export const changePassword = async (
+  request: ChangePasswordRequest
+): Promise<void> => {
+  await api.put(`${AUTH_BASE_PATH}/change-password`, request);
+};
+
+export const getCurrentUser = async (): Promise<UserDetails | null> => {
   const res = await api.get(`${AUTH_BASE_PATH}/me`);
   return res.data?.user ?? null;
 };
-
-
 
 export const fetchMyPermissions = async (): Promise<string[]> => {
     try {
@@ -89,4 +85,13 @@ export const fetchMyPermissions = async (): Promise<string[]> => {
         console.error("Failed to fetch user permissions:", error);
         return [];
     }
+};
+
+/**
+ * Toggles 2FA for the currently logged-in user.
+ * This endpoint should return an AuthResponse with a new, updated accessToken.
+ */
+export const toggle2FA = async (): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>(`${AUTH_BASE_PATH}/2fa/toggle`);
+  return response.data;
 };

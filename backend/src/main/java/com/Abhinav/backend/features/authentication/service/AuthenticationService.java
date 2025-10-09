@@ -9,6 +9,7 @@ import com.Abhinav.backend.features.authentication.repository.RoleRepository;
 import com.Abhinav.backend.features.authentication.utils.EmailService;
 import com.Abhinav.backend.features.authentication.utils.JwtService;
 import com.Abhinav.backend.features.authentication.utils.PasswordValidator;
+import com.Abhinav.backend.features.exception.InvalidRequestException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,25 +137,7 @@ public class AuthenticationService {
         }
     }
 
-    public void resetPassword(String email, String newPassword, String token) {
-        AuthenticationUser user = getUser(email);
-        if (user.getPasswordResetToken() == null || user.getPasswordResetTokenExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Password reset token is invalid or expired.");
-        }
-        if (!passwordEncoder.matches(token, user.getPasswordResetToken())) {
-            throw new IllegalArgumentException("Invalid password reset token.");
-        }
-        if (passwordEncoder.matches(newPassword, user.getPassword())) {
-            throw new IllegalArgumentException("New password cannot be the same as the old password.");
-        }
-        if (!PasswordValidator.isValid(newPassword)) {
-            throw new IllegalArgumentException("Password does not meet strength requirements.");
-        }
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setPasswordResetToken(null);
-        user.setPasswordResetTokenExpiryDate(null);
-        authenticationUserRepository.save(user);
-    }
+
 
     public AuthenticationResponseBody verifyTwoFactor(TwoFactorRequest request) {
         AuthenticationUser user = getUser(request.getEmail());
@@ -193,8 +176,25 @@ public class AuthenticationService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found."));
     }
 
-    public void toggleTwoFactor(AuthenticationUser user) {
+    public AuthenticationResponseBody toggleTwoFactor(AuthenticationUser user) {
         user.setTwoFactorEnabled(!user.getTwoFactorEnabled());
+        return generateTokensForUser(user);
+    }
+
+    public void changePassword(AuthenticationUser user, String currentPassword, String newPassword) {
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new InvalidRequestException("Incorrect current password.");
+        }
+
+        if (!PasswordValidator.isValid(newPassword)) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.");
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new InvalidRequestException("New password cannot be the same as the old password.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
         authenticationUserRepository.save(user);
     }
 

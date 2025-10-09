@@ -18,6 +18,7 @@ import MatchLobbyPage from "../features/match/pages/MatchLobbyPage";
 import MatchArenaPage from "../features/match/pages/MatchArenaPage";
 import MatchResultsPage from "../features/match/pages/MatchResultsPage";
 import MatchHistoryPage from "../features/match/pages/MatchHistoryPage";
+import ProfilePage from "../features/auth/pages/ProfilePage";
 
 
 
@@ -42,8 +43,6 @@ const AppRoutes = () => {
 
         
         <Route path="/home" element={<MainLayout><Home /></MainLayout>} />
-        <Route path="/matches" element={<MainLayout><div>Matches Page Content</div></MainLayout>} />
-        <Route path="/profile" element={<MainLayout><div>Profile Page Content</div></MainLayout>} />
         <Route 
           path="/problems/:slug" 
           element={<MainLayout><ProblemPage /></MainLayout>} 
@@ -62,6 +61,9 @@ const AppRoutes = () => {
           path="/matches/history" 
           element={<MainLayout><MatchHistoryPage /></MainLayout>} 
         />
+
+        <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
+
         
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

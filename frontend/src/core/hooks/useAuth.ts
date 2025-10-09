@@ -7,6 +7,7 @@ import { fetchMyPermissions } from '../../features/auth/services/authService';
 interface DecodedToken {
   sub: string;
   roles: string[];
+  isTwoFactorEnabled: boolean;
   iat: number;
   exp: number;
 }
@@ -43,14 +44,10 @@ export const useAuth = () => {
 
 
   const logout = useCallback(() => {
-
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-
     queryClient.invalidateQueries({ queryKey: ['permissions'] });
-    
     navigate('/login');
-    
   }, [navigate, queryClient]);
 
 
@@ -71,7 +68,13 @@ export const useAuth = () => {
 
   return { 
     isAuthenticated: !!decodedToken,
-    user: decodedToken ? { email: decodedToken.sub, roles: decodedToken.roles } : null,
+    user: decodedToken 
+      ? { 
+          email: decodedToken.sub, 
+          roles: decodedToken.roles,
+          twoFactorEnabled: decodedToken.isTwoFactorEnabled 
+        } 
+      : null,
     permissions: permissionData || [],
     hasPermission,
     hasRole,

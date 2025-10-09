@@ -1,5 +1,6 @@
 package com.Abhinav.backend.features.authentication.utils;
 
+import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -34,10 +35,17 @@ public class JwtService {
 
     public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
+
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
         extraClaims.put("roles", roles);
+
+        if (userDetails instanceof AuthenticationUser) {
+            AuthenticationUser authUser = (AuthenticationUser) userDetails;
+            extraClaims.put("isTwoFactorEnabled", authUser.getTwoFactorEnabled());
+        }
+
         return buildToken(extraClaims, userDetails, ACCESS_TOKEN_EXPIRATION);
     }
 
