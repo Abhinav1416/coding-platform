@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaGamepad, FaTrophy, FaTimesCircle, FaHandshake, FaAngleRight } from 'react-icons/fa';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaGamepad, FaTrophy, FaTimesCircle, FaHandshake, FaAngleRight, FaCode } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '../core/hooks/useAuth';
 import { getCurrentUserStats, getMatchHistory } from '../features/match/services/matchService';
 import { getProblemCount } from '../features/problem/services/problemService';
 import type { UserStats, PastMatch } from '../features/match/types/match';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '../core/hooks/useAuth';
-
 
 
 const Home: React.FC = () => {
@@ -22,16 +21,15 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (!user) {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
-
     const fetchData = async () => {
       try {
         const [statsData, historyData, problemCountData] = await Promise.all([
           getCurrentUserStats(),
           getMatchHistory({ page: 0, size: 3 }),
-          getProblemCount()
+          getProblemCount(),
         ]);
         setStats(statsData);
         setRecentMatches(historyData.content);
@@ -43,7 +41,6 @@ const Home: React.FC = () => {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, [user]);
 
@@ -61,33 +58,30 @@ const Home: React.FC = () => {
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
           Welcome Back, <span className="capitalize">{user?.email.split('@')[0]}</span>!
         </h1>
-        
-        {/* ✅ "Sexy" placement for problem count */}
         <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
           Ready to sharpen your skills? Test yourself against our library of <strong className="text-white font-bold">{problemCount}</strong> challenges or start a new match.
         </p>
-
         <div className="flex justify-center gap-4">
-          <button 
-            onClick={() => navigate('/match/create')}
-            className="bg-[#F97316] hover:bg-[#EA580C] text-white font-bold py-3 px-6 rounded-md transition-transform transform hover:scale-105"
-          >
+          <button onClick={() => navigate('/match/create')} className="bg-[#F97316] hover:bg-[#EA580C] text-white font-bold py-3 px-6 rounded-md transition-transform transform hover:scale-105">
             Start New Match
+          </button>
+          <button 
+            onClick={() => navigate('/match/join')}
+            className="bg-transparent hover:bg-zinc-800 text-gray-200 font-semibold py-3 px-6 border border-zinc-700 rounded-md transition-colors"
+          >
+            Join a Match
           </button>
         </div>
       </section>
       
       {stats && (
         <section>
-          {/* ✅ Renamed section header */}
           <h2 className="text-2xl font-semibold mb-6 text-white">Your Stats</h2>
-          
-          {/* ✅ Grid updated for 4 items, "Total Problems" card removed */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4"><FaGamepad className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Played</p><p className="text-2xl font-bold text-white">{stats.duelsPlayed}</p></div></div>
-              <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4"><FaTrophy className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Won</p><p className="text-2xl font-bold text-white">{stats.duelsWon}</p></div></div>
-              <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4"><FaTimesCircle className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Lost</p><p className="text-2xl font-bold text-white">{stats.duelsLost}</p></div></div>
-              <div className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4"><FaHandshake className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Drawn</p><p className="text-2xl font-bold text-white">{stats.duelsDrawn}</p></div></div>
+            <Link to="/matches/history?result=ALL" className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4 hover:bg-zinc-800 transition-colors"><FaGamepad className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Played</p><p className="text-2xl font-bold text-white">{stats.duelsPlayed}</p></div></Link>
+            <Link to="/matches/history?result=WIN" className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4 hover:bg-zinc-800 transition-colors"><FaTrophy className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Won</p><p className="text-2xl font-bold text-white">{stats.duelsWon}</p></div></Link>
+            <Link to="/matches/history?result=LOSS" className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4 hover:bg-zinc-800 transition-colors"><FaTimesCircle className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Lost</p><p className="text-2xl font-bold text-white">{stats.duelsLost}</p></div></Link>
+            <Link to="/matches/history?result=DRAW" className="bg-zinc-900 p-6 rounded-lg border border-white/10 flex items-center gap-4 hover:bg-zinc-800 transition-colors"><FaHandshake className="text-[#F97316] text-3xl"/><div><p className="text-sm text-gray-400">Drawn</p><p className="text-2xl font-bold text-white">{stats.duelsDrawn}</p></div></Link>
           </div>
         </section>
       )}
@@ -109,11 +103,7 @@ const Home: React.FC = () => {
                     <p className="text-sm text-gray-400">vs {match.opponentUsername}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                        match.result === 'WIN' ? 'bg-green-500/20 text-green-400' :
-                        match.result === 'LOSS' ? 'bg-red-500/20 text-red-400' :
-                        'bg-yellow-500/20 text-yellow-400'
-                      }`}>
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${ match.result === 'WIN' ? 'bg-green-500/20 text-green-400' : match.result === 'LOSS' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400' }`}>
                       {match.result}
                     </span>
                     <p className="text-sm text-gray-500 mt-1">{formatDistanceToNow(new Date(match.endedAt))} ago</p>

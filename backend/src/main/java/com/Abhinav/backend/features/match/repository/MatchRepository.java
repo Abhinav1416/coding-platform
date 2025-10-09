@@ -19,14 +19,42 @@ import java.util.UUID;
 public interface MatchRepository extends JpaRepository<Match, UUID> {
     Optional<Match> findByRoomCode(String roomCode);
 
+
     List<Match> findAllByStatusAndScheduledAtBefore(MatchStatus status, Instant currentTime);
+
 
     List<Match> findAllByStatus(MatchStatus status);
 
+
     List<Match> findAllByStatusAndCreatedAtBefore(MatchStatus status, Instant cutoff);
+
 
     @Query("SELECT m FROM Match m WHERE (m.playerOneId = :userId OR m.playerTwoId = :userId) AND m.status IN :statuses ORDER BY m.createdAt DESC")
     Page<Match> findUserMatchesByStatus(
+            @Param("userId") Long userId,
+            @Param("statuses") Collection<MatchStatus> statuses,
+            Pageable pageable
+    );
+
+
+    @Query("SELECT m FROM Match m WHERE (m.playerOneId = :userId OR m.playerTwoId = :userId) AND m.status IN :statuses AND m.winnerId = :userId ORDER BY m.createdAt DESC")
+    Page<Match> findUserWins(
+            @Param("userId") Long userId,
+            @Param("statuses") Collection<MatchStatus> statuses,
+            Pageable pageable
+    );
+
+
+    @Query("SELECT m FROM Match m WHERE (m.playerOneId = :userId OR m.playerTwoId = :userId) AND m.status IN :statuses AND m.winnerId IS NOT NULL AND m.winnerId != :userId ORDER BY m.createdAt DESC")
+    Page<Match> findUserLosses(
+            @Param("userId") Long userId,
+            @Param("statuses") Collection<MatchStatus> statuses,
+            Pageable pageable
+    );
+
+
+    @Query("SELECT m FROM Match m WHERE (m.playerOneId = :userId OR m.playerTwoId = :userId) AND m.status IN :statuses AND m.winnerId IS NULL ORDER BY m.createdAt DESC")
+    Page<Match> findUserDraws(
             @Param("userId") Long userId,
             @Param("statuses") Collection<MatchStatus> statuses,
             Pageable pageable

@@ -53,11 +53,16 @@ public class MatchController {
     }
 
 
+
     @GetMapping("/history")
-    public ResponseEntity<Page<PastMatchDto>> getMatchHistory(
+    public ResponseEntity<PageDto<PastMatchDto>> getMatchHistory(
             @AuthenticationPrincipal AuthenticationUser user,
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<PastMatchDto> pastMatches = matchService.getPastMatchesForUser(user.getId(), pageable);
+            @PageableDefault(size = 10) Pageable pageable,
+            @RequestParam(required = false) String result) {
+
+        // The service now returns our custom PageDto
+        PageDto<PastMatchDto> pastMatches = matchService.getPastMatchesForUser(user.getId(), result, pageable);
+
         return ResponseEntity.ok(pastMatches);
     }
 

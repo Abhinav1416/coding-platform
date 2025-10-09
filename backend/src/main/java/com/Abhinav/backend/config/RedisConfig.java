@@ -106,10 +106,10 @@ public class RedisConfig {
     }
 
 
+    // ... inside your RedisConfig.java ...
+
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        // This bean is perfect, no changes needed.
-        // ... (rest of the method is the same)
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -126,6 +126,12 @@ public class RedisConfig {
                 "userProfiles",
                 defaultConfig.entryTtl(Duration.ofMinutes(30))
         );
+        // V-- ADD THIS ENTRY FOR YOUR MATCH HISTORY CACHE --V
+        cacheConfigurations.put(
+                "matchHistory",
+                defaultConfig.entryTtl(Duration.ofMinutes(5)) // Set a 5-minute TTL
+        );
+        // ^-- ADD THIS ENTRY FOR YOUR MATCH HISTORY CACHE --^
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)

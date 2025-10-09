@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getMatchHistory } from '../services/matchService';
 import type { Page, PastMatch } from '../types/match';
-import { Pagination } from '../../../core/components/Pagination'; // Adjust path if needed
+import { Pagination } from '../../../core/components/Pagination';
 
 const MatchHistoryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -13,10 +13,13 @@ const MatchHistoryPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const currentPage = parseInt(searchParams.get('page') || '0', 10);
+  const currentFilter = searchParams.get('result') || 'ALL';
 
   useEffect(() => {
     setIsLoading(true);
-    getMatchHistory({ page: currentPage, size: 10 })
+    const resultFilter = currentFilter === 'ALL' ? undefined : currentFilter;
+
+    getMatchHistory({ page: currentPage, size: 10, result: resultFilter })
       .then(responseData => {
         setData(responseData);
       })
@@ -27,10 +30,14 @@ const MatchHistoryPage: React.FC = () => {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [currentPage]);
+  }, [currentPage, currentFilter]);
 
   const handlePageChange = (page: number) => {
-    setSearchParams({ page: page.toString() });
+    setSearchParams({ page: page.toString(), result: currentFilter });
+  };
+  
+  const handleFilterChange = (newFilter: string) => {
+    setSearchParams({ page: '0', result: newFilter });
   };
 
   const getResultBadgeClass = (result: string) => {
@@ -42,9 +49,30 @@ const MatchHistoryPage: React.FC = () => {
     }
   };
 
+  const FilterButton = ({ filter, label }: { filter: string, label: string }) => (
+    <button
+      onClick={() => handleFilterChange(filter)}
+      className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+        currentFilter === filter
+          ? 'bg-[#F97316] text-white'
+          : 'bg-zinc-800 text-gray-300 hover:bg-zinc-700'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Match History</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+          <h1 className="text-3xl font-bold text-white">Match History</h1>
+          <div className="flex gap-2">
+              <FilterButton filter="ALL" label="All" />
+              <FilterButton filter="WIN" label="Wins" />
+              <FilterButton filter="LOSS" label="Losses" />
+              <FilterButton filter="DRAW" label="Draws" />
+          </div>
+      </div>
       
       {isLoading ? (
         <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin text-[#F97316]" size={48} /></div>
@@ -87,7 +115,7 @@ const MatchHistoryPage: React.FC = () => {
       ) : (
         <div className="text-center bg-zinc-900 rounded-lg p-12 border border-white/10">
             <h2 className="text-xl font-semibold text-white">No Matches Found</h2>
-            <p className="text-gray-500 mt-2">You haven't played any matches yet. Go challenge someone!</p>
+            <p className="text-gray-500 mt-2">No matches found for the selected filter.</p>
         </div>
       )}
     </div>

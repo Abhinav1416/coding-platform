@@ -34,7 +34,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.stream.Collectors;import org.springframework.cache.annotation.Cacheable;
+
 
 
 @Service
@@ -386,9 +387,23 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PastMatchDto> getPastMatchesForUser(Long userId, Pageable pageable) {
-        Page<Match> matchesPage = matchRepository.findUserMatchesByStatus(userId, PAST_MATCH_STATUSES, pageable);
-        return matchesPage.map(match -> convertToDto(match, userId));
+    @Cacheable(value = "matchHistory")
+    public PageDto<PastMatchDto> getPastMatchesForUser(Long userId, String result, Pageable pageable) {
+        Page<Match> matchesPage;
+
+        if ("WIN".equalsIgnoreCase(result)) {
+            matchesPage = matchRepository.findUserWins(userId, PAST_MATCH_STATUSES, pageable);
+        } else if ("LOSS".equalsIgnoreCase(result)) {
+            matchesPage = matchRepository.findUserLosses(userId, PAST_MATCH_STATUSES, pageable);
+        } else if ("DRAW".equalsIgnoreCase(result)) {
+            matchesPage = matchRepository.findUserDraws(userId, PAST_MATCH_STATUSES, pageable);
+        } else {
+            matchesPage = matchRepository.findUserMatchesByStatus(userId, PAST_MATCH_STATUSES, pageable);
+        }
+
+        Page<PastMatchDto> dtoPage = matchesPage.map(match -> convertToDto(match, userId));
+
+        return new PageDto<>(dtoPage);
     }
 
 
@@ -447,9 +462,9 @@ public class MatchServiceImpl implements MatchService {
                 .status(match.getStatus())
                 .result(determineResult(match, currentUserId))
                 .opponentId(opponentId)
-                .opponentUsername(opponentUsername) // ✅ Set the username
+                .opponentUsername(opponentUsername)
                 .problemId(match.getProblemId())
-                .problemTitle(problemTitle)       // ✅ Set the title
+                .problemTitle(problemTitle)
                 .endedAt(match.getEndedAt())
                 .createdAt(match.getCreatedAt())
                 .build();
