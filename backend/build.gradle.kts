@@ -34,6 +34,9 @@ dependencies {
 	implementation("org.apache.commons:commons-lang3:3.13.0")
 	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
+    implementation("com.google.api-client:google-api-client:2.2.0")
+    implementation ("com.google.http-client:google-http-client-gson:1.43.3")
+
 	runtimeOnly("org.postgresql:postgresql:42.6.0")
 
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")

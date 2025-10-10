@@ -6,6 +6,15 @@ import com.Abhinav.backend.features.authentication.model.Role;
 import com.Abhinav.backend.features.authentication.model.RoleType;
 import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
 import com.Abhinav.backend.features.authentication.repository.RoleRepository;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Collections;
 import com.Abhinav.backend.features.authentication.utils.EmailService;
 import com.Abhinav.backend.features.authentication.utils.JwtService;
 import com.Abhinav.backend.features.authentication.utils.PasswordValidator;
@@ -39,6 +48,15 @@ public class AuthenticationService {
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final RedisTemplate<String, Object> redisTemplate;
+
+
+
+
+    @Value("${google.client.id}")
+    private String googleClientId;
+
+
+
 
     public AuthenticationResponseBody register(RegisterRequest request) {
         if (authenticationUserRepository.findByEmail(request.email()).isPresent()) {
@@ -204,6 +222,59 @@ public class AuthenticationService {
         user.setRefreshToken(refreshToken);
         authenticationUserRepository.save(user);
         return new AuthenticationResponseBody(accessToken, refreshToken, "Authentication succeeded.");
+    }
+
+    public AuthenticationResponseBody loginWithGoogle(String googleToken) {
+        try {
+            // 1. Setup the verifier
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            // 2. Verify the token
+            GoogleIdToken idToken = verifier.verify(googleToken);
+            if (idToken == null) {
+                throw new IllegalArgumentException("Invalid Google token.");
+            }
+
+            // 3. Get user info from the payload
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+
+            // 4. Find or create the user in your database
+            AuthenticationUser user = authenticationUserRepository.findByEmail(email)
+                    .orElseGet(() -> createNewGoogleUser(payload));
+
+            // 5. Generate and return your application's tokens
+            return generateTokensForUser(user);
+
+        } catch (GeneralSecurityException | IOException e) {
+            logger.error("Error during Google token verification", e);
+            throw new RuntimeException("Google token verification failed.", e);
+        }
+    }
+
+    private AuthenticationUser createNewGoogleUser(GoogleIdToken.Payload payload) {
+        String email = payload.getEmail();
+        // You can also get other info like name:
+        // String name = (String) payload.get("name");
+
+        var user = new AuthenticationUser();
+        user.setEmail(email);
+
+        // Users signing up with Google don't have a password in our system.
+        // The password field in your DB should be nullable.
+        user.setPassword(null);
+
+        // Google has already verified their email.
+        user.setEmailVerified(true);
+
+        // Assign a default role
+        Role userRole = roleRepository.findByName(RoleType.ROLE_USER)
+                .orElseThrow(() -> new IllegalStateException("ROLE_USER not found in database."));
+        user.setRoles(new HashSet<>(Set.of(userRole)));
+
+        return authenticationUserRepository.save(user);
     }
 
     private String generateAndSaveTwoFactorCode(AuthenticationUser user) {

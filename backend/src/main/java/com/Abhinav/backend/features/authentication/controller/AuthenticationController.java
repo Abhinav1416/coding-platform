@@ -86,4 +86,9 @@ public class AuthenticationController {
         authenticationService.logout(token);
         return ResponseEntity.ok(new Response("Logged out successfully."));
     }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthenticationResponseBody> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authenticationService.loginWithGoogle(request.token()));
+    }
 }

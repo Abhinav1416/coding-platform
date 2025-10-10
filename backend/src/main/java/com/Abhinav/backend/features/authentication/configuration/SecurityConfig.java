@@ -41,14 +41,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                // FIX 1: Configure CORS to use the bean defined below.
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // FIX 2: Allow all requests to the WebSocket endpoint to pass through security.
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/authentication/login",
                                 "/api/v1/authentication/register",
+                                "/api/v1/authentication/google", // <-- CHANGE #1: Add the new Google endpoint here
                                 "/api/v1/authentication/send-password-reset-token",
                                 "/api/v1/authentication/send-email-verification-token",
                                 "/api/v1/authentication/reset-password",
@@ -69,17 +68,19 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // FIX 3: Add the CORS configuration bean.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // This is the origin of your React frontend
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        // This is the origin of your React frontend AND your test server
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://127.0.0.1:50276" // <-- CHANGE #2: Add your Live Server origin here
+        ));
         // Allow all standard methods
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // Allow specific headers that are common in API requests
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        // This is crucial for SockJS to work
+        // This is crucial for SockJS and other credential-based requests
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
