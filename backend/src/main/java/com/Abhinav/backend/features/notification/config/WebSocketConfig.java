@@ -18,9 +18,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // --- THIS IS THE FIX ---
-        // Replace setAllowedOrigins("*") with the specific URL of your frontend.
-        // Using allowedOriginPatterns is slightly more flexible and recommended.
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("http://localhost:5173") // Change 3000 if your port is different
                 .withSockJS();

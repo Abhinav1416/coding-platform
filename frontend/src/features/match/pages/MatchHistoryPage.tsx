@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+// --- 1. Import useNavigate ---
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getMatchHistory } from '../services/matchService';
@@ -8,6 +9,9 @@ import { Pagination } from '../../../core/components/Pagination';
 
 const MatchHistoryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  // --- 2. Initialize the navigate function ---
+  const navigate = useNavigate();
+  
   const [data, setData] = useState<Page<PastMatch> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +35,16 @@ const MatchHistoryPage: React.FC = () => {
         setIsLoading(false);
       });
   }, [currentPage, currentFilter]);
+  
+  // --- 3. Create the click handler function ---
+  const handleMatchClick = (match: PastMatch) => {
+    // If the match result is CANCELED, do nothing.
+    if (match.result === 'CANCELED') {
+      return;
+    }
+    // Otherwise, navigate to the results page.
+    navigate(`/match/results/${match.matchId}`);
+  };
 
   const handlePageChange = (page: number) => {
     setSearchParams({ page: page.toString(), result: currentFilter });
@@ -40,7 +54,6 @@ const MatchHistoryPage: React.FC = () => {
     setSearchParams({ page: '0', result: newFilter });
   };
 
-  // --- THIS FUNCTION IS UPDATED ---
   const getResultBadgeClass = (result: PastMatch['result']) => {
     switch (result) {
       case 'WIN': 
@@ -57,7 +70,6 @@ const MatchHistoryPage: React.FC = () => {
         return 'bg-gray-500/20 text-gray-400';
     }
   };
-  // ---------------------------------
 
   const FilterButton = ({ filter, label }: { filter: string, label: string }) => (
     <button
@@ -102,7 +114,16 @@ const MatchHistoryPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-zinc-800">
                 {data.content.map(match => (
-                  <tr key={match.matchId} className="hover:bg-zinc-800/50">
+                  // --- 4. Add the onClick handler and cursor class to the table row ---
+                  <tr 
+                    key={match.matchId} 
+                    onClick={() => handleMatchClick(match)}
+                    className={`transition-colors ${
+                      match.result !== 'CANCELED' 
+                        ? 'hover:bg-zinc-800/50 cursor-pointer' 
+                        : 'opacity-60' // Optionally style canceled matches differently
+                    }`}
+                  >
                     <td className="px-6 py-4 font-medium text-white">{match.problemTitle}</td>
                     <td className="px-6 py-4 text-gray-300">{match.opponentUsername}</td>
                     <td className="px-6 py-4 text-center">
@@ -111,7 +132,6 @@ const MatchHistoryPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-gray-400">
-                      {/* This line is now correct because the types match */}
                       {format(new Date(match.endedAt || match.createdAt), 'MMM d, yyyy')}
                     </td>
                   </tr>

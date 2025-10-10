@@ -1,5 +1,6 @@
 package com.Abhinav.backend.features.match.service;
 
+import com.Abhinav.backend.features.match.dto.CountdownStartPayload;
 import com.Abhinav.backend.features.match.dto.LiveMatchStateDTO;
 import com.Abhinav.backend.features.match.dto.MatchResultDTO;
 
@@ -15,4 +16,6 @@ public interface MatchNotificationService {
     void notifyMatchStart(UUID matchId, LiveMatchStateDTO liveState, String p1Username, String p2Username);
 
     void notifyMatchCanceled(UUID matchId, String reason);
+
+    void notifyCountdownStarted(UUID matchId, String countdownType, CountdownStartPayload payload);
 }

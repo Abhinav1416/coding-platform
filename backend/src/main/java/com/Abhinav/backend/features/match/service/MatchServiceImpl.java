@@ -108,6 +108,11 @@ public class MatchServiceImpl implements MatchService {
 
         matchNotificationService.notifyPlayerJoined(savedMatch.getId(), joiningUserId);
 
+        long lobbyStartTime = Instant.now().toEpochMilli();
+        int lobbyDurationInSeconds = (int) savedMatch.getStartDelayInMinutes() * 60;
+        CountdownStartPayload lobbyPayload = new CountdownStartPayload(lobbyStartTime, lobbyDurationInSeconds);
+        matchNotificationService.notifyCountdownStarted(savedMatch.getId(), "LOBBY_COUNTDOWN_STARTED", lobbyPayload);
+
         return new JoinDuelResponse(savedMatch.getId(), savedMatch.getScheduledAt());
     }
 

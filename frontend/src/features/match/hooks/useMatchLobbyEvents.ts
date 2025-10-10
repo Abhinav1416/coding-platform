@@ -8,10 +8,7 @@ interface UseMatchLobbyEventsProps {
   onPlayerJoined: (payload: PlayerJoinedPayload) => void;
 }
 
-/**
- * Manages WebSocket events for a match lobby.
- * Handles navigation on MATCH_START and calls back on PLAYER_JOINED.
- */
+
 export const useMatchLobbyEvents = ({ matchId, onPlayerJoined }: UseMatchLobbyEventsProps) => {
     const navigate = useNavigate();
 

@@ -1,5 +1,6 @@
 package com.Abhinav.backend.features.match.service;
 
+import com.Abhinav.backend.features.match.dto.CountdownStartPayload;
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
 import com.Abhinav.backend.features.match.dto.LiveMatchStateDTO;
@@ -14,7 +15,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -44,14 +44,12 @@ public class MatchScheduler {
     @Transactional
     public void startScheduledMatches() {
         log.info("Scheduler running: Looking for matches to start...");
-
         List<Match> matchesToStart = matchRepository.findAllByStatusAndScheduledAtBefore(
                 MatchStatus.SCHEDULED,
                 Instant.now()
         );
 
         if (matchesToStart.isEmpty()) {
-            log.info("Scheduler: No matches to start at this time.");
             return;
         }
 
@@ -69,11 +67,9 @@ public class MatchScheduler {
                 if (problemIdOpt.isEmpty()) {
                     log.warn("Could not find a suitable problem for match {}. Canceling match.", match.getId());
                     match.setStatus(MatchStatus.CANCELED);
-                    match.setEndedAt(Instant.now()); // --- FIX #1 IS HERE ---
+                    match.setEndedAt(Instant.now());
                     matchRepository.save(match);
-
-                    String reason = "Could not find a suitable problem for both players.";
-                    matchNotificationService.notifyMatchCanceled(match.getId(), reason);
+                    matchNotificationService.notifyMatchCanceled(match.getId(), "Could not find a suitable problem for both players.");
                     continue;
                 }
 
@@ -82,11 +78,8 @@ public class MatchScheduler {
                 Map<Long, String> usernameMap = userRepository.findByIdIn(List.of(match.getPlayerOneId(), match.getPlayerTwoId())).stream()
                         .collect(Collectors.toMap(AuthenticationUser::getId, user -> getUsernameFromEmail(user.getEmail())));
 
-                match.setStatus(MatchStatus.ACTIVE); // Note: Your original code used ACTIVE, some use IN_PROGRESS. Ensure this is consistent.
+                match.setStatus(MatchStatus.ACTIVE);
                 match.setProblemId(problemId);
-
-                // Let's ensure endedAt is null for a starting match, just in case
-                match.setEndedAt(null);
                 match.setStartedAt(Instant.now());
                 matchRepository.save(match);
 
@@ -99,12 +92,10 @@ public class MatchScheduler {
                         .durationInMinutes(match.getDurationInMinutes())
                         .build();
 
-                liveMatchStateRepository.save(liveState, (long) match.getDurationInMinutes());
-                log.info(
-                        "Successfully started match ID: {}. Live state created in Redis with TTL: {} minutes.",
-                        match.getId(),
-                        match.getDurationInMinutes()
-                );
+                long ttlInMinutes = match.getDurationInMinutes() + 1L;
+                liveMatchStateRepository.save(liveState, ttlInMinutes);
+
+                log.info("Successfully started match ID: {}. Live state created in Redis with TTL: {} minutes.", match.getId(), ttlInMinutes);
 
                 matchNotificationService.notifyMatchStart(
                         match.getId(),
@@ -113,14 +104,17 @@ public class MatchScheduler {
                         usernameMap.get(match.getPlayerTwoId())
                 );
 
+                long matchStartTime = match.getStartedAt().toEpochMilli();
+                int matchDurationInSeconds = (int) match.getDurationInMinutes() * 60;
+                CountdownStartPayload matchPayload = new CountdownStartPayload(matchStartTime, matchDurationInSeconds);
+                matchNotificationService.notifyCountdownStarted(match.getId(), "MATCH_COUNTDOWN_STARTED", matchPayload);
+
             } catch (Exception e) {
                 log.error("Scheduler: Unexpected error starting match ID: {}. Canceling.", match.getId(), e);
                 match.setStatus(MatchStatus.CANCELED);
-                match.setEndedAt(Instant.now()); // --- FIX #2 IS HERE ---
+                match.setEndedAt(Instant.now());
                 matchRepository.save(match);
-
-                String reason = "An internal error occurred while starting the match.";
-                matchNotificationService.notifyMatchCanceled(match.getId(), reason);
+                matchNotificationService.notifyMatchCanceled(match.getId(), "An internal error occurred while starting the match.");
             }
         }
     }

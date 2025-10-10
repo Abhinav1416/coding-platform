@@ -1,5 +1,6 @@
 package com.Abhinav.backend.features.match.service;
 
+import com.Abhinav.backend.features.match.dto.CountdownStartPayload;
 import com.Abhinav.backend.features.match.dto.LiveMatchStateDTO;
 import com.Abhinav.backend.features.match.dto.MatchResultDTO;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -72,5 +74,22 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
         Map<String, Object> payload = Map.of("eventType", "MATCH_CANCELED", "reason", reason);
         log.info("[WS_NOTIFY matchId={}] -> Sending MATCH_CANCELED event.", matchId);
         messagingTemplate.convertAndSend(destination, payload);
+    }
+
+
+    @Override
+    public void notifyCountdownStarted(UUID matchId, String countdownType, CountdownStartPayload payload) {
+        String destination = "/topic/match/" + matchId + "/countdown";
+
+        // We wrap the payload to include an eventType. This helps the frontend
+        // distinguish between different types of countdowns (e.g., lobby vs. match).
+        Map<String, Object> message = new HashMap<>();
+        message.put("eventType", countdownType);
+        message.put("payload", payload);
+
+        log.info("Sending {} notification to {}. StartTime: {}, Duration: {}s",
+                countdownType, destination, payload.getStartTime(), payload.getDuration());
+
+        messagingTemplate.convertAndSend(destination, message);
     }
 }
