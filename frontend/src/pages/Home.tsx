@@ -44,6 +44,25 @@ const Home: React.FC = () => {
     fetchData();
   }, [user]);
 
+  // --- NEW HELPER FUNCTION TO HANDLE ALL RESULT TYPES ---
+  const getResultInfo = (result: PastMatch['result']) => {
+    switch (result) {
+      case 'WIN':
+        return { className: 'bg-green-500/20 text-green-400', text: 'WIN' };
+      case 'LOSS':
+        return { className: 'bg-red-500/20 text-red-400', text: 'LOSS' };
+      case 'DRAW':
+        return { className: 'bg-yellow-500/20 text-yellow-400', text: 'DRAW' };
+      case 'CANCELED':
+        return { className: 'bg-gray-500/20 text-gray-400', text: 'CANCELED' };
+      case 'EXPIRED':
+        return { className: 'bg-zinc-500/20 text-zinc-400', text: 'EXPIRED' };
+      default:
+        return { className: 'bg-gray-500/20 text-gray-400', text: 'UNKNOWN' };
+    }
+  };
+  // --------------------------------------------------------
+
   if (isLoading) {
     return <div className="flex justify-center items-center pt-24"><Loader2 className="animate-spin text-[#F97316]" size={48} /></div>;
   }
@@ -96,20 +115,26 @@ const Home: React.FC = () => {
         <div className="bg-zinc-900 rounded-lg border border-white/10">
           {recentMatches.length > 0 ? (
             <ul className="divide-y divide-zinc-800">
-              {recentMatches.map((match) => (
-                <li key={match.matchId} className="p-4 flex justify-between items-center hover:bg-zinc-800/50 transition-colors">
-                  <div>
-                    <p className="font-semibold text-white">{match.problemTitle}</p>
-                    <p className="text-sm text-gray-400">vs {match.opponentUsername}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${ match.result === 'WIN' ? 'bg-green-500/20 text-green-400' : match.result === 'LOSS' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400' }`}>
-                      {match.result}
-                    </span>
-                    <p className="text-sm text-gray-500 mt-1">{formatDistanceToNow(new Date(match.endedAt))} ago</p>
-                  </div>
-                </li>
-              ))}
+              {recentMatches.map((match) => {
+                // --- THIS LOGIC IS UPDATED ---
+                const resultInfo = getResultInfo(match.result);
+                const displayDate = match.endedAt || match.createdAt;
+                return (
+                  <li key={match.matchId} className="p-4 flex justify-between items-center hover:bg-zinc-800/50 transition-colors">
+                    <div>
+                      <p className="font-semibold text-white">{match.problemTitle}</p>
+                      <p className="text-sm text-gray-400">vs {match.opponentUsername}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${resultInfo.className}`}>
+                        {resultInfo.text}
+                      </span>
+                      <p className="text-sm text-gray-500 mt-1">{formatDistanceToNow(new Date(displayDate))} ago</p>
+                    </div>
+                  </li>
+                );
+                // -----------------------------
+              })}
             </ul>
           ) : (
             <p className="p-8 text-center text-gray-500">You haven't played any matches yet. Time to duel!</p>

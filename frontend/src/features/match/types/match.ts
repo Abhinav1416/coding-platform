@@ -152,8 +152,11 @@ export interface Page<T> {
 export interface PastMatch {
     matchId: string;
     status: string;
-    result: 'WIN' | 'LOSS' | 'DRAW';
+    result: 'WIN' | 'LOSS' | 'DRAW' | 'CANCELED' | 'EXPIRED';
+    opponentId: number | null;
     opponentUsername: string;
+    problemId: string | null;
     problemTitle: string;
-    endedAt: string;
+    endedAt: string | null;
+    createdAt: string;
 }

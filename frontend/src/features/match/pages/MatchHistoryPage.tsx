@@ -40,14 +40,24 @@ const MatchHistoryPage: React.FC = () => {
     setSearchParams({ page: '0', result: newFilter });
   };
 
-  const getResultBadgeClass = (result: string) => {
+  // --- THIS FUNCTION IS UPDATED ---
+  const getResultBadgeClass = (result: PastMatch['result']) => {
     switch (result) {
-      case 'WIN': return 'bg-green-500/20 text-green-400';
-      case 'LOSS': return 'bg-red-500/20 text-red-400';
-      case 'DRAW': return 'bg-yellow-500/20 text-yellow-400';
-      default: return 'bg-gray-500/20 text-gray-400';
+      case 'WIN': 
+        return 'bg-green-500/20 text-green-400';
+      case 'LOSS': 
+        return 'bg-red-500/20 text-red-400';
+      case 'DRAW': 
+        return 'bg-yellow-500/20 text-yellow-400';
+      case 'CANCELED': 
+        return 'bg-gray-500/20 text-gray-400';
+      case 'EXPIRED': 
+        return 'bg-zinc-500/20 text-zinc-400';
+      default: 
+        return 'bg-gray-500/20 text-gray-400';
     }
   };
+  // ---------------------------------
 
   const FilterButton = ({ filter, label }: { filter: string, label: string }) => (
     <button
@@ -100,7 +110,10 @@ const MatchHistoryPage: React.FC = () => {
                         {match.result}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right text-gray-400">{format(new Date(match.endedAt), 'MMM d, yyyy')}</td>
+                    <td className="px-6 py-4 text-right text-gray-400">
+                      {/* This line is now correct because the types match */}
+                      {format(new Date(match.endedAt || match.createdAt), 'MMM d, yyyy')}
+                    </td>
                   </tr>
                 ))}
               </tbody>

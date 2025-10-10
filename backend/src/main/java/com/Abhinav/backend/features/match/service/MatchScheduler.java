@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -32,28 +33,18 @@ public class MatchScheduler {
     private final MatchNotificationService matchNotificationService;
     private final AuthenticationUserRepository userRepository;
 
-    /**
-     * Extracts the username part from an email address.
-     * @param email The full email address.
-     * @return The string before the '@' symbol, or a fallback string.
-     */
     private String getUsernameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
-            return "anonymous"; // Fallback for safety
+            return "anonymous";
         }
         return email.substring(0, email.indexOf("@"));
     }
 
-    /**
-     * Periodically checks for matches that are scheduled to start,
-     * assigns them a problem, and transitions them to an active state in Redis with a TTL.
-     */
-    @Scheduled(fixedRate = 15000) // Correctly configured to run periodically.
-    @Transactional // Correctly wraps the logic in a transaction.
+    @Scheduled(fixedRate = 15000)
+    @Transactional
     public void startScheduledMatches() {
         log.info("Scheduler running: Looking for matches to start...");
 
-        // This query correctly finds all matches that are ready to begin.
         List<Match> matchesToStart = matchRepository.findAllByStatusAndScheduledAtBefore(
                 MatchStatus.SCHEDULED,
                 Instant.now()
@@ -68,7 +59,6 @@ public class MatchScheduler {
             log.info("Scheduler: Attempting to start match ID: {}", match.getId());
 
             try {
-                // Logic to find a suitable problem is sound.
                 Optional<UUID> problemIdOpt = problemRepository.findRandomUnsolvedProblemForTwoUsers(
                         match.getDifficultyMin(),
                         match.getDifficultyMax(),
@@ -76,10 +66,10 @@ public class MatchScheduler {
                         match.getPlayerTwoId()
                 );
 
-                // This is a great edge case to handle: canceling the match if no problem is found.
                 if (problemIdOpt.isEmpty()) {
                     log.warn("Could not find a suitable problem for match {}. Canceling match.", match.getId());
                     match.setStatus(MatchStatus.CANCELED);
+                    match.setEndedAt(Instant.now()); // --- FIX #1 IS HERE ---
                     matchRepository.save(match);
 
                     String reason = "Could not find a suitable problem for both players.";
@@ -89,17 +79,17 @@ public class MatchScheduler {
 
                 UUID problemId = problemIdOpt.get();
 
-                // Correctly prepares data for the notification.
                 Map<Long, String> usernameMap = userRepository.findByIdIn(List.of(match.getPlayerOneId(), match.getPlayerTwoId())).stream()
                         .collect(Collectors.toMap(AuthenticationUser::getId, user -> getUsernameFromEmail(user.getEmail())));
 
-                // Updates the main database record for the match. This is correct.
-                match.setStatus(MatchStatus.ACTIVE);
+                match.setStatus(MatchStatus.ACTIVE); // Note: Your original code used ACTIVE, some use IN_PROGRESS. Ensure this is consistent.
                 match.setProblemId(problemId);
+
+                // Let's ensure endedAt is null for a starting match, just in case
+                match.setEndedAt(null);
                 match.setStartedAt(Instant.now());
                 matchRepository.save(match);
 
-                // Prepares the DTO for Redis.
                 LiveMatchStateDTO liveState = LiveMatchStateDTO.builder()
                         .matchId(match.getId())
                         .problemId(problemId)
@@ -109,8 +99,6 @@ public class MatchScheduler {
                         .durationInMinutes(match.getDurationInMinutes())
                         .build();
 
-                // This is the most critical part, and it is correct.
-                // It saves the live state to Redis with a dynamic TTL, which enables our timeout logic.
                 liveMatchStateRepository.save(liveState, (long) match.getDurationInMinutes());
                 log.info(
                         "Successfully started match ID: {}. Live state created in Redis with TTL: {} minutes.",
@@ -118,7 +106,6 @@ public class MatchScheduler {
                         match.getDurationInMinutes()
                 );
 
-                // Notifies the frontend that the match has begun.
                 matchNotificationService.notifyMatchStart(
                         match.getId(),
                         liveState,
@@ -127,9 +114,9 @@ public class MatchScheduler {
                 );
 
             } catch (Exception e) {
-                // Robust error handling ensures one failed match doesn't break the whole scheduler.
                 log.error("Scheduler: Unexpected error starting match ID: {}. Canceling.", match.getId(), e);
                 match.setStatus(MatchStatus.CANCELED);
+                match.setEndedAt(Instant.now()); // --- FIX #2 IS HERE ---
                 matchRepository.save(match);
 
                 String reason = "An internal error occurred while starting the match.";
