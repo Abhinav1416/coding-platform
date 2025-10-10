@@ -14,37 +14,37 @@ const LoginPage = () => {
     if (accessToken) {
       navigate('/home', { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
+  const handleAuthenticated = (data: AuthResponse) => {
+    if (data.accessToken) {
+      localStorage.setItem('accessToken', data.accessToken);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+      navigate('/home');
+    } else {
+      console.error("Authentication failed: One or both tokens were missing.");
+    }
+  };
 
-
-const handleAuthenticated = (data: AuthResponse) => {
-  console.log("1. Data received by handleAuthenticated:", data);
-
-  if (data.accessToken && data.refreshToken) {
-    console.log("2. Both tokens found. Attempting to save...");
-    
-
-    console.log("3. Saving refreshToken:", data.refreshToken);
-
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    
-    navigate('/home');
-  } else {
-    console.error("4. ERROR: One or both tokens were missing from the response data.");
-  }
-};
+  // Define dynamic classes for theme switching
+  const pageBgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-slate-100';
+  const cardBgClass = theme === 'dark' ? 'bg-zinc-900 border border-white/10' : 'bg-white shadow-lg';
+  const headingClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
+  const textClass = theme === 'dark' ? 'text-gray-400' : 'text-slate-600';
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-100'}`}>
-      <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300 ${pageBgClass}`}>
+      <div className="absolute top-4 right-4">
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Welcome Back!</h1>
-          <p className={`mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Sign in to continue.</p>
+          <h1 className={`text-3xl font-bold ${headingClass}`}>Welcome Back!</h1>
+          <p className={`mt-2 ${textClass}`}>Sign in to continue.</p>
         </div>
-        <div className={`p-8 rounded-xl shadow-lg transition-colors duration-300 w-full ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+        <div className={`p-8 rounded-xl transition-colors duration-300 w-full ${cardBgClass}`}>
           <LoginForm onAuthenticated={handleAuthenticated} theme={theme} />
         </div>
       </div>

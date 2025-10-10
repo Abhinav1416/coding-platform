@@ -24,6 +24,8 @@ export interface VerifyEmailPayload {
 
 export interface VerifyEmailResponse {
   message: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface AuthResponse {

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { isValidEmail, isStrongPassword } from "../../../core/utils/validators";
 import { register, toggle2FA } from "../services/authService";
 
-export const useRegister = (onVerified: () => void) => {
+// The hook no longer accepts any arguments.
+export const useRegister = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [enable2FA, setEnable2FA] = useState(false);
@@ -27,10 +28,13 @@ export const useRegister = (onVerified: () => void) => {
       setLoading(true);
       await register({ email, password });
 
+      // Assuming your toggle2FA service doesn't need any arguments
+      // or can get the user context from the auth token set during register.
       if (enable2FA) {
-        await toggle2FA({ email });
+        await toggle2FA();
       }
 
+      // On success, we just change the step.
       setStep("verify");
     } catch (err: any) {
       setError(err.message || "Registration failed.");
@@ -39,6 +43,7 @@ export const useRegister = (onVerified: () => void) => {
     }
   };
 
+  // The onVerified property is no longer returned.
   return {
     email,
     setEmail,
@@ -50,6 +55,5 @@ export const useRegister = (onVerified: () => void) => {
     error,
     loading,
     handleSubmit,
-    onVerified,
   };
 };
