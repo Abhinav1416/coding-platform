@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom"; // <-- Note: No 'BrowserRouter' is imported
 
 // Layout & Core Components
 import MainLayout from "../components/layout/MainLayout";
@@ -20,54 +20,44 @@ import MatchResultsPage from "../features/match/pages/MatchResultsPage";
 import MatchHistoryPage from "../features/match/pages/MatchHistoryPage";
 import ProfilePage from "../features/auth/pages/ProfilePage";
 
-
-
-
-
 const AppRoutes = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    // --- The <Router> WRAPPER IS REMOVED FROM HERE ---
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        
-        <Route element={<AdminRoute />}>
-          <Route 
-            path="/admin" 
-            element={<MainLayout><AdminDashboardPage /></MainLayout>} 
-          />
-        </Route>
-
-        
-        <Route path="/home" element={<MainLayout><Home /></MainLayout>} />
+      <Route element={<AdminRoute />}>
         <Route 
-          path="/problems/:slug" 
-          element={<MainLayout><ProblemPage /></MainLayout>} 
+          path="/admin" 
+          element={<MainLayout><AdminDashboardPage /></MainLayout>} 
         />
+      </Route>
 
-        
-        <Route path="/match/create" element={<CreateMatchPage />} />
-        <Route path="/match/join" element={<JoinMatchPage />} />
-        <Route path="/match/lobby/:matchId" element={<MatchLobbyPage />} />
-        <Route path="/match/arena/:matchId" element={<MatchArenaPage />} />
+      <Route path="/home" element={<MainLayout><Home /></MainLayout>} />
+      <Route 
+        path="/problems/:slug" 
+        element={<MainLayout><ProblemPage /></MainLayout>} 
+      />
+      
+      <Route path="/match/create" element={<CreateMatchPage />} />
+      <Route path="/match/join" element={<JoinMatchPage />} />
+      <Route path="/match/lobby/:matchId" element={<MatchLobbyPage />} />
+      <Route path="/match/arena/:matchId" element={<MatchArenaPage />} />
 
-        <Route path="/match/results/:matchId" element={<MatchResultsPage />} />
+      <Route path="/match/results/:matchId" element={<MatchResultsPage />} />
 
+      <Route 
+        path="/matches/history" 
+        element={<MainLayout><MatchHistoryPage /></MainLayout>} 
+      />
 
-        <Route 
-          path="/matches/history" 
-          element={<MainLayout><MatchHistoryPage /></MainLayout>} 
-        />
+      <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
 
-        <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
-
-        
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Router>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 };
 

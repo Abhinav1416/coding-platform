@@ -1,13 +1,15 @@
 import React, { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { fetchMyPermissions } from '../../features/auth/services/authService';
+
+import type { CredentialResponse } from '@react-oauth/google';
+import { loginWithGoogle, fetchMyPermissions } from '../../features/auth/services/authService';
 
 // This is the expected structure of the decoded JWT payload
 interface DecodedToken {
-    sub: string; // 'sub' is the standard claim for user's email/username
+    sub: string;
     roles: string[];
-    isTwoFactorEnabled: boolean; // ✅ Your backend should include this in the JWT
+    isTwoFactorEnabled: boolean;
     exp: number;
 }
 
@@ -15,17 +17,19 @@ interface DecodedToken {
 export interface AuthenticatedUser {
     email: string;
     roles: string[];
-    twoFactorEnabled: boolean; // ✅ Added to track 2FA status
+    twoFactorEnabled: boolean;
 }
 
-interface AuthContextType {
+// This interface defines the shape of the context value
+export interface AuthContextType {
     user: AuthenticatedUser | null;
     logout: () => void;
     isAuthenticated: boolean;
     permissions: string[];
     hasPermission: (permission: string) => boolean;
     hasRole: (role: string) => boolean;
-    updateUser: (user: AuthenticatedUser) => void; // ✅ Added function to update user state
+    updateUser: (user: AuthenticatedUser) => void;
+    googleLogin: (credentialResponse: CredentialResponse) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,28 +52,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         navigate('/login');
     }, [navigate]);
 
+    const handleLoginSuccess = async (accessToken: string, refreshToken?: string) => {
+        localStorage.setItem('accessToken', accessToken);
+        if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken);
+        }
+
+        const decoded = jwtDecode<DecodedToken>(accessToken);
+        setUser({
+            email: decoded.sub,
+            roles: decoded.roles,
+            twoFactorEnabled: decoded.isTwoFactorEnabled,
+        });
+
+        const fetchedPermissions = await fetchMyPermissions();
+        setPermissions(fetchedPermissions);
+        navigate('/');
+    };
+
+    const googleLogin = async (credentialResponse: CredentialResponse) => {
+        try {
+            if (!credentialResponse.credential) {
+                throw new Error("Google login failed: No credential returned.");
+            }
+            const { accessToken, refreshToken } = await loginWithGoogle(credentialResponse.credential);
+            
+            if (!accessToken) {
+                throw new Error("Login failed: No access token received from backend.");
+            }
+
+            await handleLoginSuccess(accessToken, refreshToken ?? undefined);
+        } catch (error) {
+            console.error("Error during Google login:", error);
+            logout();
+        }
+    };
+
     useEffect(() => {
         const initializeAuth = async () => {
             const token = localStorage.getItem('accessToken');
-            if (token) {
-                try {
-                    const decoded = jwtDecode<DecodedToken>(token);
-                    if (decoded.exp * 1000 > Date.now()) {
-                        setUser({ 
-                            email: decoded.sub, 
-                            roles: decoded.roles,
-                            twoFactorEnabled: decoded.isTwoFactorEnabled // ✅ Set 2FA status from token
-                        });
-                        const fetchedPermissions = await fetchMyPermissions();
-                        setPermissions(fetchedPermissions);
-                    } else {
-                        logout();
-                    }
-                } catch (error) {
-                    console.error("Invalid token:", error);
+            
+            if (!token) {
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const decoded = jwtDecode<DecodedToken>(token);
+                if (decoded.exp * 1000 > Date.now()) {
+                    setUser({ 
+                        email: decoded.sub, 
+                        roles: decoded.roles,
+                        twoFactorEnabled: decoded.isTwoFactorEnabled
+                    });
+                    const fetchedPermissions = await fetchMyPermissions();
+                    setPermissions(fetchedPermissions);
+                } else {
                     logout();
                 }
+            } catch (error) {
+                console.error("Invalid token:", error);
+                logout();
             }
+            
             setIsLoading(false);
         };
         initializeAuth();
@@ -90,11 +135,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         permissions,
         hasPermission,
         hasRole,
-        updateUser: setUser, // ✅ Expose the setUser function
+        updateUser: setUser,
+        googleLogin,
     };
     
     if (isLoading) {
-        // You might want a better loading spinner here
         return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading Application...</div>;
     }
 
