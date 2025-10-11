@@ -191,8 +191,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         logger.debug("{} Entering error handling block.", logPrefix);
         try {
             submission.setStatus(SubmissionStatus.INTERNAL_ERROR);
-            String errorMessage = e.getClass().getSimpleName() + ": " + e.getMessage();
-            submission.setStderr(errorMessage);
+            submission.setStderr("Something went wrong");
             submission.setMatchId(submission.getMatchId());
             Submission savedSubmission = submissionRepository.save(submission);
             logger.info("{}   - Submission status updated to INTERNAL_ERROR in database.", logPrefix);

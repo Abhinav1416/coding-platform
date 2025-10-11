@@ -9,7 +9,7 @@ interface PaginationProps {
 
 export const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) {
-    return null; // Don't show pagination if there's only one page
+    return null;
   }
 
   const handlePrevious = () => {
@@ -31,7 +31,7 @@ export const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages,
         disabled={currentPage === 0}
         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-zinc-800 rounded-md hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <FaChevronLeft />
+        <FaChevronLeft className="pointer-events-none" />
         Previous
       </button>
 
@@ -45,7 +45,7 @@ export const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages,
         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-zinc-800 rounded-md hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Next
-        <FaChevronRight />
+        <FaChevronRight className="pointer-events-none" />
       </button>
     </div>
   );

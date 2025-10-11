@@ -31,13 +31,11 @@ export const useServerTimer = (startTime: number | null, durationInSeconds: numb
     return { minutes: 0, seconds: 0, totalSeconds: 0, isFinished: false };
   }
 
-  // --- Calculation is now done on every render ---
-  // This ensures the timer appears instantly when props are available.
+  // Calculation is done on every render
   const totalDurationMs = durationInSeconds * 1000;
   const elapsedTime = Date.now() - startTime;
   const remainingTime = totalDurationMs - elapsedTime;
 
-  // Cap the time to prevent display issues from clock skew.
   const cappedRemainingTime = Math.min(remainingTime, totalDurationMs);
   const finalRemainingTime = cappedRemainingTime > 0 ? cappedRemainingTime : 0;
 

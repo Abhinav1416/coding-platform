@@ -60,7 +60,6 @@ public class MatchController {
             @PageableDefault(size = 10) Pageable pageable,
             @RequestParam(required = false) String result) {
 
-        // The service now returns our custom PageDto
         PageDto<PastMatchDto> pastMatches = matchService.getPastMatchesForUser(user.getId(), result, pageable);
 
         return ResponseEntity.ok(pastMatches);

@@ -59,7 +59,7 @@ public class Judge0ServiceImpl implements Judge0Service {
             jsonBody = objectMapper.writeValueAsString(batchRequest);
         } catch (Exception e) {
             logger.error("{} Failed to serialize batchRequest.", logPrefix, e);
-            return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Failed to serialize request body").build();
+            return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Something went wrong").build();
         }
 
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
@@ -70,12 +70,12 @@ public class Judge0ServiceImpl implements Judge0Service {
             tokens = Objects.requireNonNull(response.getBody()).stream().map(Judge0Token::token).toList();
         } catch (RestClientException e) {
             logger.error("{} Failed to submit batch to Judge0.", logPrefix, e);
-            return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Failed to contact execution engine").build();
+            return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Something went wrong").build();
         }
 
         if (tokens.isEmpty()) {
             logger.error("{} No tokens received from Judge0.", logPrefix);
-            return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Empty response from Judge0").build();
+            return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Something went wrong").build();
         }
 
         String tokenString = String.join(",", tokens);
@@ -97,7 +97,7 @@ public class Judge0ServiceImpl implements Judge0Service {
                 if (allDone) break;
             } catch (Exception e) {
                 logger.error("{} Error while polling Judge0 results: {}", logPrefix, e.getMessage(), e);
-                return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Polling failed: " + e.getMessage()).build();
+                return SubmissionResultDTO.builder().status(SubmissionStatus.INTERNAL_ERROR).stderr("Something went wrong").build();
             }
         }
 

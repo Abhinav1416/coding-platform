@@ -37,7 +37,7 @@ const WinningSubmission = ({ submission }: { submission: SubmissionDetails }) =>
 
 // --- Main Results Page Component ---
 const MatchResultsPage = () => {
-    const { matchId } = useParams<{ matchId: string }>();
+    const { matchId } = useParams<{ matchId:string }>();
     const [result, setResult] = useState<MatchResult | null>(null);
     const [stats, setStats] = useState<{ p1: UserStats | null, p2: UserStats | null }>({ p1: null, p2: null });
     const [winningSubmission, setWinningSubmission] = useState<SubmissionDetails | null>(null);
@@ -129,6 +129,10 @@ const MatchResultsPage = () => {
                             {outcomeConfig.p1 === 'WIN' ? <FaTrophy className="text-2xl text-green-400" /> : outcomeConfig.p1 === 'LOSS' ? <FaTimesCircle className="text-2xl text-red-500" /> : <FaHandshake className="text-2xl text-yellow-400" />}
                         </div>
                         <p className="text-3xl font-bold text-[#F97316] mt-2">{result.playerOne.score} pts</p>
+                        
+                        {/* --- ADDED: Penalty display for Player One --- */}
+                        <p className="text-sm text-gray-400 mt-1">Penalties: {result.playerOne.penalties}</p>
+
                         {stats.p1 && <StatsDisplay stats={stats.p1} />}
                     </div>
 
@@ -139,6 +143,10 @@ const MatchResultsPage = () => {
                             {outcomeConfig.p2 === 'WIN' ? <FaTrophy className="text-2xl text-green-400" /> : outcomeConfig.p2 === 'LOSS' ? <FaTimesCircle className="text-2xl text-red-500" /> : <FaHandshake className="text-2xl text-yellow-400" />}
                         </div>
                         <p className="text-3xl font-bold text-[#F97316] mt-2">{result.playerTwo.score} pts</p>
+                        
+                        {/* --- ADDED: Penalty display for Player Two --- */}
+                        <p className="text-sm text-gray-400 mt-1">Penalties: {result.playerTwo.penalties}</p>
+                        
                         {stats.p2 && <StatsDisplay stats={stats.p2} />}
                     </div>
                 </div>
