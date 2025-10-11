@@ -73,6 +73,7 @@ public class AuthenticationController {
 
     @PostMapping("/refresh-access-token")
     public AuthenticationResponseBody refreshAccessToken(@RequestBody RefreshTokenRequest request) {
+        System.out.println("Received refresh token: " + request.getRefreshToken());
         return authenticationService.refreshAccessToken(request.getRefreshToken());
     }
 

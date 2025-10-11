@@ -1,7 +1,6 @@
 package com.Abhinav.backend.features.AWS.service;
 
-
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import com.Abhinav.backend.features.exception.ResourceNotFoundException;
 import com.Abhinav.backend.features.judge0.service.Judge0Service;
 import com.Abhinav.backend.features.problem.dto.SampleTestCaseDTO;
 import com.Abhinav.backend.features.problem.model.Problem;
@@ -47,8 +46,6 @@ public class S3Service {
     @Value("${problem.upload.max-size-kb}")
     private long maxUploadSizeKb;
 
-
-
     public S3Service(S3Presigner s3Presigner, S3Client s3Client, ObjectMapper objectMapper, RedisTemplate<String, Object> redisTemplate) {
         this.s3Presigner = s3Presigner;
         this.s3Client = s3Client;
@@ -56,13 +53,10 @@ public class S3Service {
         this.redisTemplate = redisTemplate;
     }
 
-
-
     @PostConstruct
     public void checkBucketNameProperty() {
         logger.info("S3Service is configured to use S3 bucket: '{}'", this.bucketName);
     }
-
 
     public String generatePresignedUploadUrl(String objectKey) {
         logger.debug("Generating presigned URL for objectKey: {}", objectKey);
@@ -82,7 +76,6 @@ public class S3Service {
         return presignedRequest.url().toString();
     }
 
-
     public boolean doesObjectExist(String objectKey) {
         try {
             HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
@@ -98,10 +91,8 @@ public class S3Service {
         }
     }
 
-
     public void deleteObject(String objectKey, UUID problemId) {
         try {
-            // 1. Delete from S3
             DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
                     .bucket(bucketName)
                     .key(objectKey)
@@ -109,7 +100,6 @@ public class S3Service {
             s3Client.deleteObject(deleteRequest);
             logger.info("Successfully deleted S3 object '{}'", objectKey);
 
-            // 2. Delete from Redis Cache
             String cacheKey = "testcases:problem:" + problemId.toString();
             if (Boolean.TRUE.equals(redisTemplate.hasKey(cacheKey))) {
                 redisTemplate.delete(cacheKey);
@@ -120,7 +110,6 @@ public class S3Service {
             throw new RuntimeException("Failed to delete S3 object: " + objectKey, e);
         }
     }
-
 
     public String moveObject(String sourceKey, String destinationKey) {
         logger.info("Moving S3 object from '{}' to '{}'", sourceKey, destinationKey);
@@ -148,12 +137,9 @@ public class S3Service {
 
         } catch (S3Exception e) {
             logger.error("Failed to move S3 object from '{}' to '{}'", sourceKey, destinationKey, e);
-            // Depending on your error handling, you might want to check if the destination object exists and clean up.
-            // For now, we re-throw a runtime exception.
             throw new RuntimeException("Error moving S3 object", e);
         }
     }
-
 
     @SuppressWarnings("unchecked")
     public List<Judge0Service.TestCase> getOrFetchAllTestCases(Problem problem) {
@@ -198,7 +184,6 @@ public class S3Service {
         return allTestCases;
     }
 
-
     private List<Judge0Service.TestCase> downloadAndParseHiddenTestCases(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {
             logger.warn("S3 key for test cases is null or blank. Returning empty list.");
@@ -242,6 +227,10 @@ public class S3Service {
             }
 
             logger.info("{} <- Successfully downloaded and parsed {} test cases.", logPrefix, testCases.size());
+
+        } catch (NoSuchKeyException e) {
+            logger.warn("{} The requested S3 object does not exist.", logPrefix);
+            throw new ResourceNotFoundException("Test case file not found in storage with key: " + s3Key);
 
         } catch (S3Exception | IOException e) {
             logger.error("{} Failed to download or parse test cases.", logPrefix, e);
