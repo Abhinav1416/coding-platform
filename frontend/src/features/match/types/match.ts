@@ -1,31 +1,28 @@
 import type { ProblemDetail } from '../../problem/types/problem';
 
 // --- Types for Creating & Joining a Match ---
-
+// (No changes here)
 export interface CreateMatchRequest {
   difficultyMin: number;
   difficultyMax: number;
   startDelayInMinutes: number;
   durationInMinutes: number;
 }
-
 export interface CreateMatchResponse {
   matchId: string;
   roomCode: string;
   shareableLink: string;
 }
-
 export interface JoinMatchRequest {
   roomCode: string;
 }
-
 export interface JoinMatchResponse {
   matchId: string;
   scheduledAt: string;
 }
 
 // --- Types for the Pre-Match Lobby ---
-
+// (No changes here)
 export interface LobbyState {
   matchId: string;
   playerOneId: number;
@@ -36,7 +33,6 @@ export interface LobbyState {
   scheduledAt: string | null;
   durationInMinutes: number;
 }
-
 export interface UserStats {
   userId: number;
   duelsPlayed: number;
@@ -44,7 +40,6 @@ export interface UserStats {
   duelsLost: number;
   duelsDrawn: number;
 }
-
 export interface Player {
   userId: number;
   username: string;
@@ -56,8 +51,7 @@ export interface Player {
 }
 
 // --- Types for the Active Match Arena ---
-
-// This matches your backend's LiveMatchStateDTO
+// (No changes here, this looks correct for its purpose)
 export interface LiveMatchState {
     matchId: string;
     problemId: string;
@@ -65,13 +59,11 @@ export interface LiveMatchState {
     playerTwoId: number;
     playerOnePenalties: number;
     playerTwoPenalties: number;
-    playerOneFinishTime: string | null; // Instants are sent as ISO strings
+    playerOneFinishTime: string | null;
     playerTwoFinishTime: string | null;
     startedAt: string;
     durationInMinutes: number;
 }
-
-// This is the main data structure for the arena page
 export interface ArenaData {
     liveState: LiveMatchState;
     problemDetails: ProblemDetail;
@@ -79,16 +71,33 @@ export interface ArenaData {
     playerTwoUsername: string;
 }
 
-// This corresponds to your backend's PlayerResultDTO
-export interface PlayerResult {
-    userId: number;
-    username: string;
-    score: number;
-    finishTime: string | null;
-    penalties: number;
+// ===================================================================
+// --- CORRECTED TYPES FOR MATCH RESULTS ---
+// ===================================================================
+
+// NEW TYPE: Defines a submission object inside the result payload
+export interface SubmissionSummaryInResult {
+    submissionId: string;
+    status: string;
+    submittedAt: string;
+    runtimeMs: number | null;
+    memoryKb: number | null;
 }
 
-// This now correctly matches your detailed backend MatchResultDTO
+// CORRECTED TYPE: This now perfectly matches the 'playerOne' and 'playerTwo'
+// objects from your Postman response for the /results endpoint.
+export interface PlayerResult {
+    userId: number;
+    solved: boolean;
+    finishTime: string | null;
+    penalties: number; // This field was already here, but the surrounding fields were wrong
+    effectiveTime: string | null;
+    submissions: SubmissionSummaryInResult[];
+    // NOTE: 'username' and 'score' are NOT included here because the API
+    // does not provide them inside this specific object.
+}
+
+// UPDATED TYPE: The MatchResult now uses the corrected PlayerResult.
 export interface MatchResult {
     matchId: string;
     problemId: string;
@@ -97,44 +106,36 @@ export interface MatchResult {
     winnerId: number | null;
     outcome: string;
     winnerUsername: string | null;
-    playerOne: PlayerResult;
-    playerTwo: PlayerResult;
+    playerOne: PlayerResult & { username: string, score: number }; // Merging for component compatibility
+    playerTwo: PlayerResult & { username: string, score: number }; // Merging for component compatibility
     winningSubmissionId: string | null;
 }
 
-
 // --- WebSocket Event Payload Interfaces ---
-
+// (No changes from here onwards)
 export interface PlayerJoinedPayload {
   eventType: 'PLAYER_JOINED';
   playerTwoId: number;
 }
-
 export interface MatchStartPayload {
     eventType: 'MATCH_START';
     liveState: LiveMatchState;
     playerOneUsername: string;
     playerTwoUsername: string;
 }
-
 export interface MatchEndPayload {
     eventType: 'MATCH_END';
     result: MatchResult;
 }
-
 export interface MatchCanceledPayload {
     eventType: 'MATCH_CANCELED';
     reason: string;
 }
-
-// A union type to handle any possible message from the match topic
 export type MatchEvent =
     | PlayerJoinedPayload
     | MatchStartPayload
     | MatchEndPayload
     | MatchCanceledPayload;
-
-
 
 export interface Page<T> {
     content: T[];
@@ -147,7 +148,6 @@ export interface Page<T> {
     numberOfElements: number;
     empty: boolean;
 }
-
 
 export interface PastMatch {
     matchId: string;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
@@ -20,11 +20,11 @@ import Tabs from '../../../core/components/Tabs';
 import { createSubmission, getSubmissionDetails } from '../../problem/services/problemService';
 import { getArenaData } from '../services/matchService';
 import { stompService } from '../../../core/sockets/stompClient';
-import type { ArenaData, MatchEvent, MatchResult } from '../types/match';
+import type { ArenaData, MatchResult } from '../types/match';
 import type { SubmissionSummary, SubmissionDetails } from '../../problem/types/problem';
 import { useServerTimer } from '../../../core/components/useServerTimer';
 
-// --- Helper Hook: Fetches initial arena data via HTTP ---
+// --- (Helper hooks and components remain unchanged) ---
 const useArenaData = (matchId: string | undefined) => {
     const [arenaData, setArenaData] = useState<ArenaData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +57,6 @@ const useArenaData = (matchId: string | undefined) => {
     return { arenaData, isLoading, error, shouldRedirect };
 };
 
-// --- Helper Hook: Manages WebSocket subscriptions and events ---
 const useMatchEvents = (
     matchId: string | undefined,
     onMatchEnd: (result: MatchResult) => void,
@@ -78,7 +77,6 @@ const useMatchEvents = (
     useEffect(() => {
         if (!matchId) return;
 
-        // Ensure the WebSocket connection is initiated. The robust service handles queuing.
         stompService.connect();
 
         const subs = [
@@ -86,14 +84,12 @@ const useMatchEvents = (
             stompService.subscribeToCountdown(matchId, handleCountdownEvent)
         ];
         
-        // Cleanup subscriptions when the component unmounts
         return () => {
             subs.forEach(sub => { if (sub) sub.unsubscribe() });
         };
     }, [matchId, handleMatchEvent, handleCountdownEvent]);
 };
 
-// --- Helper Component: Loading Spinner ---
 const LoadingSpinner = () => (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-gray-400">
         <Loader2 className="animate-spin text-[#F97316]" size={48} />
@@ -115,12 +111,49 @@ const MatchArenaPage: React.FC = () => {
     
     // Editor and submission related state
     const [language, setLanguage] = useState<'cpp' | 'java' | 'python'>('cpp');
-    const [code, setCode] = useState<string>('// Good luck!');
+    const [code, setCode] = useState<string>('// Loading code...'); 
     const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetails | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
+
+    // State and Ref for Frontend Rate Limiting (Cooldown)
+    const COOLDOWN_SECONDS = 5;
+    const [isCoolingDown, setIsCoolingDown] = useState(false);
+    const [cooldownTime, setCooldownTime] = useState(COOLDOWN_SECONDS);
+    // --- FIX APPLIED HERE ---
+    const cooldownIntervalRef = useRef<number | null>(null);
+
+    // Load saved code from localStorage when component mounts
+    useEffect(() => {
+        if (matchId && user?.email) {
+            try {
+                const storageKey = `code-cache-${user.email}-${matchId}`;
+                const savedCode = localStorage.getItem(storageKey);
+                if (savedCode) {
+                    setCode(savedCode);
+                } else {
+                    setCode('// Good luck!');
+                }
+            } catch (e) {
+                console.error("Could not read from localStorage:", e);
+                setCode('// Good luck!');
+            }
+        }
+    }, [matchId, user?.email]);
+
+    // Save code to localStorage whenever it changes
+    useEffect(() => {
+        if (matchId && user?.email && code !== '// Loading code...') {
+            try {
+                const storageKey = `code-cache-${user.email}-${matchId}`;
+                localStorage.setItem(storageKey, code);
+            } catch (e) {
+                console.error("Could not write to localStorage:", e);
+            }
+        }
+    }, [code, matchId, user?.email]);
 
     // Redirect to results if the match is already completed
     useEffect(() => {
@@ -136,47 +169,32 @@ const MatchArenaPage: React.FC = () => {
             setMatchState('COMPLETED');
         },
         (payload) => {
-            // This is still useful if the timer needs to start after the page has loaded
             setTimerData(payload);
         }
     );
     
-    // =================================================================================
-    // MODIFIED CODE BLOCK
-    // =================================================================================
     // Transition to IN_PROGRESS and initialize the timer from the HTTP response
     useEffect(() => {
         if (arenaData) {
             setMatchState('IN_PROGRESS');
-
-            // --- FIX: Initialize timer from the authoritative HTTP data ---
-            // This prevents the race condition where the WebSocket message might be missed on initial load.
             const { startedAt, durationInMinutes } = arenaData.liveState;
-
             if (startedAt && durationInMinutes > 0) {
                 setTimerData({
-                    // Convert the ISO 8601 string from the server into a UTC millisecond timestamp
                     startTime: new Date(startedAt).getTime(),
-                    // Convert the duration from minutes to seconds, as required by useServerTimer
                     duration: durationInMinutes * 60,
                 });
             }
-            // --- END OF FIX ---
         }
     }, [arenaData]);
-    // =================================================================================
     
-    // The new, self-correcting timer hook
     const { totalSeconds: timeLeft, isFinished } = useServerTimer(timerData?.startTime ?? null, timerData?.duration ?? null);
 
-    // Transition to AWAITING_RESULT when the timer hits zero
     useEffect(() => {
         if (isFinished && matchState === 'IN_PROGRESS' && timerData) {
             setMatchState('AWAITING_RESULT');
         }
     }, [isFinished, matchState, timerData]);
 
-    // Automatically navigate to results page after match completion
     useEffect(() => {
         if (matchState === 'COMPLETED' && matchId) {
             const timer = setTimeout(() => {
@@ -186,15 +204,37 @@ const MatchArenaPage: React.FC = () => {
         }
     }, [matchState, matchId, navigate]);
 
-    // Submission-related handlers
+    useEffect(() => {
+        if (isCoolingDown) {
+            cooldownIntervalRef.current = window.setInterval(() => { // Using window.setInterval for clarity
+                setCooldownTime(prevTime => {
+                    if (prevTime <= 1) {
+                        if (cooldownIntervalRef.current) {
+                            clearInterval(cooldownIntervalRef.current);
+                        }
+                        setIsCoolingDown(false);
+                        return COOLDOWN_SECONDS;
+                    }
+                    return prevTime - 1;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (cooldownIntervalRef.current) {
+                clearInterval(cooldownIntervalRef.current);
+            }
+        };
+    }, [isCoolingDown]);
+
     const handleSubmissionUpdate = useCallback((update: { submissionId: string; status: string }) => {
         setSubmissions(prev => prev.map(sub => sub.id === update.submissionId ? { ...sub, status: update.status } : sub));
     }, []);
 
     const handleSubmit = async () => {
-        if (!arenaData?.problemDetails || isSubmitting || matchState !== 'IN_PROGRESS') return;
+        if (!arenaData?.problemDetails || isSubmitting || isCoolingDown || matchState !== 'IN_PROGRESS') return;
+        
         setIsSubmitting(true);
-        setActiveTab(1); // Switch to "My Submissions" tab
+        setActiveTab(1);
         try {
             const response = await createSubmission({
                 problemId: arenaData.problemDetails.id,
@@ -211,6 +251,7 @@ const MatchArenaPage: React.FC = () => {
             console.error("Submission failed:", err);
         } finally {
             setIsSubmitting(false);
+            setIsCoolingDown(true);
         }
     };
 
@@ -224,19 +265,25 @@ const MatchArenaPage: React.FC = () => {
         }
     };
 
-    // Render loading/error states
     if (isLoading) return <LoadingSpinner />;
     if (shouldRedirect) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Match already completed. Redirecting...</div>;
     if (error) return <div className="text-red-500 text-center p-8 text-xl">{error}</div>;
     if (!arenaData?.problemDetails) return <div className="text-center p-8">Match data or problem could not be found.</div>;
 
-    const isEditorDisabled = matchState !== 'IN_PROGRESS' || isSubmitting;
+    const isEditorDisabled = matchState !== 'IN_PROGRESS' || isSubmitting || isCoolingDown;
     const { problemDetails, playerOneUsername, playerTwoUsername } = arenaData;
 
     const leftPanelTabs = [
         { label: 'Description', content: <ProblemDetails problem={problemDetails} /> },
         { label: 'My Submissions', content: <SubmissionsList submissions={submissions} onSubmissionClick={handleSubmissionClick} /> },
     ];
+
+    let submitButtonText = "Submit";
+    if (isSubmitting) {
+        submitButtonText = "Submitting...";
+    } else if (isCoolingDown) {
+        submitButtonText = `Wait ${cooldownTime}s`;
+    }
 
     return (
         <>
@@ -256,7 +303,9 @@ const MatchArenaPage: React.FC = () => {
                         <CodeEditor
                             language={language} setLanguage={setLanguage}
                             code={code} setCode={setCode}
-                            onSubmit={handleSubmit} isSubmittingDisabled={isEditorDisabled}
+                            onSubmit={handleSubmit}
+                            isSubmittingDisabled={isEditorDisabled}
+                            submitButtonText={submitButtonText}
                         />
                     </Panel>
                 </PanelGroup>
@@ -280,6 +329,5 @@ const MatchArenaPage: React.FC = () => {
         </>
     );
 };
-
 
 export default MatchArenaPage;

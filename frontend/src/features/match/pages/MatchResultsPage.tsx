@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { FaTrophy, FaTimesCircle, FaHandshake } from 'react-icons/fa';
-import type { MatchResult, UserStats } from '../types/match';
+// Make sure all necessary types are imported
+import type { MatchResult, UserStats, PlayerResult as ApiPlayerResult } from '../types/match';
 import { getMatchResult, getPlayerStats } from '../services/matchService';
 import { getSubmissionDetails } from '../../problem/services/problemService';
 import type { SubmissionDetails } from '../../problem/types/problem';
 
 // --- Sub-Component for displaying a player's updated total stats ---
+// NO CHANGES NEEDED HERE - It will work with the corrected data flow.
 const StatsDisplay = ({ stats }: { stats: UserStats }) => (
     <div className="bg-zinc-800 p-4 rounded-lg mt-4">
         <h4 className="font-bold text-lg text-white mb-2">Updated Total Stats</h4>
@@ -21,6 +23,7 @@ const StatsDisplay = ({ stats }: { stats: UserStats }) => (
 );
 
 // --- Sub-Component for displaying the winning code submission ---
+// NO CHANGES NEEDED HERE
 const WinningSubmission = ({ submission }: { submission: SubmissionDetails }) => (
     <div className="bg-zinc-900 border border-green-500/50 rounded-xl p-6 mt-8 shadow-lg">
         <h2 className="text-2xl font-bold text-center text-green-400 mb-4">Winning Submission</h2>
@@ -43,8 +46,17 @@ const MatchResultsPage = () => {
     const [winningSubmission, setWinningSubmission] = useState<SubmissionDetails | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [retryCount, setRetryCount] = useState(0); // State to track retries
+    const [retryCount, setRetryCount] = useState(0);
 
+    // This helper function calculates a score. The logic can be customized.
+    const calculateScore = (player: ApiPlayerResult): number => {
+        if (!player.solved) return 0;
+        const baseScore = 100;
+        const penaltyCost = 10; // 10 points per penalty
+        return Math.max(0, baseScore - (player.penalties * penaltyCost));
+    };
+
+    // --- MODIFIED useEffect HOOK ---
     useEffect(() => {
         if (!matchId) {
             setError("No Match ID provided.");
@@ -53,42 +65,62 @@ const MatchResultsPage = () => {
         }
 
         const fetchAllResults = async () => {
-            setError(null); // Reset error on a new attempt
+            setError(null);
             try {
-                // 1. Fetch the main match result
-                const matchResult = await getMatchResult(matchId);
-                setResult(matchResult);
+                // 1. Fetch the main match result from the API
+                const apiResult = await getMatchResult(matchId);
 
                 // 2. Fetch updated stats for both players in parallel
                 const [p1Stats, p2Stats] = await Promise.all([
-                    getPlayerStats(matchResult.playerOne.userId),
-                    getPlayerStats(matchResult.playerTwo.userId)
+                    getPlayerStats(apiResult.playerOne.userId),
+                    getPlayerStats(apiResult.playerTwo.userId)
                 ]);
                 setStats({ p1: p1Stats, p2: p2Stats });
 
-                // 3. If there was a winning submission, fetch its details
-                if (matchResult.winningSubmissionId) {
-                    const submissionDetails = await getSubmissionDetails(matchResult.winningSubmissionId);
+                // 3. Fetch winning submission details if it exists
+                if (apiResult.winningSubmissionId) {
+                    const submissionDetails = await getSubmissionDetails(apiResult.winningSubmissionId);
                     setWinningSubmission(submissionDetails);
                 }
-                setIsLoading(false); // Success, stop loading
+
+                // 4. *** THE MINIMAL FIX ***
+                // Create a final result object for the state that perfectly matches
+                // what the JSX expects, combining data from all sources.
+                const finalResult: MatchResult = {
+                    ...apiResult, // Copy all top-level properties (winnerId, outcome, etc.)
+                    playerOne: {
+                        ...apiResult.playerOne, // Copy all player data from API (userId, solved, AND penalties)
+                        username: apiResult.playerOne.username || 'Player 1', // Use username from API if available, else fallback
+                        score: calculateScore(apiResult.playerOne), // Add the calculated score
+                    },
+                    playerTwo: {
+                        ...apiResult.playerTwo,
+                        username: apiResult.playerTwo.username || 'Player 2',
+                        score: calculateScore(apiResult.playerTwo),
+                    }
+                };
+                
+                // This will now correctly log the object that your component will render
+                console.log("Final data being set to state:", finalResult);
+
+                setResult(finalResult);
+                setIsLoading(false);
+
             } catch (err) {
-                // If the fetch fails, retry up to 3 times
                 if (retryCount < 3) {
-                    console.warn(`Failed to fetch results, attempt ${retryCount + 1}. Retrying in 1.5 seconds...`);
-                    setTimeout(() => {
-                        setRetryCount(prevCount => prevCount + 1); // Trigger the useEffect again
-                    }, 1500); // Wait 1.5 seconds before retrying
+                    console.warn(`Failed to fetch results, attempt ${retryCount + 1}. Retrying...`);
+                    setTimeout(() => setRetryCount(prevCount => prevCount + 1), 1500);
                 } else {
-                    // If it still fails after all retries, show the final error
-                    setError("Failed to load match results. The link may be invalid or the match is not yet complete.");
+                    setError("Failed to load match results. The match may not be complete.");
                     setIsLoading(false);
                 }
             }
         };
 
         fetchAllResults();
-    }, [matchId, retryCount]); // Re-run the effect when matchId or retryCount changes
+    }, [matchId, retryCount]);
+
+    // ... The rest of the component from here down is UNCHANGED ...
 
     if (isLoading) {
         return (
@@ -108,7 +140,6 @@ const MatchResultsPage = () => {
         );
     }
 
-    // Determine win/loss status for each player for styling
     const outcomeConfig = result.winnerId 
         ? (result.playerOne.userId === result.winnerId ? { p1: 'WIN', p2: 'LOSS' } : { p1: 'LOSS', p2: 'WIN' }) 
         : { p1: 'DRAW', p2: 'DRAW' };
@@ -130,7 +161,7 @@ const MatchResultsPage = () => {
                         </div>
                         <p className="text-3xl font-bold text-[#F97316] mt-2">{result.playerOne.score} pts</p>
                         
-                        {/* --- ADDED: Penalty display for Player One --- */}
+                        {/* THIS LINE WILL NOW WORK CORRECTLY */}
                         <p className="text-sm text-gray-400 mt-1">Penalties: {result.playerOne.penalties}</p>
 
                         {stats.p1 && <StatsDisplay stats={stats.p1} />}
@@ -144,7 +175,7 @@ const MatchResultsPage = () => {
                         </div>
                         <p className="text-3xl font-bold text-[#F97316] mt-2">{result.playerTwo.score} pts</p>
                         
-                        {/* --- ADDED: Penalty display for Player Two --- */}
+                        {/* THIS LINE WILL NOW WORK CORRECTLY */}
                         <p className="text-sm text-gray-400 mt-1">Penalties: {result.playerTwo.penalties}</p>
                         
                         {stats.p2 && <StatsDisplay stats={stats.p2} />}

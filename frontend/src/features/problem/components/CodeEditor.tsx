@@ -5,6 +5,7 @@ import Timer from './Timer';
 
 type Language = 'cpp' | 'java' | 'python';
 
+// --- MODIFIED ---: Added submitButtonText prop
 interface CodeEditorProps {
     language: Language;
     setLanguage: (language: Language) => void;
@@ -12,6 +13,7 @@ interface CodeEditorProps {
     setCode: (code: string) => void;
     onSubmit: () => void;
     isSubmittingDisabled: boolean;
+    submitButtonText?: string; // New prop for dynamic button text
     timer?: {
         time: number;
         isActive: boolean;
@@ -27,7 +29,17 @@ const languageMap: { [key in Language]: string } = {
     python: 'python',
 };
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ language, setLanguage, code, setCode, onSubmit, isSubmittingDisabled, timer }) => {
+// --- MODIFIED ---: Destructured the new prop and gave it a default value
+const CodeEditor: React.FC<CodeEditorProps> = ({ 
+    language, 
+    setLanguage, 
+    code, 
+    setCode, 
+    onSubmit, 
+    isSubmittingDisabled, 
+    submitButtonText = "Submit", // Default text if prop is not provided
+    timer 
+}) => {
     const { theme } = useTheme();
 
     return (
@@ -65,7 +77,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ language, setLanguage, code, se
                           <path d="M9.309 3.14c-.094-.323-.527-.323-.62 0L4.363 8.32c-.2.685.028 1.488.544 1.838l3.187 2.126a2.25 2.25 0 0 0 2.373 0l3.187-2.126c.516-.35.744-1.153.544-1.838L9.309 3.14Z" />
                           <path fillRule="evenodd" d="M11.664 12.84a2.25 2.25 0 0 1-3.328 0 2.25 2.25 0 0 0-2.373 0l-3.187 2.126c-.516.35-.744 1.153-.544 1.838L4.363 17.68c.094.323.527.323.62 0l4.326-5.18a2.25 2.25 0 0 1 2.373 0l4.326 5.18c.094.323.527.323.62 0l1.414-4.949c.2-.685-.028-1.488-.544-1.838L11.664 12.84Z" clipRule="evenodd" />
                         </svg>
-                        Submit
+                        {/* --- MODIFIED ---: Using the dynamic text from props */}
+                        {submitButtonText}
                     </button>
                 </div>
             </div>
