@@ -18,7 +18,8 @@ const ProblemDetails: React.FC<ProblemDetailsProps> = ({ problem }) => {
     };
 
     return (
-        <div className="p-6 overflow-y-auto h-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        // MODIFIED: Changed background colors for better consistency and clarity.
+        <div className="p-6 overflow-y-auto h-full bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100">
             <h1 className="text-3xl font-bold mb-4">{problem.title}</h1>
 
             <div className="flex items-center space-x-4 mb-6 text-sm text-gray-600 dark:text-gray-400">
@@ -26,6 +27,8 @@ const ProblemDetails: React.FC<ProblemDetailsProps> = ({ problem }) => {
                 <span>Memory Limit: {memoryInMegabytes} MB</span>
                 <span>Points: {problem.points}</span>
             </div>
+
+            {/* The 'prose' and 'prose-invert' classes handle most of the theming for the content below */}
             <div className="prose dark:prose-invert max-w-none">
                 <h2 className="text-xl font-semibold mt-6 mb-2">Problem Statement</h2>
                 <p dangerouslySetInnerHTML={{ __html: problem.description }}></p>
@@ -45,13 +48,13 @@ const ProblemDetails: React.FC<ProblemDetailsProps> = ({ problem }) => {
                         <div className="space-y-4">
                             <div>
                                 <h4 className="font-medium">Input:</h4>
-                                <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
+                                <pre className="bg-gray-100 dark:bg-zinc-800 p-3 rounded-md">
                                     <code>{formatTestCase(testCase.stdin)}</code>
                                 </pre>
                             </div>
                             <div>
                                 <h4 className="font-medium">Output:</h4>
-                                <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
+                                <pre className="bg-gray-100 dark:bg-zinc-800 p-3 rounded-md">
                                     <code>{formatTestCase(testCase.expected_output)}</code>
                                 </pre>
                             </div>

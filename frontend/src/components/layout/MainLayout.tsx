@@ -1,6 +1,5 @@
 import React from 'react';
 import Navbar from './Navbar';
-import { useTheme } from '../../core/context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 
 interface MainLayoutProps {
@@ -8,23 +7,24 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const { theme } = useTheme();
-
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#18181b] text-gray-200' : 'bg-white text-gray-800'}`}>
+    // --- FIX: This is the correct way to handle theme backgrounds with Tailwind ---
+    // It uses dark: prefixes instead of conditional JavaScript classes.
+    <div className="min-h-screen bg-white text-gray-800 dark:bg-[#18181b] dark:text-gray-200 transition-colors duration-200">
 
       <Toaster 
         position="top-center"
         reverseOrder={false}
         toastOptions={{
-          className: '',
           style: {
             background: '#333',
             color: '#fff',
           },
         }}
       />
+      
       <Navbar />
+
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>

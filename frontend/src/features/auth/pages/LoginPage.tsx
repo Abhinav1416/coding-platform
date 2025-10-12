@@ -2,12 +2,14 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../core/context/ThemeContext';
 import type { AuthResponse } from "../types/auth";
-import ThemeToggle from '../components/ThemeToggle';
+// REMOVED: ThemeToggle is no longer imported
+// import ThemeToggle from '../components/ThemeToggle';
 import LoginForm from '../components/LoginForm';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
+  // REMOVED: toggleTheme is no longer needed here
+  const { theme } = useTheme();
 
   useEffect(() => {
     const accessToken = localStorage.getItem('accessToken');
@@ -36,9 +38,7 @@ const LoginPage = () => {
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300 ${pageBgClass}`}>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-      </div>
+      {/* REMOVED: The div containing the ThemeToggle has been deleted */}
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className={`text-3xl font-bold ${headingClass}`}>Welcome Back!</h1>

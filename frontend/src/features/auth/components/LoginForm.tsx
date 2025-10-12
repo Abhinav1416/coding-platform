@@ -10,7 +10,7 @@ interface Props {
   onAuthenticated: (data: AuthResponse) => void;
   theme: 'light' | 'dark';
 }
-
+ 
 const LoginForm = ({ onAuthenticated, theme }: Props) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

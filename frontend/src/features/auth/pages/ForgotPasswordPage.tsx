@@ -1,11 +1,13 @@
 import { useTheme } from '../../../core/context/ThemeContext';
 import ForgotPasswordForm from '../components/ForgotPasswordForm';
-import ThemeToggle from '../components/ThemeToggle';
+// REMOVED: The ThemeToggle component is no longer imported.
+// import ThemeToggle from '../components/ThemeToggle';
 
 const ForgotPasswordPage = () => {
-  const { theme, toggleTheme } = useTheme();
+  // REMOVED: `toggleTheme` is no longer needed on this page.
+  const { theme } = useTheme();
 
-  // Define dynamic classes for theme switching
+  // The dynamic classes remain so the page still adapts to the global theme.
   const pageBgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-slate-100';
   const cardBgClass = theme === 'dark' ? 'bg-zinc-900 border border-white/10' : 'bg-white shadow-lg';
   const headingClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
@@ -13,9 +15,7 @@ const ForgotPasswordPage = () => {
 
   return (
     <div className={`flex items-center justify-center min-h-screen ${pageBgClass} transition-colors duration-300`}>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-      </div>
+      {/* REMOVED: The div containing the ThemeToggle component has been deleted. */}
       <div className={`w-full max-w-md p-8 space-y-8 rounded-xl ${cardBgClass}`}>
         <div className="text-center">
           <h1 className={`text-3xl font-bold ${headingClass}`}>Forgot Your Password?</h1>

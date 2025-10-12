@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import RegisterForm from "../components/RegisterForm";
-import ThemeToggle from "../components/ThemeToggle";
+// REMOVED: ThemeToggle component is no longer imported.
+// import ThemeToggle from "../components/ThemeToggle";
 import { useTheme } from "../../../core/context/ThemeContext";
 import type { AuthResponse } from "../types/auth";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { theme, toggleTheme } = useTheme();
+  // REMOVED: `toggleTheme` is no longer needed on this page.
+  const { theme } = useTheme();
 
   const handleLoginSuccess = (data: AuthResponse) => {
     if (data.accessToken) {
@@ -24,7 +26,7 @@ const RegisterPage = () => {
     }
   };
 
-  // Define dynamic classes for theme switching
+  // The dynamic classes remain so the page still adapts to the global theme.
   const pageBgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-slate-100';
   const cardBgClass = theme === 'dark' ? 'bg-zinc-900 border border-white/10' : 'bg-white shadow-lg';
   const headingClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
@@ -32,9 +34,7 @@ const RegisterPage = () => {
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300 ${pageBgClass}`}>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-      </div>
+      {/* REMOVED: The div containing the ThemeToggle component has been deleted. */}
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className={`text-3xl font-bold ${headingClass}`}>
@@ -53,4 +53,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

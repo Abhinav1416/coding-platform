@@ -4,8 +4,9 @@ import { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
-// Core hooks for timing and authentication
+// Core and Layout components
 import { useAuth } from '../../../core/hooks/useAuth';
+
 
 // UI Components for the arena
 import MatchHeader from '../components/MatchHeader';
@@ -23,9 +24,11 @@ import { stompService } from '../../../core/sockets/stompClient';
 import type { ArenaData, MatchResult } from '../types/match';
 import type { SubmissionSummary, SubmissionDetails } from '../../problem/types/problem';
 import { useServerTimer } from '../../../core/components/useServerTimer';
+import Navbar from '../../../components/layout/Navbar';
 
-// --- (Helper hooks and components remain unchanged) ---
+// --- (Helper hooks remain unchanged) ---
 const useArenaData = (matchId: string | undefined) => {
+    // ... (This hook is unchanged)
     const [arenaData, setArenaData] = useState<ArenaData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,7 @@ const useArenaData = (matchId: string | undefined) => {
 };
 
 const useMatchEvents = (
+    // ... (This hook is unchanged)
     matchId: string | undefined,
     onMatchEnd: (result: MatchResult) => void,
     onCountdownStart: (data: { startTime: number; duration: number }) => void
@@ -76,26 +80,28 @@ const useMatchEvents = (
 
     useEffect(() => {
         if (!matchId) return;
-
         stompService.connect();
-
         const subs = [
             stompService.subscribeToMatchUpdates(matchId, handleMatchEvent),
             stompService.subscribeToCountdown(matchId, handleCountdownEvent)
         ];
-        
         return () => {
             subs.forEach(sub => { if (sub) sub.unsubscribe() });
         };
     }, [matchId, handleMatchEvent, handleCountdownEvent]);
 };
 
-const LoadingSpinner = () => (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-gray-400">
-        <Loader2 className="animate-spin text-[#F97316]" size={48} />
-        <p className="mt-4 text-lg animate-pulse">Loading Arena...</p>
+
+// --- Themed Layout for Loading/Error States ---
+const ArenaStateLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div className="flex flex-col h-screen bg-white dark:bg-zinc-950">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center text-center p-4">
+            {children}
+        </main>
     </div>
 );
+
 
 // --- Main Arena Page Component ---
 const MatchArenaPage: React.FC = () => {
@@ -105,11 +111,10 @@ const MatchArenaPage: React.FC = () => {
 
     const { arenaData, isLoading, error, shouldRedirect } = useArenaData(matchId);
 
+    // ... (All state and hooks from the original component remain unchanged here)
     const [timerData, setTimerData] = useState<{ startTime: number; duration: number } | null>(null);
     const [matchState, setMatchState] = useState<'LOADING' | 'IN_PROGRESS' | 'AWAITING_RESULT' | 'COMPLETED'>('LOADING');
     const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
-    
-    // Editor and submission related state
     const [language, setLanguage] = useState<'cpp' | 'java' | 'python'>('cpp');
     const [code, setCode] = useState<string>('// Loading code...'); 
     const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
@@ -117,15 +122,12 @@ const MatchArenaPage: React.FC = () => {
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetails | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
-
-    // State and Ref for Frontend Rate Limiting (Cooldown)
     const COOLDOWN_SECONDS = 5;
     const [isCoolingDown, setIsCoolingDown] = useState(false);
     const [cooldownTime, setCooldownTime] = useState(COOLDOWN_SECONDS);
-    // --- FIX APPLIED HERE ---
     const cooldownIntervalRef = useRef<number | null>(null);
 
-    // Load saved code from localStorage when component mounts
+    // ... (All useEffect hooks from the original component remain unchanged here)
     useEffect(() => {
         if (matchId && user?.email) {
             try {
@@ -142,8 +144,6 @@ const MatchArenaPage: React.FC = () => {
             }
         }
     }, [matchId, user?.email]);
-
-    // Save code to localStorage whenever it changes
     useEffect(() => {
         if (matchId && user?.email && code !== '// Loading code...') {
             try {
@@ -154,15 +154,11 @@ const MatchArenaPage: React.FC = () => {
             }
         }
     }, [code, matchId, user?.email]);
-
-    // Redirect to results if the match is already completed
     useEffect(() => {
         if (shouldRedirect && matchId) {
             navigate(`/match/results/${matchId}`, { replace: true });
         }
     }, [shouldRedirect, matchId, navigate]);
-
-    // Set up WebSocket event listeners
     useMatchEvents(matchId,
         (result) => {
             setMatchResult(result);
@@ -172,8 +168,6 @@ const MatchArenaPage: React.FC = () => {
             setTimerData(payload);
         }
     );
-    
-    // Transition to IN_PROGRESS and initialize the timer from the HTTP response
     useEffect(() => {
         if (arenaData) {
             setMatchState('IN_PROGRESS');
@@ -186,15 +180,12 @@ const MatchArenaPage: React.FC = () => {
             }
         }
     }, [arenaData]);
-    
     const { totalSeconds: timeLeft, isFinished } = useServerTimer(timerData?.startTime ?? null, timerData?.duration ?? null);
-
     useEffect(() => {
         if (isFinished && matchState === 'IN_PROGRESS' && timerData) {
             setMatchState('AWAITING_RESULT');
         }
     }, [isFinished, matchState, timerData]);
-
     useEffect(() => {
         if (matchState === 'COMPLETED' && matchId) {
             const timer = setTimeout(() => {
@@ -203,10 +194,9 @@ const MatchArenaPage: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [matchState, matchId, navigate]);
-
     useEffect(() => {
         if (isCoolingDown) {
-            cooldownIntervalRef.current = window.setInterval(() => { // Using window.setInterval for clarity
+            cooldownIntervalRef.current = window.setInterval(() => {
                 setCooldownTime(prevTime => {
                     if (prevTime <= 1) {
                         if (cooldownIntervalRef.current) {
@@ -232,7 +222,6 @@ const MatchArenaPage: React.FC = () => {
 
     const handleSubmit = async () => {
         if (!arenaData?.problemDetails || isSubmitting || isCoolingDown || matchState !== 'IN_PROGRESS') return;
-        
         setIsSubmitting(true);
         setActiveTab(1);
         try {
@@ -254,7 +243,6 @@ const MatchArenaPage: React.FC = () => {
             setIsCoolingDown(true);
         }
     };
-
     const handleSubmissionClick = async (submissionId: string) => {
         try {
             const details = await getSubmissionDetails(submissionId);
@@ -265,10 +253,35 @@ const MatchArenaPage: React.FC = () => {
         }
     };
 
-    if (isLoading) return <LoadingSpinner />;
-    if (shouldRedirect) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Match already completed. Redirecting...</div>;
-    if (error) return <div className="text-red-500 text-center p-8 text-xl">{error}</div>;
-    if (!arenaData?.problemDetails) return <div className="text-center p-8">Match data or problem could not be found.</div>;
+    // --- Themed Render Logic ---
+
+    if (isLoading) return (
+        <ArenaStateLayout>
+            <div>
+                <Loader2 className="animate-spin text-[#F97316] mx-auto" size={48} />
+                <p className="mt-4 text-lg animate-pulse text-gray-600 dark:text-gray-400">Loading Arena...</p>
+            </div>
+        </ArenaStateLayout>
+    );
+
+    if (shouldRedirect) return (
+        <ArenaStateLayout>
+            <p className="text-lg text-gray-800 dark:text-gray-200">Match already completed. Redirecting...</p>
+        </ArenaStateLayout>
+    );
+    
+    if (error) return (
+        <ArenaStateLayout>
+            <p className="text-red-500 text-xl">{error}</p>
+        </ArenaStateLayout>
+    );
+    
+    if (!arenaData?.problemDetails) return (
+        <ArenaStateLayout>
+            <p className="text-lg text-gray-800 dark:text-gray-200">Match data or problem could not be found.</p>
+        </ArenaStateLayout>
+    );
+
 
     const isEditorDisabled = matchState !== 'IN_PROGRESS' || isSubmitting || isCoolingDown;
     const { problemDetails, playerOneUsername, playerTwoUsername } = arenaData;
@@ -279,38 +292,39 @@ const MatchArenaPage: React.FC = () => {
     ];
 
     let submitButtonText = "Submit";
-    if (isSubmitting) {
-        submitButtonText = "Submitting...";
-    } else if (isCoolingDown) {
-        submitButtonText = `Wait ${cooldownTime}s`;
-    }
+    if (isSubmitting) submitButtonText = "Submitting...";
+    else if (isCoolingDown) submitButtonText = `Wait ${cooldownTime}s`;
 
     return (
         <>
-            <div className="flex flex-col h-screen bg-zinc-950 text-white">
-                <MatchHeader
-                    timeLeft={timeLeft}
-                    playerOneUsername={playerOneUsername}
-                    playerTwoUsername={playerTwoUsername}
-                    status={matchState}
-                />
-                <PanelGroup direction="horizontal" className="flex-grow overflow-hidden">
-                    <Panel defaultSize={50} minSize={25} className="flex flex-col bg-zinc-900">
-                        <Tabs tabs={leftPanelTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    </Panel>
-                    <PanelResizeHandle className="w-2 bg-zinc-800 hover:bg-[#F97316]/80 active:bg-[#F97316] transition-colors duration-200" />
-                    <Panel defaultSize={50} minSize={35} className="flex flex-col bg-zinc-900">
-                        <CodeEditor
-                            language={language} setLanguage={setLanguage}
-                            code={code} setCode={setCode}
-                            onSubmit={handleSubmit}
-                            isSubmittingDisabled={isEditorDisabled}
-                            submitButtonText={submitButtonText}
-                        />
-                    </Panel>
-                </PanelGroup>
+            <div className="flex flex-col h-screen bg-white dark:bg-zinc-950 text-gray-900 dark:text-white">
+                <Navbar />
+                <div className="flex-grow flex flex-col min-h-0">
+                    <MatchHeader
+                        timeLeft={timeLeft}
+                        playerOneUsername={playerOneUsername}
+                        playerTwoUsername={playerTwoUsername}
+                        status={matchState}
+                    />
+                    <PanelGroup direction="horizontal" className="flex-grow overflow-hidden">
+                        <Panel defaultSize={50} minSize={25} className="flex flex-col bg-gray-50 dark:bg-zinc-900">
+                            <Tabs tabs={leftPanelTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        </Panel>
+                        <PanelResizeHandle className="w-2 bg-gray-300 dark:bg-zinc-800 hover:bg-[#F97316]/80 active:bg-[#F97316] transition-colors duration-200" />
+                        <Panel defaultSize={50} minSize={35} className="flex flex-col bg-gray-50 dark:bg-zinc-900">
+                            <CodeEditor
+                                language={language} setLanguage={setLanguage}
+                                code={code} setCode={setCode}
+                                onSubmit={handleSubmit}
+                                isSubmittingDisabled={isEditorDisabled}
+                                submitButtonText={submitButtonText}
+                            />
+                        </Panel>
+                    </PanelGroup>
+                </div>
             </div>
             
+            {/* Overlays are kept dark for focus, which is standard UI practice */}
             {matchState === 'AWAITING_RESULT' && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 transition-opacity duration-300">
                     <Loader2 className="animate-spin text-[#F97316]" size={64} />

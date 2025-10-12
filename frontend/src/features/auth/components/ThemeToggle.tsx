@@ -7,11 +7,11 @@ interface ThemeToggleProps {
 
 const ThemeToggle = ({ theme, toggleTheme }: ThemeToggleProps) => {
   return (
-    <div className="absolute top-6 right-6">
+    <div>
       <button
         onClick={toggleTheme}
-        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-          theme === 'dark' ? 'bg-slate-700' : 'bg-indigo-500'
+        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${
+          theme === 'dark' ? 'bg-slate-700' : 'bg-orange-500'
         }`}
       >
         <span
