@@ -13,5 +13,5 @@ public class DuelStatsDto {
     private int duelsWon;
     private int duelsLost;
     private int duelsDrawn;
-    private double winRate; // e.g., 0.75 for 75%
+    private double winRate;
 }

@@ -46,14 +46,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // If no token is present, continue the filter chain for public endpoints.
             filterChain.doFilter(request, response);
             return;
         }
 
         final String jwt = authHeader.substring(7);
 
-        // 1. Check if the token is on the blocklist (logged out)
         final String redisKey = "blocklist:" + jwt;
         if (Boolean.TRUE.equals(redisTemplate.hasKey(redisKey))) {
             logger.warn("Authentication attempt with a blocklisted token for URI: {}", request.getRequestURI());
@@ -64,7 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             final String userEmail = jwtService.extractUsername(jwt);
 
-            // 2. If token is valid and user is not yet authenticated, set the security context
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
@@ -79,27 +76,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.debug("Successfully authenticated user '{}' for request URI: {}", userEmail, request.getRequestURI());
                 }
             }
-            // 3. Continue the filter chain for the authenticated request
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-            // THIS IS THE FIX for your original problem.
             logger.warn("JWT token has expired: {}", e.getMessage());
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token has expired.");
         } catch (JwtException e) {
-            // This catches other JWT-related issues like malformed tokens, signature errors, etc.
             logger.error("Invalid JWT token error: {}", e.getMessage());
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token.");
         }
     }
 
-    /**
-     * Helper method to create a standardized error response.
-     */
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json");
-        // Simple JSON response
         response.getWriter().write("{\"error\": \"" + message + "\"}");
         response.getWriter().flush();
     }

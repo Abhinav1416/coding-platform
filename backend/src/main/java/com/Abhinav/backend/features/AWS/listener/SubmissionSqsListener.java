@@ -17,12 +17,7 @@ public class SubmissionSqsListener {
     private final SubmissionService submissionService;
     private static final Logger logger = LoggerFactory.getLogger(SubmissionSqsListener.class);
 
-    /**
-     * Listens to the configured SQS queue for submission messages.
-     * When a message arrives, this method is invoked to process it.
-     *
-     * @param message The body of the SQS message, expected to be a submissionId UUID.
-     */
+
     @SqsListener("${aws.sqs.queue-name}")
     public void receiveMessage(String message) {
         String logPrefix = "[SQS_MSG " + message + "]";

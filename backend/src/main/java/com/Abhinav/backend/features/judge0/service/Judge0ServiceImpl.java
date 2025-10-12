@@ -133,8 +133,6 @@ public class Judge0ServiceImpl implements Judge0Service {
             int statusId = result.status().id();
             if (statusId == 6) { // Compilation Error
                 logger.info("{} Found 'Compilation Error'.", logPrefix);
-                // --- THIS IS THE FIX ---
-                // Put the compiler error message into the 'stderr' field of the DTO.
                 return SubmissionResultDTO.builder()
                         .status(SubmissionStatus.COMPILATION_ERROR)
                         .stderr(result.compileOutput())

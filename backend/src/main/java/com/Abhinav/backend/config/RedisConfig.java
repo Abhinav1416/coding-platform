@@ -33,7 +33,6 @@ public class RedisConfig {
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        // This bean is perfect, no changes needed.
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         ObjectMapper objectMapper = new ObjectMapper()
@@ -64,31 +63,23 @@ public class RedisConfig {
 
         PatternTopic expirationTopic = new PatternTopic("__keyevent@*__:expired");
 
-        // Listener for PROBLEM Expirations (No changes here)
         listenerContainer.addMessageListener(new RedisExpirationListener(problemService), expirationTopic);
         log.info("Registered listener for PROBLEM expirations.");
 
-        // Listener for MATCH Expirations (with new DEBUG logging)
         MessageListener matchListener = (message, pattern) -> {
             String channel = new String(pattern);
             String expiredKey = new String(message.getBody());
 
-            // --- THIS IS THE DEBUG LOG ---
-            // It will print EVERY key that expires, so we can see what's happening.
             log.info(">>>>>> [REDIS DEBUG] Event received! Channel: '{}', Expired Key: '{}'", channel, expiredKey);
-            // --- END OF DEBUG LOG ---
 
-            // Define the prefix that your LiveMatchStateRepository uses.
-            final String MATCH_KEY_PREFIX = "live_match:"; // <-- ADJUST IF YOUR PREFIX IS DIFFERENT
+            final String MATCH_KEY_PREFIX = "live_match:";
 
             if (expiredKey.startsWith(MATCH_KEY_PREFIX)) {
                 log.info("[MATCH_EXPIRY] SUCCESS: Key has the correct prefix. Processing...");
                 try {
-                    // Strip the prefix before parsing
                     String matchIdStr = expiredKey.substring(MATCH_KEY_PREFIX.length());
                     UUID matchId = UUID.fromString(matchIdStr);
 
-                    // Now, call the handler
                     matchExpirationHandler.handleExpiration(matchId);
 
                 } catch (Exception e) {
@@ -105,8 +96,6 @@ public class RedisConfig {
         return listenerContainer;
     }
 
-
-    // ... inside your RedisConfig.java ...
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
@@ -126,12 +115,10 @@ public class RedisConfig {
                 "userProfiles",
                 defaultConfig.entryTtl(Duration.ofMinutes(30))
         );
-        // V-- ADD THIS ENTRY FOR YOUR MATCH HISTORY CACHE --V
         cacheConfigurations.put(
                 "matchHistory",
-                defaultConfig.entryTtl(Duration.ofMinutes(5)) // Set a 5-minute TTL
+                defaultConfig.entryTtl(Duration.ofMinutes(5))
         );
-        // ^-- ADD THIS ENTRY FOR YOUR MATCH HISTORY CACHE --^
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)

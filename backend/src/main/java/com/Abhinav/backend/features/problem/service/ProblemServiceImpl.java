@@ -9,7 +9,7 @@ import com.Abhinav.backend.features.exception.AuthorizationException;
 import com.Abhinav.backend.features.exception.InvalidRequestException;
 import com.Abhinav.backend.features.exception.ResourceConflictException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
-import com.Abhinav.backend.features.exception.ServiceUnavailableException; // ADDED
+import com.Abhinav.backend.features.exception.ServiceUnavailableException;
 import com.Abhinav.backend.features.problem.dto.*;
 import com.Abhinav.backend.features.problem.model.Problem;
 import com.Abhinav.backend.features.problem.model.ProblemStatus;
@@ -66,7 +66,6 @@ public class ProblemServiceImpl implements ProblemService {
 
         if (!isAdmin) {
             TemporaryPermission permission = permissionRepository.findActiveCreatePermissionForUser(user.getId(), LocalDateTime.now())
-                    // CHANGED: Use custom AuthorizationException
                     .orElseThrow(() -> new AuthorizationException("User does not have a valid permission to create a problem."));
 
             permission.setConsumed(true);
@@ -74,14 +73,12 @@ public class ProblemServiceImpl implements ProblemService {
         }
 
         if (getTotalProblemCount().getTotalCount() >= problemLimit) {
-            // CHANGED: Use custom ResourceConflictException for business rule violations
             throw new ResourceConflictException(
                     "Problem creation limit reached. Cannot create more than " + problemLimit + " problems."
             );
         }
 
         problemRepository.findBySlug(requestDto.getSlug()).ifPresent(p -> {
-            // CHANGED: Use custom ResourceConflictException for duplicate resources
             throw new ResourceConflictException("Slug '" + requestDto.getSlug() + "' is already in use.");
         });
 
@@ -107,8 +104,6 @@ public class ProblemServiceImpl implements ProblemService {
         try {
             problem.setSampleTestCases(objectMapper.writeValueAsString(requestDto.getSampleTestCases()));
         } catch (JsonProcessingException e) {
-            // This is a genuine internal error, so throwing a generic exception is acceptable.
-            // The global handler will catch it and return a 500 status.
             throw new IllegalStateException("Internal error: Failed to serialize problem data.", e);
         }
 
@@ -116,7 +111,6 @@ public class ProblemServiceImpl implements ProblemService {
         UUID problemId = savedProblem.getId();
         String uploadUrl;
 
-        // ADDED: Try-catch block for external service call (S3)
         try {
             String s3Key = "uploads/pending/" + problemId.toString() + "/testcases.zip";
             uploadUrl = s3Service.generatePresignedUploadUrl(s3Key);
@@ -141,13 +135,11 @@ public class ProblemServiceImpl implements ProblemService {
     public void finalizeProblem(UUID problemId, String providedSecret) {
         if (lambdaInternalSecret == null || !lambdaInternalSecret.equals(providedSecret)) {
             logger.warn("Unauthorized attempt to finalize problem {}. Invalid secret provided.", problemId);
-            // CHANGED: Use custom AuthorizationException
             throw new AuthorizationException("Invalid secret for internal API call.");
         }
 
         logger.info("Finalizing problem {} triggered by Lambda.", problemId);
         Problem problem = problemRepository.findById(problemId)
-                // This already uses the correct custom exception, no change needed.
                 .orElseThrow(() -> new ResourceNotFoundException("Problem with ID '" + problemId + "' not found."));
 
         if (problem.getStatus() != ProblemStatus.PENDING_TEST_CASES) {
@@ -160,11 +152,9 @@ public class ProblemServiceImpl implements ProblemService {
 
         if (!s3Service.doesObjectExist(sourceKey)) {
             logger.error("Lambda triggered for problem {} but the S3 object '{}' was not found.", problemId, sourceKey);
-            // CHANGED: Use InvalidRequestException because the prerequisite (file upload) is missing.
             throw new InvalidRequestException("S3 object for pending problem not found. Cannot finalize.");
         }
 
-        // ADDED: Try-catch block for external service call (S3)
         try {
             String finalS3Key = s3Service.moveObject(sourceKey, destinationKey);
             problem.setHiddenTestCasesS3Key(finalS3Key);
@@ -191,7 +181,6 @@ public class ProblemServiceImpl implements ProblemService {
             Problem problem = problemOpt.get();
             String s3ObjectKey = "uploads/pending/" + problemId + "/testcases.zip";
 
-            // ADDED: Safely attempt to delete S3 object, but don't stop the process if it fails.
             try {
                 if (s3Service.doesObjectExist(s3ObjectKey)) {
                     s3Service.deleteObject(s3ObjectKey, problemId);
@@ -221,7 +210,6 @@ public class ProblemServiceImpl implements ProblemService {
                 throw new AuthorizationException("User is not authorized to delete this problem.");
             }
             TemporaryPermission permission = permissionRepository.findActivePermissionForProblem(author.getId(), problemId, PermissionType.DELETE_PROBLEM, LocalDateTime.now())
-                    // CHANGED: Use custom AuthorizationException
                     .orElseThrow(() -> new AuthorizationException("User does not have a valid permission to delete this specific problem."));
 
             permission.setConsumed(true);
@@ -267,7 +255,6 @@ public class ProblemServiceImpl implements ProblemService {
     @Transactional(readOnly = true)
     public ProblemDetailResponse getProblemBySlug(String slug) {
         Problem problem = problemRepository.findBySlug(slug)
-                // CHANGED: Use custom ResourceNotFoundException
                 .orElseThrow(() -> new ResourceNotFoundException("Problem with slug '" + slug + "' not found."));
         return ProblemDetailResponse.fromEntity(problem);
     }
@@ -279,7 +266,6 @@ public class ProblemServiceImpl implements ProblemService {
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
         Problem problem = problemRepository.findById(problemId)
-                // CHANGED: Use custom ResourceNotFoundException
                 .orElseThrow(() -> new ResourceNotFoundException("Problem with ID '" + problemId + "' not found."));
 
         if (!isAdmin) {
@@ -287,7 +273,6 @@ public class ProblemServiceImpl implements ProblemService {
                 throw new AuthorizationException("User is not authorized to edit this problem.");
             }
             TemporaryPermission permission = permissionRepository.findActivePermissionForProblem(author.getId(), problemId, PermissionType.UPDATE_PROBLEM, LocalDateTime.now())
-                    // CHANGED: Use custom AuthorizationException
                     .orElseThrow(() -> new AuthorizationException("User does not have a valid permission to update this specific problem."));
 
             permission.setConsumed(true);

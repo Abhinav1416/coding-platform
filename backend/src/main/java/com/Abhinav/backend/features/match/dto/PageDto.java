@@ -17,7 +17,6 @@ public class PageDto<T> {
     private int totalPages;
     private boolean last;
 
-    // Constructor to convert a Spring Page into our custom PageDto
     public PageDto(Page<T> page) {
         this.content = page.getContent();
         this.pageNumber = page.getNumber();

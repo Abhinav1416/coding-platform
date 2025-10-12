@@ -14,9 +14,9 @@ import java.util.UUID;
 public class LobbyStateDTO {
     private UUID matchId;
     private Long playerOneId;
-    private String playerOneUsername; // <-- ADDED
+    private String playerOneUsername;
     private Long playerTwoId;
-    private String playerTwoUsername; // <-- ADDED
+    private String playerTwoUsername;
     private MatchStatus status;
     private Instant scheduledAt;
     private Integer durationInMinutes;

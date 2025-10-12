@@ -1,4 +1,4 @@
-package com.Abhinav.backend.config; // Or wherever this file is
+package com.Abhinav.backend.config;
 
 import com.Abhinav.backend.features.problem.service.ProblemService;
 import com.Abhinav.backend.features.problem.service.ProblemServiceImpl;
@@ -9,23 +9,18 @@ import org.springframework.data.redis.connection.MessageListener;
 
 import java.util.UUID;
 
-// Change "extends KeyExpirationEventMessageListener" to "implements MessageListener"
 public class RedisExpirationListener implements MessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisExpirationListener.class);
     private final ProblemService problemService;
 
-    /**
-     * SIMPLIFIED CONSTRUCTOR
-     */
+
     public RedisExpirationListener(ProblemService problemService) {
         this.problemService = problemService;
     }
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        // Your existing onMessage logic for cleaning up problems is perfect.
-        // No changes are needed here.
         String expiredKey = message.toString();
         logger.debug("Redis key expired: {}", expiredKey);
 

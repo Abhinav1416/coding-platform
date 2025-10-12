@@ -21,12 +21,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
 
     List<Submission> findByMatchIdOrderByCreatedAtAsc(UUID matchId);
 
-    // Add or replace these methods inside your existing SubmissionRepository interface
 
-    /**
-     * Native query for the GitHub-like heatmap.
-     * CORRECTED: Uses 'user_id' column to match your Submission entity.
-     */
     @Query(value = """
         SELECT CAST(s.created_at AS DATE) as date, COUNT(*) as count
         FROM submissions s
@@ -36,10 +31,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     """, nativeQuery = true)
     List<Map<String, Object>> findUserActivityForHeatmap(@Param("userId") Long userId);
 
-    /**
-     * JPQL query to count the number of UNIQUE problems a user has solved successfully.
-     * CORRECTED: Uses 'userId' and 'problemId' fields directly, and assumes your SubmissionStatus enum has an 'ACCEPTED' value.
-     */
     @Query("""
         SELECT COUNT(DISTINCT s.problemId)
         FROM Submission s
@@ -47,10 +38,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     """)
     long countDistinctProblemsSolvedByUser(@Param("userId") Long userId);
 
-    /**
-     * Complex native query to count solved problems grouped by each tag.
-     * CORRECTED: Uses 'user_id' in the subquery to match your Submission entity.
-     */
     @Query(value = """
         SELECT
             t.name as tagName,

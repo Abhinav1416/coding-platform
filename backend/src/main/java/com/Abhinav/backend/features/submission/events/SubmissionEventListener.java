@@ -29,7 +29,6 @@ public class SubmissionEventListener {
             logger.info("{} Message sent successfully.", logPrefix);
         } catch (Exception e) {
             logger.error("{} CRITICAL: Failed to send SQS message post-commit.", logPrefix, e);
-            // Here you might need to add some fallback logic or monitoring
         }
     }
 }

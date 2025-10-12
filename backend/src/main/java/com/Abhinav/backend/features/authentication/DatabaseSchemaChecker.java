@@ -9,7 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
-@Order(1) // Run this as early as possible after startup
+@Order(1)
 public class DatabaseSchemaChecker implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseSchemaChecker.class);

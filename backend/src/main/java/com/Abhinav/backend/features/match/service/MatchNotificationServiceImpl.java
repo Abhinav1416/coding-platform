@@ -81,8 +81,6 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     public void notifyCountdownStarted(UUID matchId, String countdownType, CountdownStartPayload payload) {
         String destination = "/topic/match/" + matchId + "/countdown";
 
-        // We wrap the payload to include an eventType. This helps the frontend
-        // distinguish between different types of countdowns (e.g., lobby vs. match).
         Map<String, Object> message = new HashMap<>();
         message.put("eventType", countdownType);
         message.put("payload", payload);
