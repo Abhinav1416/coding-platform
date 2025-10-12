@@ -1,26 +1,10 @@
-# Spring Boot
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Dependency directories
-node_modules
-dist
-dist-ssr
-
-# Local environment files
-*.local
-.DS_Store
-
-# IDE specific files
+# ===================================================================
+# IDE / EDITOR CONFIGURATION
+# ===================================================================
+.idea/
 .vscode/*
-.idea
+!.vscode/extensions.json
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
@@ -30,16 +14,34 @@ dist-ssr
 *.iml
 *.ipr
 
-# Documentation
-HELP.md
+# ===================================================================
+# LOGS & TEMPORARY FILES
+# ===================================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Gradle files
-.gradle
+# ===================================================================
+# ENVIRONMENT & SENSITIVE FILES (THE MOST IMPORTANT PART)
+# ===================================================================
+# Ignore local environment files for Vite/Node projects
+frontend/.env
+frontend/.env.local
+
+# Ignore local environment file for the Spring Boot backend
+backend/.env
+
+# ===================================================================
+# JAVA / GRADLE (BACKEND)
+# ===================================================================
+.gradle/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-# Eclipse files
+bin/
+out/
 .apt_generated
 .classpath
 .factorypath
@@ -48,52 +50,22 @@ build/
 .springBeans
 .sts4-cache
 
-# Binary directories
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
+# Don't ignore build directories in source folders (if any)
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-# Output directories
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-# NetBeans files
+# ===================================================================
+# NODE / VITE (FRONTEND)
+# ===================================================================
+node_modules/
+dist/
+dist-ssr/
 nbproject/private/
 nbbuild/
-dist/
 nbdist/
 .nb-gradle/
 
-
-
-# Vite
-
-
-
-
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# ===================================================================
+# MISCELLANEOUS
+# ===================================================================
+HELP.md

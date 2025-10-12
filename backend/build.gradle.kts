@@ -47,6 +47,7 @@ dependencies {
     implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
 
 
+    implementation("me.paulschwarz:spring-dotenv:4.0.0")
     implementation("software.amazon.awssdk:s3:2.25.27")
 
 
