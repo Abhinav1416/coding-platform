@@ -22,7 +22,10 @@ export const useMatchEvents = (matchId: string | undefined) => {
                 setMatchState('COMPLETED');
                 break;
             case 'MATCH_CANCELED':
-                setMatchResult({ reason: event.reason, winnerId: null });
+                setMatchResult({
+                    outcome: event.reason,
+                    winnerId: null
+                } as MatchResult);
                 setMatchState('COMPLETED');
                 break;
         }
@@ -32,13 +35,15 @@ export const useMatchEvents = (matchId: string | undefined) => {
         if (!matchId) return;
 
         stompService.connect();
-        stompService.subscribeToMatchUpdates(matchId, handleMatchEvent);
+        const subscription = stompService.subscribeToMatchUpdates(matchId, handleMatchEvent);
 
         return () => {
-            // Disconnect when the component unmounts
+            if (subscription && typeof subscription.unsubscribe === 'function') {
+                subscription.unsubscribe();
+            }
             stompService.disconnect();
         };
     }, [matchId, handleMatchEvent]);
-
+    
     return { matchState, playerUsernames, matchResult };
 };

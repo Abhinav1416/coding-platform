@@ -5,7 +5,7 @@ import { useJoinMatch } from '../hooks/useJoinMatch';
 import MainLayout from '../../../components/layout/MainLayout';
 
 
-// Helper function to safely get an error message
+
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
@@ -20,14 +20,14 @@ const JoinMatchPage = () => {
   const [manualRoomCode, setManualRoomCode] = useState('');
   const codeFromUrl = searchParams.get('roomCode');
 
-  // This effect handles the automatic join from a shared link
+
   useEffect(() => {
     if (codeFromUrl) {
       joinMatchMutation({ roomCode: codeFromUrl });
     }
   }, [codeFromUrl, joinMatchMutation]);
 
-  // If joining automatically from a link, show a full-page loader within the MainLayout
+
   if (codeFromUrl) {
     return (
       <MainLayout>
@@ -47,7 +47,7 @@ const JoinMatchPage = () => {
     }
   };
 
-  // Otherwise, show the manual join form
+
   return (
     <MainLayout>
       <div className="flex items-center justify-center">

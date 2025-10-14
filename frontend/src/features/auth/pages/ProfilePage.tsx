@@ -9,7 +9,7 @@ import type { UserStats } from '../../match/types/match';
 import { useNavigate } from 'react-router-dom';
 import { isStrongPassword } from '../../../core/utils/validators';
 
-// --- Reusable Component: A styled card for each section ---
+
 const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; action?: React.ReactNode }> = ({ title, icon, children, action }) => (
     <div className="bg-zinc-900 border border-white/10 rounded-xl shadow-lg">
         <div className="flex justify-between items-center p-4 sm:p-6 border-b border-white/10">
@@ -25,7 +25,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: Re
     </div>
 );
 
-// --- Reusable Component: A single stat card for the stats grid ---
+
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number | string }> = ({ icon, label, value }) => (
     <div className="bg-zinc-800/50 p-4 rounded-lg flex items-center gap-4 transition-transform hover:-translate-y-1">
         <div className="text-[#F97316] text-3xl">{icon}</div>
@@ -36,7 +36,7 @@ const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number |
     </div>
 );
 
-// --- Sub-Component for the Stats Section ---
+
 const StatsSection = () => {
     const [stats, setStats] = useState<UserStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +77,7 @@ const StatsSection = () => {
     );
 };
 
-// --- Sub-Component for the Security Section ---
+
 const SecuritySection = () => {
     const { changePasswordMutation, isLoading: isPassLoading, error: apiError, success: apiSuccess, reset: resetApiState } = useChangePassword();
     const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -100,17 +100,17 @@ const SecuritySection = () => {
         }
         
         try {
-            // Await the mutation. If it fails, it will throw and jump to the catch block.
+
             await changePasswordMutation({ 
                 currentPassword: passwords.currentPassword, 
                 newPassword: passwords.newPassword 
             });
             
-            // This line will ONLY run if the mutation was successful.
+
             setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
         } catch (error) {
-            // The custom hook likely handles setting the error state, so we just log here for debugging.
+
             console.error("Failed to change password:", error);
         }
     };
@@ -122,7 +122,7 @@ const SecuritySection = () => {
     return (
         <SectionCard title="Security Settings" icon={<FaShieldAlt size={20} />}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
-                {/* Change Password Form */}
+
                 <form onSubmit={handlePasswordSubmit} className="space-y-4 flex flex-col">
                     <h4 className="font-semibold text-lg text-white">Change Password</h4>
                     <div>
@@ -148,7 +148,7 @@ const SecuritySection = () => {
                     </button>
                 </form>
                 
-                {/* Two-Factor Authentication */}
+
                 <div className="space-y-4">
                      <h4 className="font-semibold text-lg text-white">Two-Factor Authentication (2FA)</h4>
                     <p className="text-sm text-gray-400">Add an additional layer of security to your account during login.</p>
@@ -169,14 +169,13 @@ const SecuritySection = () => {
     );
 };
 
-// --- Main Profile Page Component ---
 const ProfilePage = () => {
     const { user } = useAuth();
     const username = user?.email.split('@')[0] || 'User';
 
     return (
         <div className="container mx-auto max-w-5xl px-4 py-8 sm:py-12 space-y-8 text-white">
-            {/* Profile Header */}
+
             <div className="flex items-center gap-4 sm:gap-6">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#F97316] flex items-center justify-center text-zinc-900 text-3xl sm:text-4xl font-bold">
                     {username.charAt(0).toUpperCase()}
@@ -187,7 +186,7 @@ const ProfilePage = () => {
                 </div>
             </div>
             
-            {/* Sections */}
+            
             <StatsSection />
             <SecuritySection />
         </div>

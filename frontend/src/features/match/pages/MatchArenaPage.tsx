@@ -3,12 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-
-// Core and Layout components
 import { useAuth } from '../../../core/hooks/useAuth';
-
-
-// UI Components for the arena
 import MatchHeader from '../components/MatchHeader';
 import { MatchResultOverlay } from '../components/MatchResultOverlay';
 import ProblemDetails from '../../problem/components/ProblemDetails';
@@ -16,8 +11,6 @@ import CodeEditor from '../../problem/components/CodeEditor';
 import SubmissionsList from '../../problem/components/SubmissionsList';
 import SubmissionDetailModal from '../../problem/SubmissionDetailModal';
 import Tabs from '../../../core/components/Tabs';
-
-// Services and Types
 import { createSubmission, getSubmissionDetails } from '../../problem/services/problemService';
 import { getArenaData } from '../services/matchService';
 import { stompService } from '../../../core/sockets/stompClient';
@@ -26,9 +19,8 @@ import type { SubmissionSummary, SubmissionDetails } from '../../problem/types/p
 import { useServerTimer } from '../../../core/components/useServerTimer';
 import Navbar from '../../../components/layout/Navbar';
 
-// --- (Helper hooks remain unchanged) ---
+
 const useArenaData = (matchId: string | undefined) => {
-    // ... (This hook is unchanged)
     const [arenaData, setArenaData] = useState<ArenaData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -61,7 +53,6 @@ const useArenaData = (matchId: string | undefined) => {
 };
 
 const useMatchEvents = (
-    // ... (This hook is unchanged)
     matchId: string | undefined,
     onMatchEnd: (result: MatchResult) => void,
     onCountdownStart: (data: { startTime: number; duration: number }) => void
@@ -92,7 +83,7 @@ const useMatchEvents = (
 };
 
 
-// --- Themed Layout for Loading/Error States ---
+
 const ArenaStateLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div className="flex flex-col h-screen bg-white dark:bg-zinc-950">
         <Navbar />
@@ -103,15 +94,12 @@ const ArenaStateLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 );
 
 
-// --- Main Arena Page Component ---
+
 const MatchArenaPage: React.FC = () => {
     const { matchId } = useParams<{ matchId: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
-
     const { arenaData, isLoading, error, shouldRedirect } = useArenaData(matchId);
-
-    // ... (All state and hooks from the original component remain unchanged here)
     const [timerData, setTimerData] = useState<{ startTime: number; duration: number } | null>(null);
     const [matchState, setMatchState] = useState<'LOADING' | 'IN_PROGRESS' | 'AWAITING_RESULT' | 'COMPLETED'>('LOADING');
     const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
@@ -127,7 +115,6 @@ const MatchArenaPage: React.FC = () => {
     const [cooldownTime, setCooldownTime] = useState(COOLDOWN_SECONDS);
     const cooldownIntervalRef = useRef<number | null>(null);
 
-    // ... (All useEffect hooks from the original component remain unchanged here)
     useEffect(() => {
         if (matchId && user?.email) {
             try {
@@ -253,7 +240,6 @@ const MatchArenaPage: React.FC = () => {
         }
     };
 
-    // --- Themed Render Logic ---
 
     if (isLoading) return (
         <ArenaStateLayout>
@@ -323,8 +309,6 @@ const MatchArenaPage: React.FC = () => {
                     </PanelGroup>
                 </div>
             </div>
-            
-            {/* Overlays are kept dark for focus, which is standard UI practice */}
             {matchState === 'AWAITING_RESULT' && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 transition-opacity duration-300">
                     <Loader2 className="animate-spin text-[#F97316]" size={64} />

@@ -19,7 +19,6 @@ export const useMatchLobbyEvents = ({ matchId, onPlayerJoined }: UseMatchLobbyEv
             console.log(`Match starting! Navigating to arena for match: ${matchId}`);
             navigate(`/match/arena/${matchId}`);
         } else if (event.eventType === 'PLAYER_JOINED') {
-            // Call the callback function provided by the component
             onPlayerJoined(event);
         }
     }, [matchId, navigate, onPlayerJoined]);

@@ -48,7 +48,6 @@ export const getArenaData = async (matchId: string): Promise<ArenaData> => {
 
 
 export const getMatchResult = async (matchId: string): Promise<MatchResult> => {
-  // This URL now correctly matches your backend controller's endpoint
   const response = await api.get<MatchResult>(`${API_BASE_URL}/${matchId}/results`);
   return response.data;
 };

@@ -67,7 +67,6 @@ const VerifyTokenForm = ({ email, onLoginSuccess, theme }: Props) => {
     }
   };
   
-  // Define dynamic classes for theme switching
   const headingClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const textClass = theme === 'dark' ? 'text-gray-400' : 'text-slate-600';
   const inputClass = theme === 'dark' 

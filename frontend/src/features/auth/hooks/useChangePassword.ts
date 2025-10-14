@@ -16,14 +16,12 @@ export const useChangePassword = () => {
             setSuccess("Password updated successfully!");
         } catch (err: any) {
             setError(err.response?.data?.message || "An error occurred.");
-            // Re-throw the error so the component knows the call failed
             throw err;
         } finally {
             setIsLoading(false);
         }
     };
     
-    // ✅ ADD this function to clear messages from the UI
     const reset = useCallback(() => {
         setError(null);
         setSuccess(null);
@@ -34,6 +32,6 @@ export const useChangePassword = () => {
         isLoading, 
         error, 
         success, 
-        reset // ✅ EXPORT the new function
+        reset
     };
 };

@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { getMatchHistory } from '../services/matchService';
 import type { Page, PastMatch } from '../types/match';
 import { Pagination } from '../../../core/components/Pagination';
-// REMOVED: MainLayout import is no longer needed here.
 
 const MatchHistoryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,7 +50,7 @@ const MatchHistoryPage: React.FC = () => {
     });
   };
 
-  // --- Theme-aware Badge Styles ---
+
   const getResultBadgeClass = (result: PastMatch['result']) => {
     switch (result) {
       case 'WIN': return 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400';
@@ -61,7 +60,7 @@ const MatchHistoryPage: React.FC = () => {
     }
   };
 
-  // --- Theme-aware Filter Button Component ---
+
   const FilterButton = ({ filter, label }: { filter: string, label: string }) => (
     <button
       onClick={() => handleFilterChange(filter)}
@@ -76,8 +75,6 @@ const MatchHistoryPage: React.FC = () => {
   );
 
   return (
-    // REMOVED: The <MainLayout> wrapper is gone.
-    // ADDED: A React Fragment (<>) to return a single root element.
     <>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Match History</h1>

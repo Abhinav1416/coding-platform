@@ -40,19 +40,11 @@ export const login = async (
   return response.data;
 };
 
-// ===================================================================
-//               ▼▼▼ ADD THIS NEW FUNCTION ▼▼▼
-// ===================================================================
-/**
- * Sends the Google credential to the backend for verification and login/signup.
- * @param credential The credential string from the Google login callback.
- * @returns A promise that resolves to the authentication response (tokens).
- */
+
 export const loginWithGoogle = async (credential: string): Promise<AuthResponse> => {
   const response = await api.post<AuthResponse>(`${AUTH_BASE_PATH}/google`, { token: credential });
   return response.data;
 };
-// ===================================================================
 
 
 export const verify2fa = async (
@@ -89,7 +81,6 @@ export const changePassword = async (
 
 export const getCurrentUser = async (): Promise<UserDetails | null> => {
   const res = await api.get(`${AUTH_BASE_PATH}/me`);
-  // Note: Your backend might wrap the user in a 'user' property. Adjust if needed.
   return res.data?.user ?? res.data ?? null;
 };
 
@@ -103,10 +94,7 @@ export const fetchMyPermissions = async (): Promise<string[]> => {
     }
 };
 
-/**
- * Toggles 2FA for the currently logged-in user.
- * This endpoint should return an AuthResponse with a new, updated accessToken.
- */
+
 export const toggle2FA = async (): Promise<AuthResponse> => {
   const response = await api.post<AuthResponse>(`${AUTH_BASE_PATH}/2fa/toggle`);
   return response.data;

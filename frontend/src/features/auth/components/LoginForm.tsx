@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-// --- 1. ADDED IMPORTS FOR GOOGLE LOGIN ---
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { login, loginWithGoogle } from '../services/authService';
 import type { AuthResponse } from '../types/auth';
@@ -16,8 +15,6 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // --- 2. ADDED STATE FOR GOOGLE LOGIN ---
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
 
@@ -35,7 +32,6 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
     }
   };
 
-  // --- 3. ADDED HANDLER FOR GOOGLE SUCCESS ---
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     setIsGoogleLoading(true);
     setGoogleError(null);
@@ -44,7 +40,7 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
         throw new Error("Google login failed: No credential returned.");
       }
       const authData = await loginWithGoogle(credentialResponse.credential);
-      onAuthenticated(authData); // Call the main authentication handler
+      onAuthenticated(authData);
     } catch (err: any) {
       setGoogleError(err.message || "Google sign in failed. Please try again.");
     } finally {
@@ -52,7 +48,6 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
     }
   };
   
-  // Define dynamic classes for theme switching
   const labelClass = theme === 'dark' ? 'text-gray-400' : 'text-slate-600';
   const inputClass = theme === 'dark' 
     ? 'bg-zinc-800 border-zinc-700 text-white focus:border-[#F97316] focus:ring-[#F97316]'
@@ -96,7 +91,7 @@ const LoginForm = ({ onAuthenticated, theme }: Props) => {
         </button>
       </div>
 
-      {/* --- 4. ADDED DIVIDER AND GOOGLE BUTTON JSX --- */}
+
       <div className="relative flex py-2 items-center">
         <div className={`flex-grow border-t ${dividerClass}`}></div>
         <span className={`flex-shrink mx-4 ${dividerTextClass}`}>OR</span>

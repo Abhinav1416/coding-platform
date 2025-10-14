@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const baseURL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-  baseURL: "http://localhost:8080", 
+  baseURL: baseURL,
   withCredentials: true,
   timeout: 10000,
 });
@@ -34,9 +36,11 @@ api.interceptors.response.use(
             console.error("Interceptor: Could not find refresh token in local storage.");
             throw new Error("No refresh token"); 
         }
+        
+        const refreshUrl = `${baseURL}/api/v1/authentication/refresh-access-token`;
 
         const refreshResponse = await axios.post(
-          "http://localhost:8080/api/v1/authentication/refresh-access-token",
+          refreshUrl,
           { refreshToken: refreshToken }
         );
         

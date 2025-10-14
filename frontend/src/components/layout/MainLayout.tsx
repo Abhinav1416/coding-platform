@@ -8,8 +8,6 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   return (
-    // --- FIX: This is the correct way to handle theme backgrounds with Tailwind ---
-    // It uses dark: prefixes instead of conditional JavaScript classes.
     <div className="min-h-screen bg-white text-gray-800 dark:bg-[#18181b] dark:text-gray-200 transition-colors duration-200">
 
       <Toaster 

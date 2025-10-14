@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { FaTrophy, FaTimes, FaHandshake } from 'react-icons/fa';
 import type { MatchResult, PlayerResult } from '../types/match';
 
-// A small helper hook to get window dimensions for the confetti
+
 const useWindowSize = () => {
     const [size, setSize] = useState([0, 0]);
     useEffect(() => {
@@ -18,7 +18,7 @@ const useWindowSize = () => {
     return size;
 };
 
-// Sub-component to display each player's final score (RESTORED TO ORIGINAL)
+
 const PlayerResultDisplay = ({ playerResult }: { playerResult: PlayerResult }) => (
     <motion.div
         className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-lg"
@@ -44,7 +44,7 @@ export const MatchResultOverlay: React.FC<MatchResultOverlayProps> = ({ result, 
       outcome = result.winnerUsername === currentUserUsername ? 'WIN' : 'LOSS';
   }
 
-  // UPDATED: Color config now supports light and dark themes
+
   const outcomeConfig = {
     WIN: { text: "Victory!", icon: <FaTrophy />, textColor: "text-green-600 dark:text-green-400", borderColor: "border-green-500", shadowColor: "shadow-[0_0_30px_5px_rgba(34,197,94,0.3)]" },
     LOSS: { text: "Defeat", icon: <FaTimes />, textColor: "text-red-600 dark:text-red-500", borderColor: "border-red-500", shadowColor: "shadow-[0_0_20px_5px_rgba(239,68,68,0.3)]" },

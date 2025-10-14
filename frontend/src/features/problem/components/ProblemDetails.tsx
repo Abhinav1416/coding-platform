@@ -18,7 +18,7 @@ const ProblemDetails: React.FC<ProblemDetailsProps> = ({ problem }) => {
     };
 
     return (
-        // MODIFIED: Changed background colors for better consistency and clarity.
+
         <div className="p-6 overflow-y-auto h-full bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100">
             <h1 className="text-3xl font-bold mb-4">{problem.title}</h1>
 
@@ -27,8 +27,6 @@ const ProblemDetails: React.FC<ProblemDetailsProps> = ({ problem }) => {
                 <span>Memory Limit: {memoryInMegabytes} MB</span>
                 <span>Points: {problem.points}</span>
             </div>
-
-            {/* The 'prose' and 'prose-invert' classes handle most of the theming for the content below */}
             <div className="prose dark:prose-invert max-w-none">
                 <h2 className="text-xl font-semibold mt-6 mb-2">Problem Statement</h2>
                 <p dangerouslySetInnerHTML={{ __html: problem.description }}></p>

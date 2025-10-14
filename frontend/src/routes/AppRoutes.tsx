@@ -1,12 +1,8 @@
-import { Routes, Route, Navigate } from "react-router-dom"; // <-- Note: No 'BrowserRouter' is imported
-
-// Layout & Core Components
+import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout";
 import NotFoundPage from "../pages/NotFound";
 import Home from "../pages/Home";
 import AdminRoute from "../core/components/AdminRoute";
-
-// Feature Page Imports
 import RegisterPage from "../features/auth/pages/RegisterPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ForgotPasswordPage from "../features/auth/pages/ForgotPasswordPage";

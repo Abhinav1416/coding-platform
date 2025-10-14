@@ -1,7 +1,7 @@
 import type { ProblemDetail } from '../../problem/types/problem';
 
-// --- Types for Creating & Joining a Match ---
-// (No changes here)
+
+
 export interface CreateMatchRequest {
   difficultyMin: number;
   difficultyMax: number;
@@ -21,8 +21,7 @@ export interface JoinMatchResponse {
   scheduledAt: string;
 }
 
-// --- Types for the Pre-Match Lobby ---
-// (No changes here)
+
 export interface LobbyState {
   matchId: string;
   playerOneId: number;
@@ -50,8 +49,7 @@ export interface Player {
   duelsDrawn: number;
 }
 
-// --- Types for the Active Match Arena ---
-// (No changes here, this looks correct for its purpose)
+
 export interface LiveMatchState {
     matchId: string;
     problemId: string;
@@ -71,11 +69,6 @@ export interface ArenaData {
     playerTwoUsername: string;
 }
 
-// ===================================================================
-// --- CORRECTED TYPES FOR MATCH RESULTS ---
-// ===================================================================
-
-// NEW TYPE: Defines a submission object inside the result payload
 export interface SubmissionSummaryInResult {
     submissionId: string;
     status: string;
@@ -84,20 +77,16 @@ export interface SubmissionSummaryInResult {
     memoryKb: number | null;
 }
 
-// CORRECTED TYPE: This now perfectly matches the 'playerOne' and 'playerTwo'
-// objects from your Postman response for the /results endpoint.
 export interface PlayerResult {
     userId: number;
     solved: boolean;
     finishTime: string | null;
-    penalties: number; // This field was already here, but the surrounding fields were wrong
+    penalties: number;
     effectiveTime: string | null;
     submissions: SubmissionSummaryInResult[];
-    // NOTE: 'username' and 'score' are NOT included here because the API
-    // does not provide them inside this specific object.
 }
 
-// UPDATED TYPE: The MatchResult now uses the corrected PlayerResult.
+
 export interface MatchResult {
     matchId: string;
     problemId: string;
@@ -106,13 +95,11 @@ export interface MatchResult {
     winnerId: number | null;
     outcome: string;
     winnerUsername: string | null;
-    playerOne: PlayerResult & { username: string, score: number }; // Merging for component compatibility
-    playerTwo: PlayerResult & { username: string, score: number }; // Merging for component compatibility
+    playerOne: PlayerResult & { username: string, score: number };
+    playerTwo: PlayerResult & { username: string, score: number };
     winningSubmissionId: string | null;
 }
 
-// --- WebSocket Event Payload Interfaces ---
-// (No changes from here onwards)
 export interface PlayerJoinedPayload {
   eventType: 'PLAYER_JOINED';
   playerTwoId: number;

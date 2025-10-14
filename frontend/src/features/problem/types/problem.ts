@@ -1,33 +1,22 @@
-// src/features/problem/types/index.ts
-
 export interface SampleTestCase {
     stdin: string;
     expected_output: string;
     explanation?: string;
 }
 
-/**
- * This is the definitive, corrected type for a problem, based on all requirements.
- */
+
 export interface ProblemDetail {
-    // Properties from your original definition
     id: string;
     slug: string;
     status: 'PUBLISHED' | 'PENDING_TEST_CASES';
-    createdAt: string; // ISO Date string
-
-    // Properties confirmed from your ProblemDetails.tsx component
+    createdAt: string;
     title: string;
-    description: string; // Contains HTML
+    description: string;
     points: number;
     timeLimitMs: number;
     memoryLimitKb: number;
     sampleTestCases: SampleTestCase[];
-    
-    // CORRECTED: Confirmed to be a single string from your component's code
     constraints: string; 
-
-    // ADDED: Required for type unification with the match feature
     difficulty: number;
 }
 

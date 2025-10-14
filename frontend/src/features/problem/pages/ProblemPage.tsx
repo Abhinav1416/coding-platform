@@ -2,25 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-
-// Core and Layout components
-
 import Tabs from '../../../core/components/Tabs';
-
-// Hooks and Components for this feature
 import { useProblem } from '../hooks/useProblem';
 import ProblemDetails from '../components/ProblemDetails';
 import CodeEditor from '../components/CodeEditor';
 import SubmissionsList from '../components/SubmissionsList';
 import SubmissionDetailModal from '../SubmissionDetailModal';
-
-// Services and Types
 import { createSubmission, getProblemSubmissions, getSubmissionDetails } from '../services/problemService';
 import { stompService } from '../../../core/sockets/stompClient';
 import type { SubmissionSummary, SubmissionDetails } from '../types/problem';
 import MainLayout from '../../../components/layout/MainLayout';
 
-// --- A layout wrapper for loading/error states ---
+
+
 const ProblemStateLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <MainLayout>
         <div className="flex flex-col items-center justify-center text-center pt-24">
@@ -100,7 +94,7 @@ const ProblemPage: React.FC = () => {
         }
     };
 
-    // --- Themed Render Logic ---
+
 
     if (isLoading) return (
         <ProblemStateLayout>
@@ -131,11 +125,9 @@ const ProblemPage: React.FC = () => {
 
     return (
         <>
-            {/* We use a custom layout here to fill the screen height */}
             <div className="flex flex-col h-screen bg-white dark:bg-[#18181b]">
-                {/* Navbar is rendered at the top */}
                 <MainLayout>
-                    <div className="flex-grow flex flex-col min-h-0 -m-8"> {/* Negative margin to counteract MainLayout padding */}
+                    <div className="flex-grow flex flex-col min-h-0 -m-8">
                         <PanelGroup direction="horizontal" className="flex-grow overflow-hidden">
                             <Panel defaultSize={50} minSize={30} className="flex flex-col bg-gray-50 dark:bg-zinc-900">
                                 <Tabs tabs={leftPanelTabs} activeTab={activeTab} setActiveTab={setActiveTab} />

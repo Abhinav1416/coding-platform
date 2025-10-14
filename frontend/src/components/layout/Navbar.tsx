@@ -1,14 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
-// REMOVED: useTheme import is no longer needed
-// import { useTheme } from '../../core/context/ThemeContext'; 
 import { useAuth } from '../../core/hooks/useAuth';
-// REMOVED: ThemeToggle import is no longer needed
-// import ThemeToggle from '../../features/auth/components/ThemeToggle';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  // REMOVED: useTheme hook call
-  // const { theme, toggleTheme } = useTheme(); 
   const { user, logout } = useAuth(); 
   const isAuthenticated = !!user;
 
@@ -17,11 +11,11 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  // This class string now determines the look of your links in the locked dark theme
+
   const navLinkColor = "text-gray-300 hover:text-[#F97316] transition-colors font-medium";
 
   return (
-    // The classes here will now always render the dark mode version
+
     <header className="sticky top-0 z-50 p-4 bg-gray-900/80 backdrop-blur-sm border-b border-white/10">
       <div className="container mx-auto flex justify-between items-center">
         
@@ -37,9 +31,6 @@ const Navbar = () => {
         )}
 
         <div className="flex items-center gap-4">
-          
-          {/* REMOVED: The ThemeToggle component */}
-          
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
               <button onClick={() => navigate('/profile')} className={navLinkColor}>Profile</button>

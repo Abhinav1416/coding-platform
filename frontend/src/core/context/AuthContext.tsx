@@ -5,7 +5,6 @@ import { jwtDecode } from 'jwt-decode';
 import type { CredentialResponse } from '@react-oauth/google';
 import { loginWithGoogle, fetchMyPermissions } from '../../features/auth/services/authService';
 
-// This is the expected structure of the decoded JWT payload
 interface DecodedToken {
     sub: string;
     roles: string[];
@@ -13,14 +12,14 @@ interface DecodedToken {
     exp: number;
 }
 
-// This represents the authenticated user object available in the app
+
 export interface AuthenticatedUser {
     email: string;
     roles: string[];
     twoFactorEnabled: boolean;
 }
 
-// This interface defines the shape of the context value
+
 export interface AuthContextType {
     user: AuthenticatedUser | null;
     logout: () => void;

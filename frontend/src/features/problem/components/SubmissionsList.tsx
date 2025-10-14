@@ -45,9 +45,6 @@ const SubmissionsList: React.FC<SubmissionsListProps> = ({ submissions, onSubmis
                             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {new Date(sub.createdAt).toLocaleString()}
                             </span>
-                            {/* --- FIX IS HERE --- */}
-                            {/* Because 'sub.language' is now a string, we render it directly. */}
-                            {/* We no longer need to access '.name'. */}
                             <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {sub.language}
                             </span>

@@ -9,7 +9,6 @@ import { useServerTimer } from '../../../core/components/useServerTimer';
 import MainLayout from '../../../components/layout/MainLayout';
 
 
-// --- A layout wrapper for loading/error/cancellation states ---
 const LobbyStateLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <MainLayout>
         <div className="flex flex-col items-center justify-center text-center pt-24">
@@ -19,7 +18,6 @@ const LobbyStateLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 );
 
 const MatchLobbyPage: React.FC = () => {
-  // --- Hooks and State Initialization (unchanged) ---
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
@@ -31,8 +29,6 @@ const MatchLobbyPage: React.FC = () => {
   const [timerData, setTimerData] = useState<{ startTime: number | null; duration: number | null }>({ startTime: null, duration: null });
   const [statusMessage, setStatusMessage] = useState('Connecting to Lobby...');
   const { minutes, seconds, isFinished } = useServerTimer(timerData.startTime, timerData.duration);
-
-  // --- Data Fetching and Side Effects (unchanged) ---
   const fetchFullLobbyData = useCallback(async () => {
     if (!matchId) return;
     try {
@@ -87,7 +83,6 @@ const MatchLobbyPage: React.FC = () => {
     return () => { subs.forEach(sub => sub?.unsubscribe()); };
   }, [matchId, fetchFullLobbyData, navigate]);
 
-  // --- Render Logic ---
   const [player1, player2] = players;
 
   if (isLoading) {

@@ -8,7 +8,7 @@ import { getProblemCount } from '../features/problem/services/problemService';
 import type { UserStats, PastMatch } from '../features/match/types/match';
 import { formatDistanceToNow } from 'date-fns';
 
-// --- Reusable Stat Card Component for a cleaner, more professional look ---
+
 const StatCard: React.FC<{ to: string; icon: React.ReactNode; label: string; value: number | string }> = ({ to, icon, label, value }) => (
   <Link 
     to={to} 
@@ -76,9 +76,7 @@ const Home: React.FC = () => {
   }
 
   return (
-    // REMOVED: Redundant <MainLayout> wrapper
     <div className="space-y-12">
-      {/* --- Redesigned Welcome Banner --- */}
       <section className="text-center bg-gradient-to-br from-gray-50 to-gray-200 dark:from-zinc-900 dark:to-zinc-800 p-8 md:p-12 rounded-xl border border-gray-200 dark:border-zinc-800">
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
           Welcome Back, <span className="capitalize">{user?.email.split('@')[0]}</span>!
@@ -98,8 +96,6 @@ const Home: React.FC = () => {
           </button>
         </div>
       </section>
-      
-      {/* --- Redesigned Stats Section using StatCard --- */}
       {stats && (
         <section>
           <h2 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">Your Stats</h2>
@@ -111,8 +107,6 @@ const Home: React.FC = () => {
           </div>
         </section>
       )}
-
-      {/* --- Redesigned Recent Matches Section --- */}
       <section>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Recent Matches</h2>

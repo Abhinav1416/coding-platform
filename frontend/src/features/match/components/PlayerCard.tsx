@@ -3,7 +3,6 @@ import { Loader2 } from 'lucide-react';
 import { FaGamepad, FaTrophy, FaTimesCircle, FaHandshake } from 'react-icons/fa';
 import type { Player } from '../types/match';
 
-// A small sub-component with theme-aware text colors
 const StatItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: number }) => (
     <div className="flex items-center gap-3">
         <div className="text-[#F97316] text-2xl flex-shrink-0 w-8 text-center">{icon}</div>
@@ -19,7 +18,7 @@ interface PlayerCardProps {
 }
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
-  // --- The "Waiting for opponent" state ---
+
   if (!player) {
     return (
       <div className="bg-gray-100 dark:bg-zinc-900/50 border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-xl p-6 flex flex-col items-center justify-center text-center h-full">
@@ -29,7 +28,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
     );
   }
 
-  // --- The state when player data is present ---
+
   return (
     <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
       <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white capitalize mb-6">{player.username}</h3>

@@ -37,7 +37,7 @@ const RegisterForm = ({ onLoginSuccess, theme }: Props) => {
     }
   };
   
-  // Define dynamic classes for theme switching
+
   const labelClass = theme === 'dark' ? 'text-gray-400' : 'text-slate-600';
   const inputClass = theme === 'dark' 
     ? 'bg-zinc-800 border-zinc-700 text-white focus:border-[#F97316] focus:ring-[#F97316]'

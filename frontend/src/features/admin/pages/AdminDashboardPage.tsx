@@ -6,7 +6,6 @@ import MainLayout from '../../../components/layout/MainLayout';
 import { useGrantPermission } from '../hooks/useGrantPermission';
 import { type GrantScopedFormValues, grantScopedSchema, type GrantCreateFormValues, grantCreateSchema } from '../types/admin';
 
-// --- Themed FormInput Component ---
 const FormInput = ({ id, label, register, error, ...rest }: any) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
@@ -20,7 +19,7 @@ const FormInput = ({ id, label, register, error, ...rest }: any) => (
   </div>
 );
 
-// --- Themed GrantScopedPermissionForm Component ---
+
 const GrantScopedPermissionForm: React.FC<{
   title: string;
   onSubmit: SubmitHandler<GrantScopedFormValues>;
@@ -49,7 +48,7 @@ const GrantScopedPermissionForm: React.FC<{
   );
 };
 
-// --- Main AdminDashboardPage Component ---
+
 const AdminDashboardPage: React.FC = () => {
   const { grantCreate, isCreating, grantUpdate, isUpdating, grantDelete, isDeleting } = useGrantPermission();
   
@@ -71,7 +70,7 @@ const AdminDashboardPage: React.FC = () => {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Grant Create Permission Card */}
+
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg border border-gray-200 dark:border-white/10 shadow-sm">
             <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Grant Create Permission</h3>
             <form onSubmit={handleSubmitCreate(handleCreateSubmit)} className="space-y-4">
@@ -81,15 +80,11 @@ const AdminDashboardPage: React.FC = () => {
               </button>
             </form>
           </div>
-
-          {/* Grant Update Permission Card */}
           <GrantScopedPermissionForm
             title="Grant Update Permission"
             onSubmit={(data) => grantUpdate(data)}
             isLoading={isUpdating}
           />
-
-          {/* Grant Delete Permission Card */}
           <GrantScopedPermissionForm
             title="Grant Delete Permission"
             onSubmit={(data) => grantDelete(data)}

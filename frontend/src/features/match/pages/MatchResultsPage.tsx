@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { FaTrophy, FaTimesCircle, FaHandshake } from 'react-icons/fa';
-
 import type { MatchResult, UserStats, PlayerResult as ApiPlayerResult } from '../types/match';
 import { getMatchResult, getPlayerStats } from '../services/matchService';
 import { getSubmissionDetails } from '../../problem/services/problemService';
 import type { SubmissionDetails } from '../../problem/types/problem';
 import MainLayout from '../../../components/layout/MainLayout';
 
-// --- Sub-Component for displaying a player's updated total stats ---
+
+
 const StatsDisplay = ({ stats }: { stats: UserStats }) => (
     <div className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-lg mt-4">
         <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2">Updated Total Stats</h4>
@@ -22,7 +22,7 @@ const StatsDisplay = ({ stats }: { stats: UserStats }) => (
     </div>
 );
 
-// --- Sub-Component for displaying the winning code submission ---
+
 const WinningSubmission = ({ submission }: { submission: SubmissionDetails }) => (
     <div className="bg-white dark:bg-zinc-900 border border-green-300 dark:border-green-500/50 rounded-xl p-6 mt-8 shadow-lg">
         <h2 className="text-2xl font-bold text-center text-green-600 dark:text-green-400 mb-4">Winning Submission</h2>
@@ -37,7 +37,7 @@ const WinningSubmission = ({ submission }: { submission: SubmissionDetails }) =>
 );
 
 
-// --- Main Results Page Component ---
+
 const MatchResultsPage = () => {
     const { matchId } = useParams<{ matchId:string }>();
     const [result, setResult] = useState<MatchResult | null>(null);
@@ -63,7 +63,7 @@ const MatchResultsPage = () => {
 
         const fetchAllResults = async () => {
             setError(null);
-            setIsLoading(true); // Set loading to true at the start of fetch
+            setIsLoading(true);
             try {
                 const apiResult = await getMatchResult(matchId);
                 const [p1Stats, p2Stats] = await Promise.all([
@@ -134,7 +134,7 @@ const MatchResultsPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Player One Results Card */}
+
                     <div className={`bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 p-6 rounded-xl ${outcomeConfig.p1 === 'WIN' && 'border-green-400 dark:border-green-500 shadow-lg shadow-green-500/10'}`}>
                         <div className="flex justify-between items-center">
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white capitalize">{result.playerOne.username}</h3>
@@ -145,7 +145,7 @@ const MatchResultsPage = () => {
                         {stats.p1 && <StatsDisplay stats={stats.p1} />}
                     </div>
 
-                    {/* Player Two Results Card */}
+
                     <div className={`bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 p-6 rounded-xl ${outcomeConfig.p2 === 'WIN' && 'border-green-400 dark:border-green-500 shadow-lg shadow-green-500/10'}`}>
                         <div className="flex justify-between items-center">
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white capitalize">{result.playerTwo.username}</h3>

@@ -7,7 +7,7 @@ import { stompService } from '../../../core/sockets/stompClient';
 import MainLayout from '../../../components/layout/MainLayout';
 
 
-// --- Helper function to safely get an error message ---
+
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
@@ -15,7 +15,7 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-// --- Main Component ---
+
 const CreateMatchPage = () => {
   const { createMatchMutation, isLoading, error, createdMatchData } = useCreateMatch();
   const [formData, setFormData] = useState<CreateMatchRequest>({
@@ -28,7 +28,7 @@ const CreateMatchPage = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Handle empty input gracefully by not setting it to 0 immediately
+
     setFormData(prevState => ({ ...prevState, [name]: value === '' ? '' : parseInt(value, 10) }));
   };
 
@@ -39,7 +39,7 @@ const CreateMatchPage = () => {
       setFormError('Max difficulty must be greater than min difficulty.');
       return;
     }
-    // Ensure values are numbers before mutation
+
     const numericFormData = {
       ...formData,
       difficultyMin: Number(formData.difficultyMin),
@@ -50,7 +50,7 @@ const CreateMatchPage = () => {
     createMatchMutation(numericFormData);
   };
 
-  // --- Theme-aware Styles ---
+
   const labelStyles = "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2";
   const inputStyles = "w-full p-2 bg-gray-50 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-gray-200 rounded-md outline-none transition-colors focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]";
 
@@ -98,7 +98,7 @@ const CreateMatchPage = () => {
   );
 };
 
-// --- Waiting for Opponent Component ---
+
 const WaitingForOpponent = ({ data }: { data: CreateMatchResponse }) => {
   const navigate = useNavigate();
   const [copiedItem, setCopiedItem] = useState<'link' | 'code' | null>(null);
@@ -123,7 +123,7 @@ const WaitingForOpponent = ({ data }: { data: CreateMatchResponse }) => {
     setTimeout(() => setCopiedItem(null), 2000);
   };
 
-  // --- Theme-aware Styles ---
+
   const inputGroupStyles = "flex items-center bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-md";
   const textStyles = "flex-grow p-2 font-mono text-gray-800 dark:text-gray-300 overflow-x-auto whitespace-nowrap";
   const buttonStyles = "p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors";

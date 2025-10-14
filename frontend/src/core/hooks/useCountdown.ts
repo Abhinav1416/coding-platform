@@ -14,7 +14,7 @@ export const useCountdown = (targetDate: string) => {
   );
 
   useEffect(() => {
-    // Don't start the timer if the target date is invalid
+
     if (isNaN(countDownDate)) {
       setCountDown(0);
       return;
@@ -25,7 +25,7 @@ export const useCountdown = (targetDate: string) => {
       setCountDown(remaining > 0 ? remaining : 0);
     }, 1000);
 
-    // Cleanup the interval on component unmount
+
     return () => clearInterval(interval);
   }, [countDownDate]);
 
