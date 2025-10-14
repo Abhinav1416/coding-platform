@@ -19,7 +19,7 @@ const useWindowSize = () => {
 };
 
 
-const PlayerResultDisplay = ({ playerResult }: { playerResult: PlayerResult }) => (
+const PlayerResultDisplay = ({ }: { playerResult: PlayerResult }) => (
     <motion.div
         className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-lg"
         initial={{ opacity: 0, y: 20 }}
