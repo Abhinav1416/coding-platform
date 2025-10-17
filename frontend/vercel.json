@@ -7,6 +7,10 @@
     {
       "source": "/ws/:path*",
       "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/ws/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
