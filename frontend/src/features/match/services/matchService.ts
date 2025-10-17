@@ -14,8 +14,8 @@ import type {
   MatchResult
 } from '../types/match';
 
-const API_BASE_URL = '/api/match';
-const API_STATS_URL = '/api/stats';
+const API_BASE_URL = '/match';
+const API_STATS_URL = '/stats';
 
 
 export const createMatch = async (requestData: CreateMatchRequest): Promise<CreateMatchResponse> => {

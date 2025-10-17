@@ -3,7 +3,7 @@ import type { ProblemDetail, SubmissionRequest, PaginatedSubmissionResponse, Sub
 
 
 export const getProblemBySlug = async (slug: string): Promise<ProblemDetail> => {
-    const response = await api.get<ProblemDetail>(`/api/problems/${slug}`);
+    const response = await api.get<ProblemDetail>(`/problems/${slug}`);
     return response.data;
 };
 
@@ -12,12 +12,12 @@ export interface SubmissionResponse {
 }
 
 export const createSubmission = async (request: SubmissionRequest): Promise<SubmissionResponse> => {
-    const response = await api.post<SubmissionResponse>('/api/submissions', request);
+    const response = await api.post<SubmissionResponse>('/submissions', request);
     return response.data;
 };
 
 export const getProblemSubmissions = async (problemId: string): Promise<PaginatedSubmissionResponse> => {
-    const response = await api.get<any>(`/api/submissions/problem/${problemId}`);
+    const response = await api.get<any>(`/submissions/problem/${problemId}`);
     const normalizedSubmissions = response.data.submissions.map((sub: any) => ({
         ...sub,
         language: sub.language.name, 
@@ -29,11 +29,11 @@ export const getProblemSubmissions = async (problemId: string): Promise<Paginate
 };
 
 export const getSubmissionDetails = async (submissionId: string): Promise<SubmissionDetails> => {
-    const response = await api.get<SubmissionDetails>(`/api/submissions/${submissionId}`);
+    const response = await api.get<SubmissionDetails>(`/submissions/${submissionId}`);
     return response.data;
 };
 
 export const getProblemCount = async (): Promise<ProblemCountResponse> => {
-    const response = await api.get<ProblemCountResponse>('/api/problems/count');
+    const response = await api.get<ProblemCountResponse>('/problems/count');
     return response.data;
 };
