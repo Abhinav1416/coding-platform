@@ -1,18 +1,18 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/api/:path*",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+      "src": "/api/(.*)",
+      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      "dest": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/api/$1"
     },
     {
-      "source": "/ws/:path*",
-      "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/ws/:path*",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+      "src": "/ws/(.*)",
+      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      "dest": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/ws/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
