@@ -14,7 +14,8 @@ import type {
   ChangePasswordRequest,
 } from "../types/auth";
 
-const AUTH_BASE_PATH = "/api/v1/authentication";
+// ✅ FIXED: Removed the redundant "/api" prefix
+const AUTH_BASE_PATH = "/v1/authentication";
 
 export const register = async (
   payload: RegisterPayload
@@ -86,7 +87,7 @@ export const getCurrentUser = async (): Promise<UserDetails | null> => {
 
 export const fetchMyPermissions = async (): Promise<string[]> => {
     try {
-        const response = await api.get<string[]>('/api/users/me/permissions');
+        const response = await api.get<string[]>('/users/me/permissions');
         return response.data;
     } catch (error) {
         console.error("Failed to fetch user permissions:", error);
