@@ -5,8 +5,8 @@
       "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/api/:path*"
     },
     {
-      "source": "/ws/:path*",
-      "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/ws/:path*"
+      "source": "/ws/(\\d+)/([\\w-]+)/(websocket|xhr_streaming|xhr)",
+      "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/ws/$1/$2/$3"
     },
     {
       "source": "/(.*)",
