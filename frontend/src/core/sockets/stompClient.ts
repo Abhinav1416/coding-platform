@@ -17,7 +17,10 @@ class StompService {
 
     constructor() {
         this.stompClient = new Client({
-            webSocketFactory: () => new SockJS(SOCKET_URL),
+            // --- THIS IS THE FINAL FIX ---
+            // We are forcing SockJS to only use the 'websocket' transport,
+            // which solves the 405 Method Not Allowed error.
+            webSocketFactory: () => new SockJS(SOCKET_URL, null, { transports: ['websocket'] }),
             reconnectDelay: 5000,
             onConnect: () => {
                 console.log('STOMP Client Connected');
