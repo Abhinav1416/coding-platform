@@ -31,6 +31,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.apache.commons:commons-lang3:3.13.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
