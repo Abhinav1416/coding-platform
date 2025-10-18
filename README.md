@@ -66,7 +66,7 @@ To handle large test case file uploads for new problems, the application uses a 
 
 | Category | Technology |
 | :--- | :--- |
-| **Frontend** | **React (Vite)**, TypeScript, **StompJS/SockJS** |
+| **Frontend** | **React (Vite)**, TypeScript, **StompJS/SockJS**, Tailwind CSS, HTML |
 | **Backend** | **Spring Boot 3**, **Java 21**, **Spring Security 6** (JWT, OAuth2) |
 | **Data & Cache** | **PostgreSQL** (hosted on Neon DB), **Redis** (hosted on Upstash) |
 | **Cloud (AWS)** | **EC2**, **S3**, **SQS**, **Lambda**, **ALB**, **ECR**, IAM, CloudWatch |
