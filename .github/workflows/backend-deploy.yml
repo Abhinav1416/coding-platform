@@ -1,0 +1,94 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        
+    - name: Set up Gradle cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradlew.kts', '**/settings.gradle.kts') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Build Spring Boot .jar with Gradle
+      working-directory: ./backend
+      run: |
+        chmod +x ./gradlew
+        ./gradlew bootJar
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+
+    - name: Log in to ECR
+      uses: aws-actions/amazon-ecr-login@v2 
+      with:
+        registry-uris: ${{ secrets.AWS_ECR_URI }}
+
+    - name: Build, tag, and push image to ECR
+      env:
+        ECR_REGISTRY: ${{ secrets.AWS_ECR_URI }}
+        ECR_REPOSITORY: code-duel-backend
+        IMAGE_TAG: latest
+      run: |
+        # Build the Docker image. 
+        # The context is './backend' so the Dockerfile can find the .jar file
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+  deploy-to-ec2:
+    name: Deploy to EC2
+    needs: build-and-push 
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        script: |
+          # This script runs ON YOUR EC2 INSTANCE
+          echo "Logging in to AWS ECR..."
+          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_URI }}
+          
+          echo "Pulling latest Docker image..."
+          docker pull ${{ secrets.AWS_ECR_URI }}/code-duel-backend:latest
+          
+          echo "Stopping old container..."
+          docker stop code-duel-backend || true
+          
+          echo "Removing old container..."
+          docker rm code-duel-backend || true
+          
+          echo "Starting new container..."
+          docker run -d -p 8080:8080 --restart always --name code-duel-backend --env-file ~/code-duel.env ${{ secrets.AWS_ECR_URI }}/code-duel-backend:latest
+          
+          echo "Deployment complete!"
