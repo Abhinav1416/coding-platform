@@ -1,19 +1,20 @@
 import api from '../../../core/api/api';
 
 
+
 export const grantCreatePermission = async (data: { email: string }) => {
-  const response = await api.post('/api/v1/admin/permissions/grant-create', data);
+  const response = await api.post('/v1/admin/permissions/grant-create', data);
   return response.data;
 };
 
 
 export const grantUpdatePermission = async (data: { email: string; problemId: string }) => {
-  const response = await api.post('/api/v1/admin/permissions/grant-update', data);
+  const response = await api.post('/v1/admin/permissions/grant-update', data);
   return response.data;
 };
 
 
 export const grantDeletePermission = async (data: { email: string; problemId: string }) => {
-  const response = await api.post('/api/v1/admin/permissions/grant-delete', data);
+  const response = await api.post('/v1/admin/permissions/grant-delete', data);
   return response.data;
 };
