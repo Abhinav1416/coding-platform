@@ -8,7 +8,6 @@ Code Duel is a full-stack, real-time web application where users are matched for
 
 **You can try the live application here: [https://coding-platform-uyo1.vercel.app/](https://coding-platform-uyo1.vercel.app/)**
 
-*(Note: The backend is deployed on the AWS Free Tier. The server may spin down when idle, so the first login or API call might take up to 30 seconds to respond.)*
 
 ##  Core Features
 
