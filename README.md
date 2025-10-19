@@ -1,88 +1,99 @@
 # Code Duel: A Real-Time 1v1 Competitive Programming Platform
 
-![Code-Duel Architecture Diagram](./assets/4F17645B-B8AD-45B5-8DC4-F5A88A835E20_1_201_a.jpeg)
+Code Duel is a cloud native full-stack, real-time web application where users are matched for one-on-one Data Structures and Algorithms (DSA) challenges. Built on a modern, decoupled, and event-driven architecture, this project is designed for high scalability, security, and real-time performance.
 
-Code Duel is a full-stack, real-time web application where users are matched for one-on-one Data Structures and Algorithms (DSA) challenges. Built on a modern, decoupled, and event-driven architecture, this project is designed for high scalability, security, and real-time performance.
-
-##  Live Demo
+## Live Demo
 
 **You can try the live application here: [https://coding-platform-uyo1.vercel.app/](https://coding-platform-uyo1.vercel.app/)**
 
+---
 
-##  Core Features
 
-* **Secure Google OAuth 2.0 Login**: Users can register and log in seamlessly and securely using their Google accounts.
-* **Stateless JWT Authentication**: Sessions are managed using stateless JSON Web Tokens (JWTs), with a robust refresh token rotation system for enhanced security.
-* **1-vs-1 Matchmaking**: Users can enter a matchmaking pool and be paired with another user to compete on a randomly selected problem.
-* **Real-Time Code Editor & Sync**: A shared, real-time code editor allows both competitors to see their code.
-* **Instant Submission Results**: Code submissions are judged asynchronously, and results (`Accepted`, `Wrong Answer`, etc.) are delivered instantly to the user's browser via WebSockets.
+![Code Duel Architecture Flow](assets/F7FB327A-508D-4CD7-9EF1-E086A90AB004_1_201_a.jpeg)
+
+
+## Deployment & Cloud Architecture
+
+This project is deployed using a hybrid-cloud model, demonstrating a professional DevOps workflow with a focus on automation, security, and scalability.
+
+* **Frontend (Vercel):** The React application is deployed to **Vercel**, leveraging its global CDN for high-performance static asset delivery and seamless Git integration. The Vercel project is configured to act as a **secure proxy**, routing all API (`/api/**`) and WebSocket (`/ws/**`) requests to the backend. This provides a unified API gateway for the client and solves all CORS and "Mixed Content" (HTTPS/HTTP) browser issues.
+
+* **Backend (AWS & Docker):** The Spring Boot application is **containerized with Docker** and runs on an **AWS EC2** instance.
+
+* **Networking & Security (NGINX):** On the EC2 instance, **NGINX** is configured as a **reverse proxy** and **SSL termination** point. It handles all incoming HTTPS traffic, manages SSL certificates, and forwards validated requests to the Spring Boot Docker container, which runs in an isolated network.
+
+* **CI/CD Pipeline (GitHub Actions):** The entire backend deployment is fully automated. A **GitHub Actions** workflow triggers on every push to the `main` branch:
+    1.  **Build:** A **cross-platform `linux/amd64` Docker image** is built using `docker buildx` (solving M1/M2-to-EC2 build conflicts) from a multi-stage Dockerfile for a minimal, secure production image.
+    2.  **Store:** The new image is tagged and pushed to a private **AWS ECR (Elastic Container Registry)** repository.
+    3.  **Deploy:** The workflow securely SSHs into the EC2 instance, authenticates with ECR, pulls the new image, and restarts the container for a seamless update.
+
+* **Cloud Services & Configuration:**
+    * **AWS IAM (Identity and Access Management):** IAM roles are attached to the EC2 instance and used by the GitHub Actions runner, providing secure, keyless access to other AWS services (like SQS, S3, and ECR) based on the principle of least privilege.
+    * **AWS CloudWatch:** Used for logging and monitoring of the EC2 instance and Lambda functions, providing visibility into application health and performance.
+    * **Secret Management:** A two-tiered strategy is used: **GitHub Actions Secrets** store CI/CD credentials (AWS keys, SSH keys), while an **`.env` file** on the EC2 server securely injects runtime secrets (database URLs, JWT keys) into the container at runtime.
 
 ---
 
-##  Technical Highlights & Architecture
+## Technical Highlights & System Design
 
-This project was built with a focus on modern, scalable, and secure system design. The most complex features are highlighted below.
+This project was built with a focus on modern, scalable, and secure system design patterns. The following sections detail the design decisions for the most complex features.
 
-### 1. Asynchronous Code Judging (High Scalability)
+### 1. Asynchronous Code Judging (High Scalability & Responsiveness)
 
-To ensure the API remains fast and responsive, code submissions are not processed on the main web server thread.
+* **Problem:** The external code-judging API can take several seconds to execute a submission. A synchronous request would block the main API thread, severely limiting throughput and creating a poor user experience.
+* **Solution:** The system is decoupled using a message queue.
+    1.  When a user submits code, the API endpoint (`/api/submit`) validates the request and immediately places it as a message in an **AWS SQS (Simple Queue Service)** queue.
+    2.  The API returns an "Pending" response to the user instantly.
+    3.  A separate `@SqsListener` in the Spring Boot backend (running on a different thread) consumes messages from this queue, makes the long-running call to the Judge0 API, and processes the result.
+* **Result:** This architecture allows the API to handle large bursts of submissions without slowing down. It provides high throughput and resilience, as failed jobs can be automatically retried by SQS.
 
-* **Problem:** The external **Judge0 API** can take several seconds to execute code. A traditional synchronous request would block the API, leading to a poor user experience and low throughput.
-* **Solution:** Submissions are decoupled using a message queue.
-    1.  The user's API request (`/api/submit`) is validated and immediately placed as a message in an **AWS SQS** queue.
-    2.  An `@SqsListener` in a separate thread on the Spring Boot backend consumes messages from this queue, calls the Judge0 API, and processes the result.
-    3.  The result is then published to a **Redis** Pub/Sub topic and pushed to the user via WebSockets.
-* **Result:** This pattern provides instant API responses for the user and makes the system highly resilient and scalable, as it can handle large bursts of submissions without slowing down.
+### 2. Real-Time Event System (WebSockets & Redis Pub/Sub)
 
-### 2. Advanced Security (RBAC & ABAC)
+* **Problem:** Once the asynchronous judging is complete (in the SQS worker), the result must be pushed instantly to both competing users. The system also needs to broadcast other match-state events (e.g., opponent found, timer ticks) in real-time.
+* **Solution:** A combination of Spring WebSockets and **Redis Pub/Sub**.
+    1.  Clients maintain a persistent WebSocket (STOMP over SockJS) connection to the server.
+    2.  **Redis** is used as a high-speed message broker, not just a cache.
+    3.  When the SQS worker (from point 1) receives a judging result, it publishes that result to a specific Redis topic (e.g., `match:123:results`).
+    4.  The main Spring Boot application, which manages the WebSocket connections, is *subscribed* to these Redis topics. It instantly receives the message and forwards it to the correct users over their specific WebSocket connection.
+* **Result:** This pattern effectively connects the asynchronous backend workers (SQS listeners) to the real-time frontend clients, a non-trivial challenge in distributed systems.
 
-The application implements a multi-layered security model using **Spring Security** to go beyond simple authentication.
+### 3. Event-Driven File Uploads (Security & Decoupling)
 
-* **Role-Based Access Control (RBAC):** Defines three distinct roles (`ROLE_USER`, `ROLE_ADMIN`, `ROLE_PROBLEM_SETTER`). API endpoints are secured using method-level annotations (e.g., `@PreAuthorize("hasRole('ADMIN')")`) to restrict access based on these roles.
-* **Attribute-Based Access Control (ABAC):** For more granular control, the system uses custom security expressions. This allows for dynamic, context-aware authorization.
-    * **Example:** A `PROBLEM_SETTER` can only edit or delete a problem *if* they are the original author of that problem. This is checked at the method level using `@PreAuthorize("@problemSecurityService.isOwner(principal, #problemId)")`, which is far more flexible than static roles.
+* **Problem:** Allowing problem setters to upload large test case `.zip` files directly to the API server is inefficient, insecure, and burdens the EC2 instance's network and disk I/O.
+* **Solution:** A secure, serverless, event-driven pattern that completely bypasses the application server.
+    1.  The problem-setter's client requests an upload URL from the API.
+    2.  The backend generates and returns a secure, short-lived **AWS S3 Pre-Signed URL**, granting temporary write-only access to a specific key in an **AWS S3** bucket.
+    3.  The client uploads the `.zip` file *directly* to S3, bypassing the backend entirely.
+    4.  The S3 bucket is configured with event notifications. Upon a new file upload (`s3:ObjectCreated:*`), it emits an event.
+    5.  This event triggers an **AWS Lambda** function, which validates the file, unzips it, and calls a secure internal API endpoint to finalize the problem's creation in the database.
+* **Result:** This is a highly secure and scalable cloud-native pattern that offloads all file-handling logic from the main application, reduces server load, and leverages managed AWS services.
 
-### 3. Real-Time WebSocket Communication
+### 4. Advanced Security (RBAC & ABAC)
 
-The entire match and submission flow is powered by a real-time event system.
-
-* The backend uses **Spring WebSockets** with **STOMP** over **SockJS** to manage persistent, bi-directional communication.
-* All match events (e.g., opponent found, countdown timer ticks, submission results, match end) are pushed from the server to the client, ensuring the UI is always in sync for both players without a single manual refresh.
-* A custom `SecurityFilterChain` was implemented to bypass JWT authentication for the initial WebSocket handshake while securing the main application, solving complex CORS and `X-Frame-Options` issues.
-
-### 4. Decoupled Event-Driven File Handling
-
-To handle large test case file uploads for new problems, the application uses a secure, event-driven pattern.
-
-1.  A `PROBLEM_SETTER` requests an upload URL from the API.
-2.  The backend generates a secure, short-lived **AWS S3 Pre-Signed URL** and returns it.
-3.  The client uploads the `.zip` file directly to S3, bypassing the backend server entirely.
-4.  The S3 bucket, upon receiving the new file, emits an event that triggers an **AWS Lambda** function.
-5.  The Lambda function validates the file and calls a secure internal API endpoint (`/api/internal/...`) to finalize the problem, linking the test cases and publishing the problem.
+* **Problem:** The application requires a security model more granular than simple authentication. For example, a `PROBLEM_SETTER` should only be able to edit their *own* problems, not all problems.
+* **Solution:** A multi-layered security model using **Spring Security**.
+    * **Role-Based Access Control (RBAC):** Defines three distinct roles (`ROLE_USER`, `ROLE_ADMIN`, `ROLE_PROBLEM_SETTER`). API endpoints are secured using method-level annotations (e.g., `@PreAuthorize("hasRole('ADMIN')")`) to restrict access based on these static roles.
+    * **Attribute-Based Access Control (ABAC):** For more granular control, the system uses custom Spring Expression Language (SpEL) security expressions. This allows for dynamic, context-aware authorization.
+        * **Example:** A method to edit a problem is secured with `@PreAuthorize("@problemSecurityService.isOwner(principal, #problemId)")`. This expression calls a bean at runtime to check if the authenticated principal's ID (an attribute) matches the author ID of the requested problem (another attribute).
 
 ---
 
-##  Tech Stack
+## Core Application Features
+
+* **Secure Google OAuth 2.0 Login**: Seamless and secure user registration and login using Google accounts.
+* **Stateless JWT Authentication**: Robust session management using JSON Web Tokens with a secure refresh token rotation system.
+* **1-vs-1 Matchmaking**: A dynamic pool that pairs users for a head-to-head competition on a randomly selected problem.
+* **Real-Time Code Editor**: A shared, real-time code editor allowing both competitors to code simultaneously.
+* **Instant Submission Results**: Asynchronous code judging delivers results (`Accepted`, `Wrong Answer`, etc.) instantly to the user's browser via WebSockets.
+
+---
+
+## Tech Stack
 
 | Category | Technology |
 | :--- | :--- |
-| **Frontend** | **React (Vite)**, TypeScript, **StompJS/SockJS**, Tailwind CSS, HTML |
+| **Frontend** | **React (Vite)**, TypeScript, **StompJS/SockJS**, Tailwind CSS |
 | **Backend** | **Spring Boot 3**, **Java 21**, **Spring Security 6** (JWT, OAuth2) |
-| **Data & Cache** | **PostgreSQL** (hosted on Neon DB), **Redis** (hosted on Upstash) |
-| **Cloud (AWS)** | **EC2**, **S3**, **SQS**, **Lambda**, **ALB**, **ECR**, IAM, CloudWatch |
-| **Deployment** | **Docker** (`buildx`), **Vercel** (with Serverless Function proxy), **GitHub Actions (CI/CD)** |
-
----
-
-##  Deployment & CI/CD Pipeline
-
-The project is deployed using a hybrid cloud model, demonstrating a practical understanding of a professional DevOps workflow.
-
-* **Frontend**: Deployed to **Vercel**. A `vercel.json` file handles SPA routing and acts as a **secure proxy** for all API and WebSocket traffic, solving all "Mixed Content" (HTTPS/HTTP) browser errors.
-* **Backend**: The Spring Boot application is **containerized with Docker** and runs on an **AWS EC2** instance, managed by an Application Load Balancer.
-* **CI/CD Pipeline**: A **GitHub Actions** workflow is configured to:
-    1.  Trigger on any push to the `main` branch.
-    2.  Build a **cross-platform `linux/amd64` Docker image** (solving the Mac M1-to-EC2 build conflict).
-    3.  Push the new image to a private **AWS ECR** repository.
-
-For a detailed breakdown of the cloud infrastructure, IAM policies, and the step-by-step debugging process, please see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+| **Data & Cache** | **PostgreSQL** (Neon DB), **Redis** (Upstash) |
+| **Cloud (AWS)** | **EC2**, **S3**, **SQS**, **Lambda**, **ECR**, **IAM**, **CloudWatch** |
+| **Deployment** | **Docker** (`buildx`), **NGINX**, **Vercel** (Proxy), **GitHub Actions (CI/CD)** |
