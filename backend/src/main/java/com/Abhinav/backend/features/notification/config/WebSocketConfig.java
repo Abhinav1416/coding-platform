@@ -18,8 +18,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // --- THIS IS THE FINAL FIX ---
-        // Allow all origins, as Vercel is our trusted proxy.
         registry.addEndpoint("/ws")
                 .setAllowedOrigins("*")
                 .withSockJS();

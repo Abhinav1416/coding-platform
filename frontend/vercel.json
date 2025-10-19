@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/api/:path*"
+      "destination": "https://code-duel.ddns.net/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "http://code-duel-alb-2054648281.ap-south-1.elb.amazonaws.com/ws/:path*"
+      "destination": "https://code-duel.ddns.net/ws/:path*"
     },
     {
       "source": "/((?!api/|ws/|assets/).*)",
