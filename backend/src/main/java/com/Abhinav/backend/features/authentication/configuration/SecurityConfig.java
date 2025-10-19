@@ -46,7 +46,7 @@ public class SecurityConfig {
     public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/actuator/health", "/ws/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // THIS LINE IS THE FIX
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers
