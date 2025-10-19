@@ -1,6 +1,6 @@
 # Code Duel: A Real-Time 1v1 Competitive Programming Platform
 
-Code Duel is a cloud native full-stack, real-time web application where users are matched for one-on-one Data Structures and Algorithms (DSA) challenges. Built on a modern, decoupled, and event-driven architecture, this project is designed for high scalability, security, and real-time performance.
+Code Duel is a cloud native full-stack, real-time web application where users are matched for one-on-one Data Structures and Algorithms (DSA) challenges. Built on a modern, decoupled, and event-driven architecture, this project is designed for high scalability, security, and real-time performance. Deployed on AWS with NGINX reverse proxy and automated CI/CD pipelines
 
 ## Live Demo
 
