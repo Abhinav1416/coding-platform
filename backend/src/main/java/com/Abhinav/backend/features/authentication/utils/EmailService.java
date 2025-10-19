@@ -20,7 +20,7 @@ public class EmailService {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message);
 
-        helper.setFrom("no-reply@linkedin.com", "LinkedIn");
+        helper.setFrom("coding-platform-uyo1", "codeDuel");
         helper.setTo(email);
 
         helper.setSubject(subject);
