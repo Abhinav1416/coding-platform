@@ -1,25 +1,41 @@
 version: '3.8'
 
 services:
+  # CORE REDIS (For the Main Backend - Port 6379)
   redis:
     image: redis:7-alpine
+    container_name: codeduel_redis
     ports:
       - '6379:6379'
     volumes:
       - redis_data:/data
     restart: always
 
+  # SENTINEL REDIS (For the Worker Service - Port 6380)
+  # This isolates the worker's cache from the main app
+  sentinel_redis:
+    image: redis:7-alpine
+    container_name: codeduel_sentinel_redis
+    ports:
+      - '6380:6379' # Maps Host 6380 -> Container 6379
+    volumes:
+      - sentinel_redis_data:/data
+    restart: always
+
+  # MAILHOG (Email Testing)
   mailhog:
     image: mailhog/mailhog
     ports:
       - '1025:1025'
       - '8025:8025'
 
+  # LOCALSTACK (AWS Mock)
   localstack:
     image: localstack/localstack:latest
+    container_name: codeduel_localstack
     ports:
-      - '4566:4566'
-      - '4510-4559:4510-4559'
+      - '4566:4566'            # Main AWS Port
+      - '4510-4559:4510-4559'  # External service range
     environment:
       - SERVICES=s3,sqs,lambda,iam,logs
       - AWS_DEFAULT_REGION=ap-southeast-1
@@ -32,3 +48,4 @@ services:
 volumes:
   localstack_data:
   redis_data:
+  sentinel_redis_data: # New volume for Sentinel data
