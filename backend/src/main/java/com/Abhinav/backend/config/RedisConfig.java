@@ -1,6 +1,6 @@
 package com.Abhinav.backend.config;
 
-import com.Abhinav.backend.features.duel.service.DuelManager; // <--- NEW IMPORT
+import com.Abhinav.backend.features.duel.service.DuelManager;
 import com.Abhinav.backend.features.match.service.MatchExpirationHandler;
 import com.Abhinav.backend.features.problem.service.ProblemService;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -12,13 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource; // <--- NEW IMPORT
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript; // <--- NEW IMPORT
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
