@@ -1,5 +1,6 @@
 package com.Abhinav.backend.config;
 
+import com.Abhinav.backend.features.duel.service.DuelManager;
 import com.Abhinav.backend.features.problem.service.ProblemService;
 import com.Abhinav.backend.features.problem.service.ProblemServiceImpl;
 import org.slf4j.Logger;
@@ -12,11 +13,13 @@ import java.util.UUID;
 public class RedisExpirationListener implements MessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisExpirationListener.class);
+
     private final ProblemService problemService;
+    private final DuelManager duelManager;
 
-
-    public RedisExpirationListener(ProblemService problemService) {
+    public RedisExpirationListener(ProblemService problemService, DuelManager duelManager) {
         this.problemService = problemService;
+        this.duelManager = duelManager;
     }
 
     @Override
@@ -24,14 +27,27 @@ public class RedisExpirationListener implements MessageListener {
         String expiredKey = message.toString();
         logger.debug("Redis key expired: {}", expiredKey);
 
-        if (expiredKey != null && expiredKey.startsWith(ProblemServiceImpl.PENDING_PROBLEM_KEY_PREFIX)) {
-            try {
+        if (expiredKey == null) return;
+
+        try {
+            if (expiredKey.startsWith(ProblemServiceImpl.PENDING_PROBLEM_KEY_PREFIX)) {
                 String problemIdStr = expiredKey.substring(ProblemServiceImpl.PENDING_PROBLEM_KEY_PREFIX.length());
                 UUID problemId = UUID.fromString(problemIdStr);
-                new Thread(() -> problemService.cleanupPendingProblem(problemId)).start();
-            } catch (Exception e) {
-                logger.error("Error processing expired Redis key: {}", expiredKey, e);
+                Thread.ofVirtual().start(() -> problemService.cleanupPendingProblem(problemId));
             }
+
+            else if (expiredKey.startsWith("duel:start:")) {
+                UUID duelId = UUID.fromString(expiredKey.substring("duel:start:".length()));
+                duelManager.startDuel(duelId);
+            }
+
+            else if (expiredKey.startsWith("duel:live:")) {
+                UUID duelId = UUID.fromString(expiredKey.substring("duel:live:".length()));
+                duelManager.endDuel(duelId);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error processing expired Redis key: {}", expiredKey, e);
         }
     }
 }

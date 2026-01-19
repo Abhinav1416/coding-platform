@@ -1,5 +1,6 @@
 package com.Abhinav.backend.config;
 
+import com.Abhinav.backend.features.duel.service.DuelManager; // <--- NEW IMPORT
 import com.Abhinav.backend.features.match.service.MatchExpirationHandler;
 import com.Abhinav.backend.features.problem.service.ProblemService;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -11,11 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource; // <--- NEW IMPORT
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript; // <--- NEW IMPORT
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -53,18 +56,31 @@ public class RedisConfig {
     }
 
     @Bean
+    public DefaultRedisScript<String> scoringScript() {
+        DefaultRedisScript<String> script = new DefaultRedisScript<>();
+        script.setLocation(new ClassPathResource("scripts/update_score.lua"));
+        script.setResultType(String.class);
+        return script;
+    }
+
+    @Bean
     public RedisMessageListenerContainer keyExpirationListenerContainer(
             RedisConnectionFactory connectionFactory,
             ProblemService problemService,
-            MatchExpirationHandler matchExpirationHandler
+            MatchExpirationHandler matchExpirationHandler,
+            DuelManager duelManager
     ) {
         RedisMessageListenerContainer listenerContainer = new RedisMessageListenerContainer();
         listenerContainer.setConnectionFactory(connectionFactory);
 
         PatternTopic expirationTopic = new PatternTopic("__keyevent@*__:expired");
 
-        listenerContainer.addMessageListener(new RedisExpirationListener(problemService), expirationTopic);
-        log.info("Registered listener for PROBLEM expirations.");
+        listenerContainer.addMessageListener(
+                new RedisExpirationListener(problemService, duelManager),
+                expirationTopic
+        );
+
+        log.info("Registered listener for PROBLEM and DUEL expirations.");
 
         MessageListener matchListener = (message, pattern) -> {
             String channel = new String(pattern);
