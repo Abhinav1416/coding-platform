@@ -3,6 +3,7 @@ package com.codingplatform.sentinel.service;
 import com.codingplatform.sentinel.client.CodeforcesApiClient;
 import com.codingplatform.sentinel.dto.CodeforcesResponse;
 import com.codingplatform.sentinel.dto.MonitoredMatch;
+import com.codingplatform.sentinel.producer.MatchStatusProducer;
 import com.codingplatform.sentinel.repository.MatchMonitoringService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ public class SentinelPollingService {
 
     private final MatchMonitoringService monitoringService;
     private final CodeforcesApiClient apiClient;
+    private final MatchStatusProducer producer;
 
     private long nextPollTime = 0;
     private long currentBackoff = 15000;
@@ -27,9 +29,12 @@ public class SentinelPollingService {
     private static final long MIN_INTERVAL = 15000;
     private static final long MAX_INTERVAL = 300000;
 
-    public SentinelPollingService(MatchMonitoringService monitoringService, CodeforcesApiClient apiClient) {
+    public SentinelPollingService(MatchMonitoringService monitoringService,
+                                  CodeforcesApiClient apiClient,
+                                  MatchStatusProducer producer) {
         this.monitoringService = monitoringService;
         this.apiClient = apiClient;
+        this.producer = producer;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -49,11 +54,10 @@ public class SentinelPollingService {
         try {
             processMatches(activeMatches);
 
+            // --- SMART SUCCESS HANDLING (Binary Search) ---
             if (currentBackoff > MIN_INTERVAL) {
 
-                long oldBackoff = currentBackoff;
                 long dangerLine = Math.max(lastFailureBackoff, MIN_INTERVAL);
-
                 long newSpeed = (currentBackoff + dangerLine) / 2;
 
                 if (newSpeed >= currentBackoff - 1000) {
@@ -62,8 +66,7 @@ public class SentinelPollingService {
 
                 currentBackoff = Math.max(newSpeed, MIN_INTERVAL);
 
-                log.info("✅ API Success. ADAPTIVE RECOVERY: Old={}s, DangerLine={}s -> New Target={}s",
-                        oldBackoff/1000, dangerLine/1000, currentBackoff/1000);
+                log.info("✅ API Success. ADAPTIVE RECOVERY: Target={}s", currentBackoff/1000);
 
                 if (lastFailureBackoff > 0) {
                     lastFailureBackoff = Math.max(0, lastFailureBackoff - 5000);
@@ -76,12 +79,9 @@ public class SentinelPollingService {
 
         } catch (Exception e) {
             lastFailureBackoff = currentBackoff;
-            long oldBackoff = currentBackoff;
-
             currentBackoff = Math.min(currentBackoff * 2, MAX_INTERVAL);
 
-            log.error("⚠️ API FAILURE at {}s! Doubling backoff to {}s. (Danger Line set to {}s)",
-                    oldBackoff/1000, currentBackoff/1000, lastFailureBackoff/1000);
+            log.error("⚠️ API FAILURE! Doubling backoff to {}s.", currentBackoff/1000);
 
             nextPollTime = now + currentBackoff;
         }
@@ -126,6 +126,8 @@ public class SentinelPollingService {
             if (!isProblemInMatch(sub.problem(), match)) continue;
             if (sub.verdict() == null || "TESTING".equals(sub.verdict())) continue;
 
+            String fullProblemId = sub.problem().contestId() + sub.problem().index();
+
             String logMsg = String.format(
                     "User: %s | Prob: %s | Verdict: %s | Time: %dms",
                     handle, sub.problem().index(), sub.verdict(), sub.timeConsumedMillis()
@@ -133,8 +135,27 @@ public class SentinelPollingService {
 
             if ("OK".equals(sub.verdict())) {
                 log.info("✅ SUCCESS (AC)! {}", logMsg);
+
+                producer.sendMatchUpdate(
+                        match.matchId(),
+                        handle,
+                        fullProblemId,
+                        "OK",
+                        sub.timeConsumedMillis(),
+                        sub.memoryConsumedBytes()
+                );
+
             } else {
                 log.info("❌ FAILED ATTEMPT! {}", logMsg);
+
+                producer.sendMatchUpdate(
+                        match.matchId(),
+                        handle,
+                        fullProblemId,
+                        sub.verdict(),
+                        sub.timeConsumedMillis(),
+                        sub.memoryConsumedBytes()
+                );
             }
 
             currentMatchState = currentMatchState.withProcessedId(sub.id());

@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
+
 @Component
 public class MatchQueueListener {
 
@@ -21,21 +23,26 @@ public class MatchQueueListener {
     // Listen to the match-watch-queue
     @SqsListener("match-watch-queue")
     public void receiveMatchStart(MatchStartEvent event) {
-        log.info("📩 Received Match Start Order: {}", event.matchId());
+        try {
+            log.info("📩 Received Match Start Order: {}", event.matchId());
 
-        long endTime = event.startTimeEpochSeconds() + event.durationSeconds();
+            long endTime = event.startTimeEpochSeconds() + event.durationSeconds();
 
-        MonitoredMatch match = new MonitoredMatch(
-                event.matchId(),
-                event.userHandles(),
-                event.problemIds(),
-                endTime,
-                event.startTimeEpochSeconds(),
-                new java.util.HashSet<>()
-        );
+            MonitoredMatch match = new MonitoredMatch(
+                    event.matchId(),
+                    event.userHandles(),
+                    event.problemIds(),
+                    endTime,
+                    event.startTimeEpochSeconds(),
+                    new HashSet<>()
+            );
 
-        monitoringService.addMatch(match);
+            monitoringService.addMatch(match);
 
-        log.info("✅ Match {} saved to Redis. Monitoring starts now.", event.matchId());
+            log.info("✅ Match {} saved to Redis. Monitoring starts now.", event.matchId());
+        } catch (Exception e) {
+            log.error("❌ Critical Failure processing match {}: {}", event.matchId(), e.getMessage());
+            throw new RuntimeException("Forcing SQS retry due to internal error", e);
+        }
     }
 }
