@@ -1,17 +1,16 @@
 package com.Abhinav.backend.features.duel.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class SubmitScoreRequest {
-    @NotBlank(message = "Problem ID is required")
     private String problemId;
-
-    @NotBlank(message = "Verdict is required")
     private String verdict;
-
-    @NotNull(message = "Time taken is required")
-    private Long timeTakenSeconds;
+    private long timeTakenSeconds;    // Relative time
+    private long timeConsumedMillis;  // Execution time from Sentinel
+    private long memoryConsumedBytes; // Memory from Sentinel
 }

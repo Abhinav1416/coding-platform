@@ -13,15 +13,14 @@ public class DuelData {
     private UUID duelId;
     private DuelStatus status;
     private DuelScoreboard scoreboard;
-
     private String player1Handle;
     private String player2Handle;
-
     private List<String> problemLinks;
-
     private int durationMinutes;
     private int startsInMinutes;
-
     private String roomCode;
     private List<String> problemIds;
+
+    // Ensure this field exists for relative time calculation
+    private Long startTime;
 }

@@ -2,11 +2,16 @@ package com.Abhinav.backend.features.duel.controller;
 
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.duel.dto.CreateDuelRequest;
+import com.Abhinav.backend.features.duel.dto.DuelHistoryResponse;
 import com.Abhinav.backend.features.duel.dto.DuelResponse;
 import com.Abhinav.backend.features.duel.dto.JoinDuelRequest;
 import com.Abhinav.backend.features.duel.model.DuelData;
+import com.Abhinav.backend.features.duel.model.DuelHistory;
+import com.Abhinav.backend.features.duel.model.DuelScoreboard;
+import com.Abhinav.backend.features.duel.repository.DuelRepository;
 import com.Abhinav.backend.features.duel.service.DuelManager;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +26,8 @@ import java.util.UUID;
 public class DuelController {
 
     private final DuelManager duelManager;
+    private final DuelRepository duelRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * Phase 1: Create a Match
@@ -53,7 +60,7 @@ public class DuelController {
     }
 
     /**
-     * Helper: Get Match State
+     * Helper: Get Live Match State (From Redis)
      * Frontend polls this or uses it on page load to sync state
      */
     @GetMapping("/{duelId}")
@@ -61,9 +68,44 @@ public class DuelController {
         DuelData data = duelManager.getDuelState(duelId);
 
         if (data == null) {
-            throw new ResourceNotFoundException("Duel not found with ID: " + duelId);
+            // If not in Redis, it might be finished.
+            // You could optionally redirect to history here, or throw 404.
+            throw new ResourceNotFoundException("Live duel not found with ID: " + duelId + ". It may have finished.");
         }
 
         return ResponseEntity.ok(data);
+    }
+
+    /**
+     * Get Finished Match History (From Database)
+     * Returns the winner, final scores, and detailed submission history
+     */
+    @GetMapping("/history/{duelId}")
+    public ResponseEntity<DuelHistoryResponse> getDuelHistory(@PathVariable UUID duelId) {
+        DuelHistory history = duelRepository.findByDuelId(duelId)
+                .orElseThrow(() -> new ResourceNotFoundException("Match history not found for ID: " + duelId));
+
+        DuelScoreboard scoreboard = null;
+        try {
+            // Deserialize the stored JSON string back into the Scoreboard object
+            if (history.getScoreboardJson() != null) {
+                scoreboard = objectMapper.readValue(history.getScoreboardJson(), DuelScoreboard.class);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing historical scoreboard data", e);
+        }
+
+        DuelHistoryResponse response = DuelHistoryResponse.builder()
+                .duelId(history.getDuelId())
+                .player1Handle(history.getPlayer1Handle())
+                .player2Handle(history.getPlayer2Handle())
+                .player1Score(history.getPlayer1Score())
+                .player2Score(history.getPlayer2Score())
+                .winnerHandle(history.getWinnerHandle())
+                .endedAt(history.getEndedAt())
+                .detailedScoreboard(scoreboard) // This contains the full history map
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }

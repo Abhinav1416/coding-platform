@@ -1,6 +1,8 @@
 package com.Abhinav.backend.features.duel.service;
 
 import com.Abhinav.backend.features.duel.dto.MatchStartEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,14 +14,26 @@ import org.springframework.stereotype.Service;
 public class SentinelProducer {
 
     private final SqsTemplate sqsTemplate;
+    private final ObjectMapper objectMapper;
+
     private static final String QUEUE_NAME = "match-watch-queue";
 
     public void sendMatchStart(MatchStartEvent event) {
         try {
-            sqsTemplate.send(QUEUE_NAME, event);
-            log.info("🚀 Dispatched Match Start to Sentinel: {}", event.matchId());
-        } catch (Exception e) {
-            log.error("❌ Failed to send Match Start to SQS", e);
+            String payload = objectMapper.writeValueAsString(event);
+
+            // 2. Log the Payload
+            log.info("================= SQS OUTBOUND =================");
+            log.info("➡ [TARGET]  {}", QUEUE_NAME);
+            log.info("➡ [PAYLOAD] {}", payload);
+            log.info("================================================");
+
+            // 3. Send the JSON String (instead of the object)
+            sqsTemplate.send(QUEUE_NAME, payload);
+
+        } catch (JsonProcessingException e) {
+            log.error("❌ Failed to serialize MatchStartEvent", e);
+            throw new RuntimeException("Serialization error", e);
         }
     }
 }

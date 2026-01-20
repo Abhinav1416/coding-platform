@@ -38,4 +38,9 @@ public class DuelHistory {
 
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
+
+    // --- NEW FIELD ---
+    // Stores the full DuelScoreboard object as a JSON string
+    @Column(columnDefinition = "TEXT")
+    private String scoreboardJson;
 }

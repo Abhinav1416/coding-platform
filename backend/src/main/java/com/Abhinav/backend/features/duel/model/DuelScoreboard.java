@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Data
@@ -20,7 +21,6 @@ public class DuelScoreboard {
     public static class DuelUserStats {
         private int solved = 0;
         private long penalty = 0;
-
         private Map<String, ProblemStats> problems = new HashMap<>();
     }
 
@@ -30,6 +30,18 @@ public class DuelScoreboard {
     public static class ProblemStats {
         private String status;
         private int attempts;
-        private long time;
+        private long bestTime;
+
+        private Map<String, SubmissionData> history = new LinkedHashMap<>();
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class SubmissionData {
+        private String verdict;
+        private long timeConsumedMillis;
+        private long memoryConsumedBytes;
+        private long submissionTimeSeconds;
     }
 }
