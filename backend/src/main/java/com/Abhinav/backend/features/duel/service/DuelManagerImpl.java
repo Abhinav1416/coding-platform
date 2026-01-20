@@ -12,7 +12,7 @@ import com.Abhinav.backend.features.duel.repository.DuelRepository;
 import com.Abhinav.backend.features.exception.InvalidRequestException;
 import com.Abhinav.backend.features.exception.ResourceConflictException;
 import com.Abhinav.backend.features.exception.ResourceNotFoundException;
-import com.fasterxml.jackson.databind.ObjectMapper; // <--- Import this
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -41,7 +41,8 @@ public class DuelManagerImpl implements DuelManager {
     private final DefaultRedisScript<String> scoringScript;
     private final DuelRepository duelRepository;
     private final SentinelProducer sentinelProducer;
-    private final ObjectMapper objectMapper; // <--- Inject ObjectMapper
+    private final ObjectMapper objectMapper;
+    private final DuelNotificationService notificationService;
 
     private static final String KEY_DATA = "duel:data:";
     private static final String KEY_START = "duel:start:";
@@ -54,13 +55,18 @@ public class DuelManagerImpl implements DuelManager {
     public DuelResponse createWaitingRoom(Long userId, CreateDuelRequest request) {
         UUID duelId = UUID.randomUUID();
         String handle = request.getHandle();
-
         String roomCode = generateRoomCode();
 
+        log.info("Creating waiting room. User: {}, DuelID: {}, RoomCode: {}", userId, duelId, roomCode);
+
         List<String> parsedIds = new ArrayList<>();
-        for (String link : request.getProblemLinks()) {
-            String pid = extractProblemId(link);
-            parsedIds.add(pid);
+        try {
+            for (String link : request.getProblemLinks()) {
+                parsedIds.add(extractProblemId(link));
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse problem links for duel {}: {}", duelId, e.getMessage());
+            throw e;
         }
 
         DuelData data = new DuelData();
@@ -79,18 +85,30 @@ public class DuelManagerImpl implements DuelManager {
         redisTemplate.opsForValue().set(KEY_DATA + duelId, data, Duration.ofSeconds(waitingTtlSeconds));
         stringRedisTemplate.opsForValue().set(KEY_CODE + roomCode, duelId.toString(), Duration.ofSeconds(waitingTtlSeconds));
 
-        log.info("Duel {} created. Room Code: {}. Problems: {}", duelId, roomCode, parsedIds);
+        log.info("✅ Duel {} created successfully. TTL: {}s", duelId, waitingTtlSeconds);
         return new DuelResponse(duelId, roomCode, DuelStatus.WAITING.name(), "Waiting for opponent...");
     }
 
     @Override
     public DuelResponse joinRoom(UUID duelId, Long userId, String player2Handle) {
+        log.info("Attempting join. DuelID: {}, User: {}, Handle: {}", duelId, userId, player2Handle);
+
         String dataKey = KEY_DATA + duelId;
         DuelData data = (DuelData) redisTemplate.opsForValue().get(dataKey);
 
-        if (data == null) throw new ResourceNotFoundException("Room code invalid or match expired.");
-        if (data.getStatus() != DuelStatus.WAITING) throw new ResourceConflictException("Match is already in progress or finished.");
-        if (data.getPlayer1Handle().equalsIgnoreCase(player2Handle)) throw new InvalidRequestException("You cannot duel yourself.");
+        if (data == null) {
+            log.warn("Join failed: Duel {} not found in Redis.", duelId);
+            throw new ResourceNotFoundException("Room code invalid or match expired.");
+        }
+
+        if (data.getStatus() != DuelStatus.WAITING) {
+            log.warn("Join failed: Duel {} status is {}", duelId, data.getStatus());
+            throw new ResourceConflictException("Match is already in progress or finished.");
+        }
+
+        if (data.getPlayer1Handle().equalsIgnoreCase(player2Handle)) {
+            throw new InvalidRequestException("You cannot duel yourself.");
+        }
 
         data.setPlayer2Handle(player2Handle);
         data.setStatus(DuelStatus.PENDING);
@@ -98,24 +116,24 @@ public class DuelManagerImpl implements DuelManager {
         redisTemplate.opsForValue().set(dataKey, data);
         stringRedisTemplate.opsForValue().set(KEY_START + duelId, "STARTING", Duration.ofMinutes(data.getStartsInMinutes()));
 
-        log.info("Duel {} joined by {}. Countdown started.", duelId, player2Handle);
-        return new DuelResponse(duelId, data.getRoomCode(), DuelStatus.PENDING.name(), "Match starts in " + data.getStartsInMinutes() + " minutes");
-    }
+        log.info("✅ Player 2 ({}) joined Duel {}. Countdown started.", player2Handle, duelId);
 
-    public UUID getDuelIdByCode(String roomCode) {
-        String uuidStr = stringRedisTemplate.opsForValue().get(KEY_CODE + roomCode);
-        if (uuidStr == null) throw new ResourceNotFoundException("Invalid Room Code.");
-        return UUID.fromString(uuidStr);
+        // 📡 Notify Player 1 that Player 2 joined
+        broadcastUpdate(duelId, data);
+
+        return new DuelResponse(duelId, data.getRoomCode(), DuelStatus.PENDING.name(), "Match starts in " + data.getStartsInMinutes() + " minutes");
     }
 
     @Override
     public void startDuel(UUID duelId) {
+        log.info("⏳ Timer expired. Starting Duel: {}", duelId);
         String dataKey = KEY_DATA + duelId;
         DuelData data = (DuelData) redisTemplate.opsForValue().get(dataKey);
 
         if (data != null) {
             data.setStatus(DuelStatus.LIVE);
-            data.setStartTime(Instant.now().getEpochSecond()); // Save Start Time
+            long startTime = Instant.now().getEpochSecond();
+            data.setStartTime(startTime);
 
             redisTemplate.opsForValue().set(dataKey, data);
             stringRedisTemplate.opsForValue().set(KEY_LIVE + duelId, "LIVE", Duration.ofMinutes(data.getDurationMinutes()));
@@ -125,44 +143,66 @@ public class DuelManagerImpl implements DuelManager {
                     List.of(data.getPlayer1Handle(), data.getPlayer2Handle()),
                     data.getProblemIds(),
                     (long) data.getDurationMinutes() * 60,
-                    data.getStartTime()
+                    startTime
             );
 
+            log.info("Dispatching MatchStartEvent to Sentinel for Duel {}", duelId);
             sentinelProducer.sendMatchStart(event);
+
             stringRedisTemplate.delete(KEY_CODE + data.getRoomCode());
-            log.info("Duel {} LIVE. Sentinel tracking: {}", duelId, data.getProblemIds());
+
+            log.info("✅ Duel {} is now LIVE. StartTime: {}", duelId, startTime);
+
+            // 📡 Notify both players: "GO!"
+            broadcastUpdate(duelId, data);
+        } else {
+            log.error("❌ Failed to start duel {}: Data not found in Redis.", duelId);
         }
     }
 
     @Override
     public void submitScoreByHandle(UUID duelId, String handle, SubmitScoreRequest request) {
+        log.info("⚡ Processing submission. Duel: {}, Handle: {}, Problem: {}, Verdict: {}",
+                duelId, handle, request.getProblemId(), request.getVerdict());
+
         String currentTimestamp = String.valueOf(Instant.now().getEpochSecond());
 
-        stringRedisTemplate.execute(
-                scoringScript,
-                Collections.singletonList(KEY_DATA + duelId),
-                handle,
-                request.getProblemId(),
-                request.getVerdict(),
-                currentTimestamp,
-                String.valueOf(request.getTimeConsumedMillis()),
-                String.valueOf(request.getMemoryConsumedBytes())
-        );
-        log.info("Score update processed for {} in duel {}", handle, duelId);
+        try {
+            stringRedisTemplate.execute(
+                    scoringScript,
+                    Collections.singletonList(KEY_DATA + duelId),
+                    handle,
+                    request.getProblemId(),
+                    request.getVerdict(),
+                    currentTimestamp,
+                    String.valueOf(request.getTimeConsumedMillis()),
+                    String.valueOf(request.getMemoryConsumedBytes())
+            );
+            log.info("✅ Lua script executed for Duel {}", duelId);
+
+            // Fetch updated state to broadcast to frontend
+            DuelData updatedData = (DuelData) redisTemplate.opsForValue().get(KEY_DATA + duelId);
+            if (updatedData != null) {
+                broadcastUpdate(duelId, updatedData);
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Error executing scoring script for Duel {}", duelId, e);
+        }
     }
 
     @Override
     public void endDuel(UUID duelId) {
+        log.info("🏁 Ending Duel: {}", duelId);
         String dataKey = KEY_DATA + duelId;
         DuelData finalState = (DuelData) redisTemplate.opsForValue().get(dataKey);
 
         if (finalState != null) {
-            log.info("Closing Duel {}. Archiving results.", duelId);
-
             DuelScoreboard sb = finalState.getScoreboard();
             String p1 = finalState.getPlayer1Handle();
             String p2 = finalState.getPlayer2Handle();
 
+            // Safe null checks for user stats
             var u1 = (sb.getUsers() != null) ? sb.getUsers().get(p1) : null;
             var u2 = (sb.getUsers() != null) ? sb.getUsers().get(p2) : null;
 
@@ -179,12 +219,13 @@ public class DuelManagerImpl implements DuelManager {
                 else if (p2Penalty < p1Penalty) winnerHandle = p2;
             }
 
-            // --- SERIALIZE SCOREBOARD ---
+            log.info("Winner calculated: {} ({} vs {})", winnerHandle, p1Score, p2Score);
+
             String scoreboardJson = "{}";
             try {
                 scoreboardJson = objectMapper.writeValueAsString(sb);
             } catch (Exception e) {
-                log.error("Failed to serialize scoreboard for history", e);
+                log.error("❌ Failed to serialize scoreboard for Duel {}", duelId, e);
             }
 
             DuelHistory history = DuelHistory.builder()
@@ -196,16 +237,23 @@ public class DuelManagerImpl implements DuelManager {
                     .winnerHandle(winnerHandle)
                     .startedAt(LocalDateTime.now().minusMinutes(finalState.getDurationMinutes()))
                     .endedAt(LocalDateTime.now())
-                    .scoreboardJson(scoreboardJson) // Save JSON
+                    .scoreboardJson(scoreboardJson)
                     .build();
 
             duelRepository.save(history);
+            log.info("✅ History saved to DB for Duel {}", duelId);
 
             finalState.setStatus(DuelStatus.FINISHED);
+            // Keep in Redis briefly for late fetchers
             redisTemplate.opsForValue().set(dataKey, finalState, Duration.ofMinutes(10));
+
             redisTemplate.delete(KEY_LIVE + duelId);
             redisTemplate.delete(KEY_START + duelId);
-            log.info("Duel {} marked as FINISHED.", duelId);
+
+            // 📡 Notify: Game Over
+            broadcastUpdate(duelId, finalState);
+        } else {
+            log.warn("⚠️ Could not end duel {}: Data missing from Redis.", duelId);
         }
     }
 
@@ -214,14 +262,35 @@ public class DuelManagerImpl implements DuelManager {
         return (DuelData) redisTemplate.opsForValue().get(KEY_DATA + duelId);
     }
 
+    public UUID getDuelIdByCode(String roomCode) {
+        String uuidStr = stringRedisTemplate.opsForValue().get(KEY_CODE + roomCode);
+        if (uuidStr == null) {
+            log.warn("Room code lookup failed: {}", roomCode);
+            throw new ResourceNotFoundException("Invalid Room Code.");
+        }
+        return UUID.fromString(uuidStr);
+    }
+
+    private void broadcastUpdate(UUID duelId, DuelData data) {
+        try {
+            notificationService.sendDuelUpdate(duelId, data);
+        } catch (Exception e) {
+            log.error("⚠️ Failed to broadcast WebSocket update for Duel {}", duelId, e);
+        }
+    }
+
     private String generateRoomCode() {
         return String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
     }
 
     private String extractProblemId(String url) {
-        if (url == null || url.isBlank()) throw new InvalidRequestException("Problem link cannot be empty.");
+        if (url == null || url.isBlank()) {
+            throw new InvalidRequestException("Problem link cannot be empty.");
+        }
         Matcher matcher = CF_PATTERN.matcher(url);
-        if (matcher.find()) return matcher.group(1) + matcher.group(2);
-        throw new InvalidRequestException("Invalid Codeforces URL: " + url);
+        if (matcher.find()) {
+            return matcher.group(1) + matcher.group(2);
+        }
+        throw new InvalidRequestException("Invalid Codeforces URL: " + url + ". Must be a contest or problemset link.");
     }
 }
