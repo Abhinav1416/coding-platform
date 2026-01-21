@@ -2,6 +2,8 @@ package com.Abhinav.backend.features.match.service;
 
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
 import com.Abhinav.backend.features.authentication.repository.AuthenticationUserRepository;
+import com.Abhinav.backend.features.duel.model.DuelHistory;
+import com.Abhinav.backend.features.duel.repository.DuelRepository;
 import com.Abhinav.backend.features.exception.InvalidRequestException;
 import com.Abhinav.backend.features.exception.MatchAlreadyCompletedException;
 import com.Abhinav.backend.features.exception.ResourceConflictException;
@@ -24,7 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,9 +38,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;import org.springframework.cache.annotation.Cacheable;
-
-
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -51,13 +53,18 @@ public class MatchServiceImpl implements MatchService {
     private final MatchNotificationService matchNotificationService;
     private final AuthenticationUserRepository userRepository;
     private final CacheManager cacheManager;
-
+    private final DuelRepository duelRepository;
 
     public static final long PENALTY_MINUTES = 5;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
+    private static final Set<MatchStatus> PAST_MATCH_STATUSES = EnumSet.of(
+            MatchStatus.COMPLETED,
+            MatchStatus.CANCELED,
+            MatchStatus.EXPIRED
+    );
 
     private String getUsernameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
@@ -65,7 +72,6 @@ public class MatchServiceImpl implements MatchService {
         }
         return email.substring(0, email.indexOf("@"));
     }
-
 
     @Override
     public CreateDuelResponse createDuel(CreateDuelRequest request, Long creatorId) {
@@ -86,7 +92,6 @@ public class MatchServiceImpl implements MatchService {
         String shareableLink = frontendUrl + "/match/join?roomCode=" + roomCode;
         return new CreateDuelResponse(savedMatch.getId(), roomCode, shareableLink);
     }
-
 
     @Override
     @Transactional
@@ -116,7 +121,6 @@ public class MatchServiceImpl implements MatchService {
         return new JoinDuelResponse(savedMatch.getId(), savedMatch.getScheduledAt());
     }
 
-
     @Override
     public DuelStateResponseDTO getDuelState(UUID matchId) {
         Match match = matchRepository.findById(matchId)
@@ -134,7 +138,6 @@ public class MatchServiceImpl implements MatchService {
 
         ProblemDetailResponse problemDTO = ProblemDetailResponse.fromEntity(problemEntity);
 
-        // This is safer to prevent NullPointerException if player two hasn't joined yet
         List<Long> userIds = new ArrayList<>();
         if (liveState.getPlayerOneId() != null) userIds.add(liveState.getPlayerOneId());
         if (liveState.getPlayerTwoId() != null) userIds.add(liveState.getPlayerTwoId());
@@ -152,7 +155,6 @@ public class MatchServiceImpl implements MatchService {
                 .playerTwoUsername(usernameMap.get(liveState.getPlayerTwoId()))
                 .build();
     }
-
 
     @Override
     public void processDuelSubmissionResult(UUID matchId, Long userId, SubmissionStatus submissionStatus) {
@@ -186,7 +188,6 @@ public class MatchServiceImpl implements MatchService {
             log.info("{} Penalties updated in Redis and notification sent.", logPrefix);
         }
     }
-
 
     @Override
     @Transactional
@@ -249,7 +250,6 @@ public class MatchServiceImpl implements MatchService {
         log.info("{} <- Match completion process finished successfully.", logPrefix);
     }
 
-
     private void updateUserStats(Long p1Id, Long p2Id, Long winnerId, boolean isDraw) {
         Map<Long, UserStats> statsMap = userStatsRepository.findAllById(Arrays.asList(p1Id, p2Id)).stream().collect(Collectors.toMap(UserStats::getUserId, Function.identity()));
         UserStats p1Stats = statsMap.computeIfAbsent(p1Id, id -> { UserStats newUserStats = new UserStats(); newUserStats.setUserId(id); return newUserStats; });
@@ -280,12 +280,10 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-
     private void updateUserStatsForDraw(Long p1Id, Long p2Id) {
         if (p1Id == null || p2Id == null) return;
         updateUserStats(p1Id, p2Id, null, true);
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -297,7 +295,6 @@ public class MatchServiceImpl implements MatchService {
         }
         return buildMatchResults(match);
     }
-
 
     private MatchResultDTO buildMatchResults(Match match) {
         List<Submission> allSubmissions = submissionRepository.findByMatchIdOrderByCreatedAtAsc(match.getId());
@@ -324,7 +321,6 @@ public class MatchServiceImpl implements MatchService {
 
         UUID winningSubmissionId = null;
         if (winnerId != null) {
-            // Use the repository method to find the winner's first accepted submission
             List<Submission> winnerSubmissions = submissionRepository
                     .findByMatchIdAndUserIdAndStatusOrderByCreatedAtAsc(
                             match.getId(),
@@ -350,7 +346,6 @@ public class MatchServiceImpl implements MatchService {
                 .winningSubmissionId(winningSubmissionId)
                 .build();
     }
-
 
     private PlayerResultDTO buildPlayerResultFromStored(Long userId, Match match, List<Submission> allSubmissions) {
         if (userId == null) return null;
@@ -383,34 +378,61 @@ public class MatchServiceImpl implements MatchService {
     }
 
 
-    private static final Set<MatchStatus> PAST_MATCH_STATUSES = EnumSet.of(
-            MatchStatus.COMPLETED,
-            MatchStatus.CANCELED,
-            MatchStatus.EXPIRED
-    );
-
-
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "matchHistory")
+    @Cacheable(value = "matchHistory", key = "#userId + '-' + #result + '-' + #pageable.pageNumber")
     public PageDto<PastMatchDto> getPastMatchesForUser(Long userId, String result, Pageable pageable) {
-        Page<Match> matchesPage;
 
+        List<Match> standardMatches;
         if ("WIN".equalsIgnoreCase(result)) {
-            matchesPage = matchRepository.findUserWins(userId, PAST_MATCH_STATUSES, pageable);
+            standardMatches = matchRepository.findUserWins(userId, PAST_MATCH_STATUSES, Pageable.unpaged()).getContent();
         } else if ("LOSS".equalsIgnoreCase(result)) {
-            matchesPage = matchRepository.findUserLosses(userId, PAST_MATCH_STATUSES, pageable);
+            standardMatches = matchRepository.findUserLosses(userId, PAST_MATCH_STATUSES, Pageable.unpaged()).getContent();
         } else if ("DRAW".equalsIgnoreCase(result)) {
-            matchesPage = matchRepository.findUserDraws(userId, PAST_MATCH_STATUSES, pageable);
+            standardMatches = matchRepository.findUserDraws(userId, PAST_MATCH_STATUSES, Pageable.unpaged()).getContent();
         } else {
-            matchesPage = matchRepository.findUserMatchesByStatus(userId, PAST_MATCH_STATUSES, pageable);
+            standardMatches = matchRepository.findUserMatchesByStatus(userId, PAST_MATCH_STATUSES, Pageable.unpaged()).getContent();
         }
 
-        Page<PastMatchDto> dtoPage = matchesPage.map(match -> convertToDto(match, userId));
+        List<DuelHistory> duelMatches = duelRepository.findAllByPlayer1IdOrPlayer2Id(userId, userId);
 
-        return new PageDto<>(dtoPage);
+        if (result != null && !result.equalsIgnoreCase("ALL")) {
+            duelMatches = duelMatches.stream().filter(duel -> {
+                boolean isWinner = userId.equals(duel.getWinnerId());
+                boolean isDraw = duel.getWinnerId() == null;
+
+                if ("WIN".equalsIgnoreCase(result)) return isWinner;
+                if ("LOSS".equalsIgnoreCase(result)) return !isWinner && !isDraw;
+                if ("DRAW".equalsIgnoreCase(result)) return isDraw;
+                return true;
+            }).collect(Collectors.toList());
+        }
+
+        List<PastMatchDto> mergedDtos = new ArrayList<>();
+
+        mergedDtos.addAll(standardMatches.stream()
+                .map(m -> convertToDto(m, userId))
+                .toList());
+
+        mergedDtos.addAll(duelMatches.stream()
+                .map(d -> convertDuelToDto(d, userId))
+                .toList());
+
+        mergedDtos.sort(Comparator.comparing(PastMatchDto::getCreatedAt).reversed());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), mergedDtos.size());
+
+        List<PastMatchDto> pageContent;
+        if (start >= mergedDtos.size()) {
+            pageContent = Collections.emptyList();
+        } else {
+            pageContent = mergedDtos.subList(start, end);
+        }
+
+        Page<PastMatchDto> page = new PageImpl<>(pageContent, pageable, mergedDtos.size());
+        return new PageDto<>(page);
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -456,7 +478,9 @@ public class MatchServiceImpl implements MatchService {
         }
 
         String problemTitle = "Unknown Problem";
+        String problemIdStr = "";
         if (match.getProblemId() != null) {
+            problemIdStr = match.getProblemId().toString();
             problemTitle = problemRepository.findById(match.getProblemId())
                     .map(Problem::getTitle)
                     .orElse("Unknown Problem");
@@ -468,13 +492,49 @@ public class MatchServiceImpl implements MatchService {
                 .result(determineResult(match, currentUserId))
                 .opponentId(opponentId)
                 .opponentUsername(opponentUsername)
-                .problemId(match.getProblemId())
+                .problemId(problemIdStr)
                 .problemTitle(problemTitle)
                 .endedAt(match.getEndedAt())
                 .createdAt(match.getCreatedAt())
+                .matchType("STANDARD")
                 .build();
     }
 
+    private PastMatchDto convertDuelToDto(DuelHistory duel, Long currentUserId) {
+        Long opponentId = Objects.equals(duel.getPlayer1Id(), currentUserId)
+                ? duel.getPlayer2Id()
+                : duel.getPlayer1Id();
+
+        String opponentHandle = Objects.equals(duel.getPlayer1Id(), currentUserId)
+                ? duel.getPlayer2Handle()
+                : duel.getPlayer1Handle();
+
+        String result = "DRAW";
+        if (duel.getWinnerId() != null) {
+            result = duel.getWinnerId().equals(currentUserId) ? "WIN" : "LOSS";
+        }
+
+        // Convert Timestamps
+        Instant created = duel.getStartedAt() != null
+                ? duel.getStartedAt().atZone(java.time.ZoneId.systemDefault()).toInstant()
+                : Instant.now();
+        Instant ended = duel.getEndedAt() != null
+                ? duel.getEndedAt().atZone(java.time.ZoneId.systemDefault()).toInstant()
+                : null;
+
+        return PastMatchDto.builder()
+                .matchId(duel.getDuelId())
+                .status(MatchStatus.COMPLETED)
+                .result(result)
+                .opponentId(opponentId)
+                .opponentUsername(opponentHandle)
+                .problemId("N/A")
+                .problemTitle("Codeforces Duel")
+                .endedAt(ended)
+                .createdAt(created)
+                .matchType("DUEL")
+                .build();
+    }
 
     private String determineResult(Match match, Long currentUserId) {
         switch (match.getStatus()) {

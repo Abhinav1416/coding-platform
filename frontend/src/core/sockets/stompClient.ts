@@ -97,6 +97,10 @@ class StompService {
     public subscribeToCountdown(matchId: string, onEvent: (event: any) => void): StompSubscription {
         return this.subscribe(`/topic/match/${matchId}/countdown`, onEvent);
     }
+
+    public subscribeToDuel(duelId: string, onEvent: (event: any) => void): StompSubscription {
+        return this.subscribe(`/topic/duel/${duelId}`, onEvent);
+    }
 }
 
 export const stompService = new StompService();

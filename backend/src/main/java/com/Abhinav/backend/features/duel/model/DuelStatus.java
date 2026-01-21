@@ -4,5 +4,6 @@ public enum DuelStatus {
     WAITING,
     PENDING,
     LIVE,
-    FINISHED
+    FINISHED,
+    CANCELLED
 }

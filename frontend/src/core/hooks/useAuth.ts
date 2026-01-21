@@ -6,6 +6,7 @@ import { fetchMyPermissions } from '../../features/auth/services/authService';
 
 interface DecodedToken {
   sub: string;
+  userId: number;
   roles: string[];
   isTwoFactorEnabled: boolean;
   iat: number;
@@ -70,7 +71,9 @@ export const useAuth = () => {
     isAuthenticated: !!decodedToken,
     user: decodedToken 
       ? { 
+          id: decodedToken.userId,
           email: decodedToken.sub, 
+          username: decodedToken.sub.split('@')[0],
           roles: decodedToken.roles,
           twoFactorEnabled: decodedToken.isTwoFactorEnabled 
         } 

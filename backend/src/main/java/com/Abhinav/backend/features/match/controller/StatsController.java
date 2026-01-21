@@ -19,7 +19,6 @@ public class StatsController {
     private final StatsService statsService;
 
 
-
     @GetMapping("/{userId}")
     public ResponseEntity<UserStatsDTO> getUserStats(@PathVariable Long userId) {
         UserStatsDTO stats = statsService.getUserStats(userId);

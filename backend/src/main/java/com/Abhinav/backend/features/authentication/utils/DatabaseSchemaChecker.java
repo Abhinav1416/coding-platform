@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication;
+package com.Abhinav.backend.features.authentication.utils;
 
 import com.Abhinav.backend.features.authentication.repository.RoleRepository;
 import org.slf4j.Logger;

@@ -1,26 +1,33 @@
-package com.Abhinav.backend.features.duel.model;
+package com.Abhinav.backend.features.duel.dto;
 
-import lombok.AllArgsConstructor;
+import com.Abhinav.backend.features.duel.model.DuelScoreboard;
+import com.Abhinav.backend.features.duel.model.DuelStatus;
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+
 import java.util.List;
 import java.util.UUID;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class DuelData {
+@Builder
+public class DuelStateResponse {
     private UUID duelId;
     private DuelStatus status;
     private DuelScoreboard scoreboard;
+
     private String player1Handle;
     private String player2Handle;
-    private List<String> problemLinks;
-    private int durationMinutes;
-    private int startsInMinutes;
-    private String roomCode;
-    private List<String> problemIds;
+
     private Long player1UserId;
     private Long player2UserId;
+
+    private List<String> problemLinks;
+    private List<String> problemIds;
+
+    private int durationMinutes;
+    private int startsInMinutes;
+
+    private String roomCode;
+
     private Long startTime;
 }

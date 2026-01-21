@@ -1,6 +1,6 @@
 package com.Abhinav.backend.features.duel.service;
 
-import com.Abhinav.backend.features.duel.model.DuelData;
+import com.Abhinav.backend.features.duel.dto.DuelStateResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -15,11 +15,7 @@ public class DuelNotificationService {
 
     private final SimpMessagingTemplate messagingTemplate;
 
-    /**
-     * Broadcasts the full DuelData object to /topic/duel/{duelId}
-     * Frontend subscribes to this to get live updates.
-     */
-    public void sendDuelUpdate(UUID duelId, DuelData duelData) {
+    public void sendDuelUpdate(UUID duelId, DuelStateResponse duelData) {
         String destination = "/topic/duel/" + duelId;
 
         log.info("📡 WS Broadcast -> {}: Status={}, P1={}, P2={}",

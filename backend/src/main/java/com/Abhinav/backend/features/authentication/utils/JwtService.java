@@ -44,6 +44,7 @@ public class JwtService {
         if (userDetails instanceof AuthenticationUser) {
             AuthenticationUser authUser = (AuthenticationUser) userDetails;
             extraClaims.put("isTwoFactorEnabled", authUser.getTwoFactorEnabled());
+            extraClaims.put("userId", authUser.getId());
         }
 
         return buildToken(extraClaims, userDetails, ACCESS_TOKEN_EXPIRATION);

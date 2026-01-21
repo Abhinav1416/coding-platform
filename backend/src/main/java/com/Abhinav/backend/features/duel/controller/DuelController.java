@@ -1,11 +1,7 @@
 package com.Abhinav.backend.features.duel.controller;
 
 import com.Abhinav.backend.features.authentication.model.AuthenticationUser;
-import com.Abhinav.backend.features.duel.dto.CreateDuelRequest;
-import com.Abhinav.backend.features.duel.dto.DuelHistoryResponse;
-import com.Abhinav.backend.features.duel.dto.DuelResponse;
-import com.Abhinav.backend.features.duel.dto.JoinDuelRequest;
-import com.Abhinav.backend.features.duel.model.DuelData;
+import com.Abhinav.backend.features.duel.dto.*;
 import com.Abhinav.backend.features.duel.model.DuelHistory;
 import com.Abhinav.backend.features.duel.model.DuelScoreboard;
 import com.Abhinav.backend.features.duel.repository.DuelRepository;
@@ -53,7 +49,6 @@ public class DuelController {
             @AuthenticationPrincipal AuthenticationUser user) {
 
         UUID duelId = duelManager.getDuelIdByCode(roomCode);
-
         DuelResponse response = duelManager.joinRoom(duelId, user.getId(), request.getHandle());
 
         return ResponseEntity.ok(response);
@@ -62,10 +57,11 @@ public class DuelController {
     /**
      * Helper: Get Live Match State (From Redis)
      * Frontend polls this or uses it on page load to sync state
+     * Returns: Safe DTO
      */
     @GetMapping("/{duelId}")
-    public ResponseEntity<DuelData> getDuelState(@PathVariable UUID duelId) {
-        DuelData data = duelManager.getDuelState(duelId);
+    public ResponseEntity<DuelStateResponse> getDuelState(@PathVariable UUID duelId) {
+        DuelStateResponse data = duelManager.getDuelState(duelId);
 
         if (data == null) {
             throw new ResourceNotFoundException("Live duel not found with ID: " + duelId + ". It may have finished.");

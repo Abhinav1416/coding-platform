@@ -36,6 +36,12 @@ public class RedisExpirationListener implements MessageListener {
                 Thread.ofVirtual().start(() -> problemService.cleanupPendingProblem(problemId));
             }
 
+            else if (expiredKey.startsWith("duel:waiting:")) {
+                UUID duelId = UUID.fromString(expiredKey.substring("duel:waiting:".length()));
+                logger.info("⏰ Waiting time expired for Duel {}. Cancelling room.", duelId);
+                duelManager.cancelWaitingRoom(duelId);
+            }
+
             else if (expiredKey.startsWith("duel:start:")) {
                 UUID duelId = UUID.fromString(expiredKey.substring("duel:start:".length()));
                 duelManager.startDuel(duelId);

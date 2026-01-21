@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.authentication;
+package com.Abhinav.backend.features.authentication.utils;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;

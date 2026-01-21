@@ -73,8 +73,13 @@ public class SecurityConfig {
                                 "/api/v1/authentication/validate-email-verification-token",
                                 "/api/v1/authentication/refresh-access-token"
                         ).permitAll()
+
                         .requestMatchers("/api/internal/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/problems/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/duel/**", "/api/duels/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/match/**", "/api/matches/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -94,7 +99,7 @@ public class SecurityConfig {
         // 2. Allow ALL standard methods
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-        // 3. THIS IS THE FIX: Allow ALL headers (solving the 403 issue)
+        // 3. Allow ALL headers
         configuration.setAllowedHeaders(List.of("*"));
 
         // 4. Allow credentials (cookies/auth headers)
