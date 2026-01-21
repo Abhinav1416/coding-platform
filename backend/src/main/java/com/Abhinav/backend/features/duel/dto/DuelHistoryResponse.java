@@ -18,6 +18,5 @@ public class DuelHistoryResponse {
     private int player2Score;
     private LocalDateTime endedAt;
 
-    // Returns object structure, NOT string
     private DuelScoreboard detailedScoreboard;
 }

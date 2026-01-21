@@ -21,6 +21,5 @@ public class DuelData {
     private String roomCode;
     private List<String> problemIds;
 
-    // Ensure this field exists for relative time calculation
     private Long startTime;
 }

@@ -68,8 +68,6 @@ public class DuelController {
         DuelData data = duelManager.getDuelState(duelId);
 
         if (data == null) {
-            // If not in Redis, it might be finished.
-            // You could optionally redirect to history here, or throw 404.
             throw new ResourceNotFoundException("Live duel not found with ID: " + duelId + ". It may have finished.");
         }
 
@@ -87,7 +85,6 @@ public class DuelController {
 
         DuelScoreboard scoreboard = null;
         try {
-            // Deserialize the stored JSON string back into the Scoreboard object
             if (history.getScoreboardJson() != null) {
                 scoreboard = objectMapper.readValue(history.getScoreboardJson(), DuelScoreboard.class);
             }
@@ -103,7 +100,7 @@ public class DuelController {
                 .player2Score(history.getPlayer2Score())
                 .winnerHandle(history.getWinnerHandle())
                 .endedAt(history.getEndedAt())
-                .detailedScoreboard(scoreboard) // This contains the full history map
+                .detailedScoreboard(scoreboard)
                 .build();
 
         return ResponseEntity.ok(response);
