@@ -1,7 +1,5 @@
 import type { ProblemDetail } from '../../problem/types/problem';
 
-
-
 export interface CreateMatchRequest {
   difficultyMin: number;
   difficultyMax: number;
@@ -21,7 +19,6 @@ export interface JoinMatchResponse {
   scheduledAt: string;
 }
 
-
 export interface LobbyState {
   matchId: string;
   playerOneId: number;
@@ -32,6 +29,7 @@ export interface LobbyState {
   scheduledAt: string | null;
   durationInMinutes: number;
 }
+
 export interface UserStats {
   userId: number;
   duelsPlayed: number;
@@ -39,6 +37,7 @@ export interface UserStats {
   duelsLost: number;
   duelsDrawn: number;
 }
+
 export interface Player {
   userId: number;
   username: string;
@@ -48,7 +47,6 @@ export interface Player {
   duelsLost: number;
   duelsDrawn: number;
 }
-
 
 export interface LiveMatchState {
     matchId: string;
@@ -62,6 +60,7 @@ export interface LiveMatchState {
     startedAt: string;
     durationInMinutes: number;
 }
+
 export interface ArenaData {
     liveState: LiveMatchState;
     problemDetails: ProblemDetail;
@@ -85,7 +84,6 @@ export interface PlayerResult {
     effectiveTime: string | null;
     submissions: SubmissionSummaryInResult[];
 }
-
 
 export interface MatchResult {
     matchId: string;
@@ -146,4 +144,5 @@ export interface PastMatch {
     problemTitle: string;
     endedAt: string | null;
     createdAt: string;
+    matchType?: 'STANDARD' | 'DUEL'; 
 }

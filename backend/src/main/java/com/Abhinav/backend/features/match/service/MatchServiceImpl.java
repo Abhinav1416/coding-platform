@@ -514,7 +514,6 @@ public class MatchServiceImpl implements MatchService {
             result = duel.getWinnerId().equals(currentUserId) ? "WIN" : "LOSS";
         }
 
-        // Convert Timestamps
         Instant created = duel.getStartedAt() != null
                 ? duel.getStartedAt().atZone(java.time.ZoneId.systemDefault()).toInstant()
                 : Instant.now();

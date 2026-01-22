@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaGamepad, FaTrophy, FaTimesCircle, FaHandshake, FaAngleRight, FaCode, FaSignInAlt } from 'react-icons/fa';
-import { Loader2, Swords, Zap, Users } from 'lucide-react';
+import { Loader2, Swords, Zap, Timer, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../core/hooks/useAuth';
 import { getCurrentUserStats, getMatchHistory } from '../features/match/services/matchService';
 import { getProblemCount } from '../features/problem/services/problemService';
@@ -29,7 +29,7 @@ const Home: React.FC = () => {
 
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentMatches, setRecentMatches] = useState<PastMatch[]>([]);
-  const [problemCount, setProblemCount] = useState<number>(0);
+  const [, setProblemCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -81,26 +81,35 @@ const Home: React.FC = () => {
             Welcome, <span className="text-[#F97316] capitalize">{username}</span>
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-            Choose your arena and start coding.
+            Choose your battle mode.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
         <div className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 dark:from-zinc-900 dark:to-zinc-800 rounded-2xl p-8 border border-orange-200 dark:border-zinc-700 shadow-sm transition-all hover:shadow-md">
           <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-5">
             <Swords size={120} className="text-[#F97316]" />
           </div>
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-200 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold mb-4">
-              <Zap size={12} /> NEW FEATURE
+              <Zap size={12} /> RECOMMENDED
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
               <Swords className="text-[#F97316]" /> Codeforces Duel
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-sm">
-              Real-time 1v1 battles using live Codeforces problems. Official ICPC scoring rules.
+            <p className="text-gray-600 dark:text-gray-400 mb-6 min-h-[48px]">
+              Battle on multiple problems from live Codeforces contests. 
+              <strong> ICPC Scoring</strong> (Points + Time Penalty).
             </p>
+
+            <ul className="space-y-2 mb-8 text-sm text-gray-700 dark:text-gray-300">
+               <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500"/> Supports multiple problems (1-4)</li>
+               <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500"/> Official ICPC Penalty Rules</li>
+               <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500"/> Submit directly on Codeforces</li>
+            </ul>
+
             <div className="flex flex-col sm:flex-row gap-4">
               <button onClick={() => navigate('/duel/create')} className="flex-1 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all transform hover:scale-105">
                 Create Room
@@ -118,14 +127,22 @@ const Home: React.FC = () => {
           </div>
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 text-xs font-bold mb-4">
-              <Users size={12} /> CLASSIC
+              <Timer size={12} /> SPEED RUN
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
               <FaCode className="text-blue-500" /> Standard Match
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-sm">
-              Practice with our internal problem library. Good for warmups.
+            <p className="text-gray-600 dark:text-gray-400 mb-6 min-h-[48px]">
+              A rapid 1v1 on a single problem from our library.
+              <strong> Sudden Death Rules:</strong> The first person to solve it wins instantly.
             </p>
+
+            <ul className="space-y-2 mb-8 text-sm text-gray-700 dark:text-gray-300">
+               <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-blue-500"/> Single Problem (Internal Library)</li>
+               <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-blue-500"/> First AC ends the match</li>
+               <li className="flex items-center gap-2"><CheckCircle2 size={16} className="text-blue-500"/> Best for quick warmups</li>
+            </ul>
+
             <div className="flex flex-col sm:flex-row gap-4">
               <button onClick={() => navigate('/match/create')} className="flex-1 bg-gray-900 dark:bg-zinc-700 hover:bg-gray-800 dark:hover:bg-zinc-600 text-white font-bold py-3 px-6 rounded-lg transition-all">
                 Create Match
@@ -165,11 +182,13 @@ const Home: React.FC = () => {
                   {recentMatches.map((match) => {
                     const resultInfo = getResultInfo(match.result);
                     const displayDate = match.endedAt || match.createdAt;
+                    const isDuel = match.matchType === 'DUEL' || match.problemTitle.includes("Duel");
+
                     return (
                       <li key={match.matchId} className="p-4 sm:p-5 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                         <div className="flex items-center gap-4">
                           <div className={`p-2 rounded-lg ${match.result === 'WIN' ? 'bg-green-100 dark:bg-green-900/20 text-green-600' : 'bg-gray-100 dark:bg-zinc-800 text-gray-500'}`}>
-                              <FaTrophy size={16} />
+                             {isDuel ? <Swords size={16} /> : <FaGamepad size={16} />}
                           </div>
                           <div>
                               <p className="font-semibold text-gray-900 dark:text-white line-clamp-1">{match.problemTitle}</p>
