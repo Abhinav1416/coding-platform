@@ -25,10 +25,7 @@ public class DuelController {
     private final DuelRepository duelRepository;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Phase 1: Create a Match
-     * User 1 sends settings -> Gets back Room Code & UUID
-     */
+
     @PostMapping("/create")
     public ResponseEntity<DuelResponse> createDuel(
             @Valid @RequestBody CreateDuelRequest request,
@@ -38,10 +35,7 @@ public class DuelController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Phase 2: Join a Match using Room Code
-     * User 2 enters "123456" -> Backend resolves to UUID -> Joins
-     */
+
     @PostMapping("/join/{roomCode}")
     public ResponseEntity<DuelResponse> joinDuel(
             @PathVariable String roomCode,
@@ -54,11 +48,7 @@ public class DuelController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Helper: Get Live Match State (From Redis)
-     * Frontend polls this or uses it on page load to sync state
-     * Returns: Safe DTO
-     */
+
     @GetMapping("/{duelId}")
     public ResponseEntity<DuelStateResponse> getDuelState(@PathVariable UUID duelId) {
         DuelStateResponse data = duelManager.getDuelState(duelId);
@@ -70,10 +60,7 @@ public class DuelController {
         return ResponseEntity.ok(data);
     }
 
-    /**
-     * Get Finished Match History (From Database)
-     * Returns the winner, final scores, and detailed submission history
-     */
+
     @GetMapping("/history/{duelId}")
     public ResponseEntity<DuelHistoryResponse> getDuelHistory(@PathVariable UUID duelId) {
         DuelHistory history = duelRepository.findByDuelId(duelId)

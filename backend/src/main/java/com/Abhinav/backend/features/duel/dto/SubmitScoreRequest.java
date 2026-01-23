@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class SubmitScoreRequest {
     private String problemId;
     private String verdict;
-    private long timeTakenSeconds;    // Relative time
-    private long timeConsumedMillis;  // Execution time from Sentinel
-    private long memoryConsumedBytes; // Memory from Sentinel
+    private long timeTakenSeconds;
+    private long timeConsumedMillis;
+    private long memoryConsumedBytes;
 }

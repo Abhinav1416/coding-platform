@@ -1,4 +1,4 @@
-package com.Abhinav.backend.features.duel.service;
+package com.Abhinav.backend.features.duel.producer;
 
 import com.Abhinav.backend.features.duel.dto.MatchStartEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,13 +22,11 @@ public class SentinelProducer {
         try {
             String payload = objectMapper.writeValueAsString(event);
 
-            // 2. Log the Payload
             log.info("================= SQS OUTBOUND =================");
             log.info("➡ [TARGET]  {}", QUEUE_NAME);
             log.info("➡ [PAYLOAD] {}", payload);
             log.info("================================================");
 
-            // 3. Send the JSON String (instead of the object)
             sqsTemplate.send(QUEUE_NAME, payload);
 
         } catch (JsonProcessingException e) {

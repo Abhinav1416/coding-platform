@@ -2,6 +2,7 @@ package com.Abhinav.backend.features.duel.service;
 
 import com.Abhinav.backend.features.duel.dto.*;
 import com.Abhinav.backend.features.duel.model.*;
+import com.Abhinav.backend.features.duel.producer.SentinelProducer;
 import com.Abhinav.backend.features.duel.repository.DuelRepository;
 import com.Abhinav.backend.features.match.model.UserStats;
 import com.Abhinav.backend.features.match.repository.UserStatsRepository;

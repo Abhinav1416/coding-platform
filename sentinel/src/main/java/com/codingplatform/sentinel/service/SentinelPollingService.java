@@ -54,7 +54,6 @@ public class SentinelPollingService {
         try {
             processMatches(activeMatches);
 
-            // --- SMART SUCCESS HANDLING (Binary Search) ---
             if (currentBackoff > MIN_INTERVAL) {
 
                 long dangerLine = Math.max(lastFailureBackoff, MIN_INTERVAL);
