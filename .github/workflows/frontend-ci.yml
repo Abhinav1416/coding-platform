@@ -10,6 +10,10 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -31,10 +35,31 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Verify Docker Build (Dry Run)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631534400515:role/GitHubActionsServiceRole
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push Docker image to AWS ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: codeduels-frontend
+          IMAGE_TAG: ${{ github.sha }}
+          API_URL: ${{ vars.VITE_API_URL }}
+          WS_URL: ${{ vars.VITE_WEBSOCKET_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
         run: |
           docker build \
-            --build-arg VITE_API_URL=http://localhost:8080/api \
-            --build-arg VITE_WEBSOCKET_URL=http://localhost:8080/ws \
-            --build-arg VITE_GOOGLE_CLIENT_ID=dummy-client-id \
-            -t codeduels-frontend:test .
+            --build-arg VITE_API_URL=$API_URL \
+            --build-arg VITE_WEBSOCKET_URL=$WS_URL \
+            --build-arg VITE_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
