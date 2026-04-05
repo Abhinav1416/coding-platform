@@ -25,6 +25,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: sqs
+          AWS_DEFAULT_REGION: ap-southeast-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+        ports:
+          - 4566:4566
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -40,8 +50,13 @@ jobs:
 
       - name: Run Unit Tests
         env:
+          SPRING_PROFILES_ACTIVE: dev
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
+          SPRING_CLOUD_AWS_SQS_ENDPOINT: http://localhost:4566
+          SPRING_CLOUD_AWS_REGION_STATIC: ap-southeast-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
         run: ./gradlew test --no-daemon
 
       - name: Verify Docker Build (Dry Run)
