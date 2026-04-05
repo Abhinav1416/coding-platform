@@ -1,0 +1,109 @@
+services:
+  # --- INFRASTRUCTURE ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: codeduel_postgres
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=codeduels
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: codeduel_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  sentinel_redis:
+    image: redis:7-alpine
+    container_name: codeduel_sentinel_redis
+    ports:
+      - '6380:6379'
+    volumes:
+      - sentinel_redis_data:/data
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: codeduel_mailhog
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: codeduel_localstack
+    ports:
+      - '4566:4566'
+    environment:
+      - SERVICES=s3,sqs,lambda,iam,logs
+      - AWS_DEFAULT_REGION=ap-southeast-1
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
+
+  # --- APPLICATIONS ---
+
+  main-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codeduel_main_backend
+    ports:
+      - '8080:8080'
+    env_file: ./backend/.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_MAIL_HOST=mailhog
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/codeduels
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_CLOUD_AWS_S3_ENDPOINT=http://localstack:4566
+      - SPRING_CLOUD_AWS_SQS_ENDPOINT=http://localstack:4566
+      - SPRING_CLOUD_AWS_LAMBDA_ENDPOINT=http://localstack:4566
+    depends_on:
+      - postgres
+      - redis
+      - localstack
+      - mailhog
+
+  sentinel-service:
+    build:
+      context: ./sentinel
+      dockerfile: Dockerfile
+    container_name: codeduel_sentinel
+    ports:
+      - '8081:8081'
+    environment:
+      - SPRING_DATA_REDIS_HOST=sentinel_redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_CLOUD_AWS_SQS_ENDPOINT=http://localstack:4566
+    depends_on:
+      - sentinel_redis
+      - localstack
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8080/api
+        - VITE_WEBSOCKET_URL=http://localhost:8080/ws
+        - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    container_name: codeduel_frontend
+    ports:
+      - '5173:80'
+    depends_on:
+      - main-backend
+
+volumes:
+  postgres_data:
+  localstack_data:
+  redis_data:
+  sentinel_redis_data:

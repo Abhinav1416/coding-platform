@@ -17,5 +17,5 @@ RUN ./gradlew build -x test --no-daemon
 FROM --platform=linux/amd64 eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=builder /workspace/app/build/libs/*.jar app.jar
-EXPOSE 8080
+EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]

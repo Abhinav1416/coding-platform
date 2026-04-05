@@ -41,6 +41,7 @@ services:
       - AWS_DEFAULT_REGION=ap-southeast-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
+      - SPRING_MAIL_HOST=mailhog
     volumes:
       - localstack_data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock
