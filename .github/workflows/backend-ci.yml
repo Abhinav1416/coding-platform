@@ -69,20 +69,7 @@ jobs:
 
       - name: Run Unit Tests
         env:
-          SPRING_PROFILES_ACTIVE: dev
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/codeduels
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: password
-          SPRING_DATA_REDIS_HOST: localhost
-          SPRING_DATA_REDIS_PORT: 6379
-          SPRING_CLOUD_AWS_S3_ENDPOINT: http://localhost:4566
-          SPRING_CLOUD_AWS_SQS_ENDPOINT: http://localhost:4566
-          SPRING_CLOUD_AWS_LAMBDA_ENDPOINT: http://localhost:4566
-          SPRING_CLOUD_AWS_REGION_STATIC: ap-southeast-1
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          SPRING_MAIL_HOST: localhost
-          SPRING_MAIL_PORT: 1025
+          SPRING_PROFILES_ACTIVE: ci
         run: ./gradlew test --no-daemon
 
       - name: Verify Docker Build (Dry Run)
