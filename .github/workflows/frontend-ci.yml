@@ -1,0 +1,36 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ "feature/sentinel-service" ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 23
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Verify Docker Build (Dry Run)
+        run: |
+          docker build \
+            --build-arg VITE_API_URL=http://localhost:8080/api \
+            --build-arg VITE_WEBSOCKET_URL=http://localhost:8080/ws \
+            --build-arg VITE_GOOGLE_CLIENT_ID=dummy-client-id \
+            -t codeduels-frontend:test .
