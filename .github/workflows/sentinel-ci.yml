@@ -14,6 +14,17 @@ jobs:
       run:
         working-directory: ./sentinel
 
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -28,6 +39,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Unit Tests
+        env:
+          SPRING_DATA_REDIS_HOST: localhost
+          SPRING_DATA_REDIS_PORT: 6379
         run: ./gradlew test --no-daemon
 
       - name: Verify Docker Build (Dry Run)
