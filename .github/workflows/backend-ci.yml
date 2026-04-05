@@ -40,7 +40,7 @@ jobs:
           --health-retries 5
 
       localstack:
-        image: localstack/localstack:latest
+        image: localstack/localstack:3.8.0
         env:
           SERVICES: s3,sqs,lambda,iam,logs
           AWS_DEFAULT_REGION: ap-southeast-1
