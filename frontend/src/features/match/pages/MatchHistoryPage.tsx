@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getMatchHistory } from '../services/matchService';
@@ -8,8 +8,7 @@ import { Pagination } from '../../../core/components/Pagination';
 
 const MatchHistoryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  
+
   const [data, setData] = useState<Page<PastMatch> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +29,6 @@ const MatchHistoryPage: React.FC = () => {
       .finally(() => setIsLoading(false));
   }, [currentPage, currentFilter]);
   
-  const handleMatchClick = (match: PastMatch) => {
-    if (match.result === 'CANCELED') return;
-    navigate(`/match/results/${match.matchId}`);
-  };
-
   const handlePageChange = (page: number) => {
     setSearchParams(prevParams => {
       prevParams.set('page', page.toString());
@@ -104,7 +98,7 @@ const MatchHistoryPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-zinc-800">
                 {data.content.map(match => (
-                  <tr key={match.matchId} onClick={() => handleMatchClick(match)} className={`transition-colors ${match.result !== 'CANCELED' ? 'hover:bg-gray-50 dark:hover:bg-zinc-800/50 cursor-pointer' : 'opacity-60'}`}>
+                  <tr key={match.matchId} className={`transition-colors ${match.result !== 'CANCELED' ? 'hover:bg-gray-50 dark:hover:bg-zinc-800/50' : 'opacity-60'}`}>
                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{match.problemTitle}</td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{match.opponentUsername}</td>
                     <td className="px-6 py-4 text-center">

@@ -23,7 +23,6 @@ public class MatchController {
 
 
 
-
     @PostMapping
     public ResponseEntity<CreateDuelResponse> createDuel(
             @Valid @RequestBody CreateDuelRequest request,

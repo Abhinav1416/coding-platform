@@ -99,7 +99,6 @@ public class DuelManagerImpl implements DuelManager {
     public DuelResponse joinRoom(UUID duelId, Long userId, String player2Handle) {
         String dataKey = KEY_DATA + duelId;
 
-        @SuppressWarnings("unchecked")
         List<Object> txResults = redisTemplate.execute(new SessionCallback<List<Object>>() {
             @Override
             public List<Object> execute(RedisOperations operations) throws DataAccessException {
@@ -206,22 +205,76 @@ public class DuelManagerImpl implements DuelManager {
             log.info("Dispatching MatchStartEvent for Duel {}", duelId);
             sentinelProducer.sendMatchStart(event);
             broadcastUpdate(duelId, data);
+
+            long durationSeconds = data.getDurationMinutes() * 60L;
+            scheduler.schedule(() -> endDuel(duelId), durationSeconds, TimeUnit.SECONDS);
+            log.info("⏳ Scheduled endDuel for {} in {} seconds", duelId, durationSeconds);
         }
     }
 
     @Override
     public void submitScoreByHandle(UUID duelId, String handle, SubmitScoreRequest request) {
         log.info("⚡ Processing submission for Duel: {}, Handle: {}", duelId, handle);
-        String currentTimestamp = String.valueOf(Instant.now().getEpochSecond());
+        String dataKey = KEY_DATA + duelId;
+
         try {
-            stringRedisTemplate.execute(scoringScript, Collections.singletonList(KEY_DATA + duelId), handle, request.getProblemId(), request.getVerdict(), currentTimestamp, String.valueOf(request.getTimeConsumedMillis()), String.valueOf(request.getMemoryConsumedBytes()));
-            DuelData updatedData = (DuelData) redisTemplate.opsForValue().get(KEY_DATA + duelId);
-            if (updatedData != null) {
-                broadcastUpdate(duelId, updatedData);
-                if (updatedData.getStatus() == DuelStatus.FINISHED) {
-                    saveOrUpdateHistory(updatedData, false);
+            DuelData data = (DuelData) redisTemplate.opsForValue().get(dataKey);
+            if (data == null) {
+                log.warn("❌ Duel not found in Redis: {}", duelId);
+                return;
+            }
+
+            DuelScoreboard scoreboard = data.getScoreboard();
+            if (scoreboard == null) {
+                scoreboard = new DuelScoreboard();
+                data.setScoreboard(scoreboard);
+            }
+
+            DuelScoreboard.DuelUserStats userStats = scoreboard.getUsers()
+                    .computeIfAbsent(handle, k -> new DuelScoreboard.DuelUserStats());
+
+            DuelScoreboard.ProblemStats probStats = userStats.getProblems()
+                    .computeIfAbsent(request.getProblemId(), k -> new DuelScoreboard.ProblemStats());
+
+            long currentTimestampSeconds = Instant.now().getEpochSecond();
+
+            long elapsedSeconds = Math.max(0, currentTimestampSeconds - data.getStartTime());
+
+            DuelScoreboard.SubmissionData subData = new DuelScoreboard.SubmissionData(
+                    request.getVerdict(),
+                    request.getTimeConsumedMillis(),
+                    request.getMemoryConsumedBytes(),
+                    elapsedSeconds
+            );
+            probStats.getHistory().put(String.valueOf(currentTimestampSeconds), subData);
+
+            if (!"OK".equals(probStats.getStatus())) {
+                if ("OK".equals(request.getVerdict())) {
+                    probStats.setStatus("OK");
+
+                    long elapsedMinutes = elapsedSeconds / 60;
+                    probStats.setBestTime(elapsedSeconds);
+
+                    userStats.setSolved(userStats.getSolved() + 1);
+                    long penaltyForProblem = elapsedMinutes + (probStats.getAttempts() * 20L);
+                    userStats.setPenalty(userStats.getPenalty() + penaltyForProblem);
+
+                } else {
+                    probStats.setStatus(request.getVerdict());
+
+                    if (!"COMPILATION_ERROR".equals(request.getVerdict())) {
+                        probStats.setAttempts(probStats.getAttempts() + 1);
+                    }
                 }
             }
+
+            redisTemplate.opsForValue().set(dataKey, data, Duration.ofMinutes(data.getDurationMinutes() + 5));
+            broadcastUpdate(duelId, data);
+
+            if (data.getStatus() == DuelStatus.FINISHED) {
+                saveOrUpdateHistory(data, false);
+            }
+
         } catch (Exception e) {
             log.error("❌ Scoring error", e);
         }

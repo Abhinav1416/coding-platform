@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
@@ -12,13 +12,11 @@ interface DecodedToken {
     exp: number;
 }
 
-
 export interface AuthenticatedUser {
     email: string;
     roles: string[];
     twoFactorEnabled: boolean;
 }
-
 
 export interface AuthContextType {
     user: AuthenticatedUser | null;
@@ -51,7 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         navigate('/login');
     }, [navigate]);
 
-    const handleLoginSuccess = async (accessToken: string, refreshToken?: string) => {
+    // Wrapped in useCallback to keep its memory reference stable
+    const handleLoginSuccess = useCallback(async (accessToken: string, refreshToken?: string) => {
         localStorage.setItem('accessToken', accessToken);
         if (refreshToken) {
             localStorage.setItem('refreshToken', refreshToken);
@@ -64,12 +63,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             twoFactorEnabled: decoded.isTwoFactorEnabled,
         });
 
-        const fetchedPermissions = await fetchMyPermissions();
-        setPermissions(fetchedPermissions);
+        try {
+            const fetchedPermissions = await fetchMyPermissions();
+            setPermissions(fetchedPermissions);
+        } catch (error) {
+            console.error("Failed to fetch permissions", error);
+        }
+        
         navigate('/');
-    };
+    }, [navigate]);
 
-    const googleLogin = async (credentialResponse: CredentialResponse) => {
+    // Wrapped in useCallback
+    const googleLogin = useCallback(async (credentialResponse: CredentialResponse) => {
         try {
             if (!credentialResponse.credential) {
                 throw new Error("Google login failed: No credential returned.");
@@ -85,7 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error("Error during Google login:", error);
             logout();
         }
-    };
+    }, [handleLoginSuccess, logout]);
 
     useEffect(() => {
         const initializeAuth = async () => {
@@ -98,6 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             try {
                 const decoded = jwtDecode<DecodedToken>(token);
+                // Check if token is expired
                 if (decoded.exp * 1000 > Date.now()) {
                     setUser({ 
                         email: decoded.sub, 
@@ -110,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     logout();
                 }
             } catch (error) {
-                console.error("Invalid token:", error);
+                console.error("Invalid token during initialization:", error);
                 logout();
             }
             
@@ -119,15 +125,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         initializeAuth();
     }, [logout]);
 
-    const hasPermission = (permission: string): boolean => {
+    // Wrapped in useCallback
+    const hasPermission = useCallback((permission: string): boolean => {
         return permissions.includes(permission);
-    };
+    }, [permissions]);
 
-    const hasRole = (role: string): boolean => {
+    // Wrapped in useCallback
+    const hasRole = useCallback((role: string): boolean => {
         return user?.roles.includes(role) ?? false;
-    };
+    }, [user?.roles]);
     
-    const contextValue: AuthContextType = {
+    // The Ultimate Fix: Memoize the context value
+    const contextValue = useMemo<AuthContextType>(() => ({
         user,
         logout,
         isAuthenticated: !!user,
@@ -136,7 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasRole,
         updateUser: setUser,
         googleLogin,
-    };
+    }), [user, permissions, logout, hasPermission, hasRole, googleLogin]);
     
     if (isLoading) {
         return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading Application...</div>;

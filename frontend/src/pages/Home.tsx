@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaGamepad, FaTrophy, FaTimesCircle, FaHandshake, FaAngleRight, FaCode, FaSignInAlt } from 'react-icons/fa';
 import { Loader2, Swords, Zap, Timer, CheckCircle2 } from 'lucide-react';
@@ -27,13 +27,15 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const hasFetched = useRef(false);
+
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentMatches, setRecentMatches] = useState<PastMatch[]>([]);
   const [, setProblemCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.email || hasFetched.current) {
       setIsLoading(false);
       return;
     }
@@ -46,7 +48,7 @@ const Home: React.FC = () => {
           getProblemCount(),
         ]);
         setStats(statsData);
-        setRecentMatches(historyData.content);
+        setRecentMatches(historyData?.content || []);
         setProblemCount(problemCountData.totalCount);
       } catch (err) {
         console.error("Failed to load stats", err);
@@ -55,7 +57,7 @@ const Home: React.FC = () => {
       }
     };
     fetchData();
-  }, [user]);
+  }, [user?.email]);
 
   const getResultInfo = (result: PastMatch['result']) => {
     switch (result) {

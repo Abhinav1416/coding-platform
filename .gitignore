@@ -25,15 +25,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# ===================================================================
-# ENVIRONMENT & SENSITIVE FILES (THE MOST IMPORTANT PART)
-# ===================================================================
-# Ignore local environment files for Vite/Node projects
-frontend/.env
-frontend/.env.local
-
-# Ignore local environment file for the Spring Boot backend
-backend/.env
+**/.env
+**/.env.*
+!**/.env.example
 
 # ===================================================================
 # JAVA / GRADLE (BACKEND)

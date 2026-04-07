@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../core/context/ThemeContext';
-import type { AuthResponse } from "../types/auth";
 import LoginForm from '../components/LoginForm';
 
 const LoginPage = () => {
@@ -15,15 +14,22 @@ const LoginPage = () => {
     }
   }, [navigate]);
 
-  const handleAuthenticated = (data: AuthResponse) => {
-    if (data.accessToken) {
-      localStorage.setItem('accessToken', data.accessToken);
+  const handleAuthenticated = (data: any) => {
+    console.log("🔥 DEBUG - RAW BACKEND RESPONSE:", data);
+
+    // Grab the token whether the backend called it 'accessToken' OR 'token'
+    const tokenToSave = data.accessToken || data.token;
+
+    if (tokenToSave) {
+      localStorage.setItem('accessToken', tokenToSave);
+      
       if (data.refreshToken) {
         localStorage.setItem('refreshToken', data.refreshToken);
       }
+      
       navigate('/home');
     } else {
-      console.error("Authentication failed: One or both tokens were missing.");
+      console.error("❌ Authentication failed. Token missing from:", data);
     }
   };
 

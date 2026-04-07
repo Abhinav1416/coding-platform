@@ -1,0 +1,61 @@
+resource "aws_iam_role" "lambda_exec_role" {
+  name = "${var.project_name}-lambda-exec-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_lambda_function" "s3_finalization_lambda" {
+  filename         = "lambda_function.jar"
+  function_name    = "${var.project_name}-s3-finalization"
+  role             = aws_iam_role.lambda_exec_role.arn
+  handler          = "com.yourlambda.handler.S3FinalizationHandler::handleRequest"
+  runtime          = "java21"
+  timeout          = 30
+  memory_size      = 512
+
+  source_code_hash = filebase64sha256("lambda_function.jar")
+
+  environment {
+    variables = {
+      BACKEND_API_ENDPOINT = "http://${aws_lb.main.dns_name}"
+      INTERNAL_API_SECRET  = var.lambda_secret
+    }
+  }
+}
+
+resource "aws_lambda_permission" "allow_s3_to_call_lambda" {
+  statement_id  = "AllowExecutionFromS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.s3_finalization_lambda.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.backend_storage.arn
+}
+
+resource "aws_s3_bucket_notification" "bucket_notification" {
+  bucket = aws_s3_bucket.backend_storage.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.s3_finalization_lambda.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "uploads/pending/"
+    filter_suffix       = ".zip"
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3_to_call_lambda]
+}

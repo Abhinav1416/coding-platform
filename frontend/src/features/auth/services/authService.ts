@@ -14,7 +14,6 @@ import type {
   ChangePasswordRequest,
 } from "../types/auth";
 
-// ✅ FIXED: Removed the redundant "/api" prefix
 const AUTH_BASE_PATH = "/v1/authentication";
 
 export const register = async (
