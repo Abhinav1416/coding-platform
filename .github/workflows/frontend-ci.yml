@@ -2,7 +2,7 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ "feature/sentinel-service" ]
+    branches: [ "main", "feature/sentinel-service" ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
@@ -63,3 +63,11 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Force ECS Deployment
+        run: |
+          aws ecs update-service \
+            --cluster codeduels-cluster \
+            --service codeduels-frontend-service \
+            --force-new-deployment \
+            --region ap-south-1
