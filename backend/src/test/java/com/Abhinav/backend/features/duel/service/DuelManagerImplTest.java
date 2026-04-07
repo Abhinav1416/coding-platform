@@ -230,29 +230,28 @@ class DuelManagerImplTest {
         request.setTimeConsumedMillis(1500L);
         request.setMemoryConsumedBytes(2048L);
 
-        when(stringRedisTemplate.execute(
-                eq(scoringScript),
-                anyList(),
-                eq("PlayerOne"),
-                eq("4A"),
-                eq("OK"),
-                anyString(),
-                eq("1500"),
-                eq("2048")
-        )).thenReturn("OK");
+        testDuelData.setStatus(DuelStatus.LIVE);
+        long startTime = java.time.Instant.now().getEpochSecond() - 60;
+        testDuelData.setStartTime(startTime);
+        testDuelData.setScoreboard(new DuelScoreboard());
+
+        when(valueOps.get("duel:data:" + duelId)).thenReturn(testDuelData);
 
         duelManager.submitScoreByHandle(duelId, "PlayerOne", request);
 
-        verify(stringRedisTemplate).execute(
-                eq(scoringScript),
-                anyList(),
-                eq("PlayerOne"),
-                eq("4A"),
-                eq("OK"),
-                anyString(),
-                eq("1500"),
-                eq("2048")
-        );
+        ArgumentCaptor<DuelData> captor = ArgumentCaptor.forClass(DuelData.class);
+        verify(valueOps).set(eq("duel:data:" + duelId), captor.capture(), any(Duration.class));
+
+        DuelData updatedData = captor.getValue();
+        DuelScoreboard.DuelUserStats stats = updatedData.getScoreboard().getUsers().get("PlayerOne");
+        DuelScoreboard.ProblemStats pStats = stats.getProblems().get("4A");
+
+        assertThat(stats.getSolved()).isEqualTo(1);
+        assertThat(pStats.getStatus()).isEqualTo("OK");
+
+        assertThat(stats.getPenalty()).isEqualTo(1);
+
+        verify(notificationService).sendDuelUpdate(eq(duelId), any(DuelStateResponse.class));
     }
 
 
