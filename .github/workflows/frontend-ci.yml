@@ -2,20 +2,17 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ "main", "feature/sentinel-service" ]
+    branches: [ "feature/sentinel-service" ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,39 +32,25 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Build Frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_WEBSOCKET_URL: ${{ vars.VITE_WEBSOCKET_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        run: npm run build
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::631534400515:role/GitHubActionsServiceRole
           aws-region: ap-south-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push Docker image to AWS ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: codeduels-frontend
-          IMAGE_TAG: ${{ github.sha }}
-          API_URL: ${{ vars.VITE_API_URL }}
-          WS_URL: ${{ vars.VITE_WEBSOCKET_URL }}
-          GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+      - name: Deploy to S3
         run: |
-          docker build \
-            --build-arg VITE_API_URL=$API_URL \
-            --build-arg VITE_WEBSOCKET_URL=$WS_URL \
-            --build-arg VITE_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          aws s3 sync dist/ s3://${{ vars.S3_BUCKET }} --delete
 
-      - name: Force ECS Deployment
+      - name: Invalidate CloudFront Cache
         run: |
-          aws ecs update-service \
-            --cluster codeduels-cluster \
-            --service codeduels-frontend-service \
-            --force-new-deployment \
-            --region ap-south-1
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.CLOUDFRONT_ID }} \
+            --paths "/*"
