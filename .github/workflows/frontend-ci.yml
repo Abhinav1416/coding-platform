@@ -47,10 +47,11 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          aws s3 sync dist/ s3://${{ vars.S3_BUCKET }} --delete
+          aws s3 sync dist/ s3://${{ vars.S3_BUCKET }} --delete --region ap-south-1
 
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ vars.CLOUDFRONT_ID }} \
-            --paths "/*"
+            --paths "/*" \
+            --region ap-south-1
