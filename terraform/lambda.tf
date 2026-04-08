@@ -1,3 +1,8 @@
+data "aws_ssm_parameter" "lambda_secret_decrypted" {
+  name            = "/${var.project_name}/prod/lambda_secret"
+  with_decryption = true
+}
+
 resource "aws_iam_role" "lambda_exec_role" {
   name = "${var.project_name}-lambda-exec-role"
 
@@ -34,7 +39,7 @@ resource "aws_lambda_function" "s3_finalization_lambda" {
   environment {
     variables = {
       BACKEND_API_ENDPOINT = "http://${aws_lb.main.dns_name}"
-      INTERNAL_API_SECRET  = var.lambda_secret
+      INTERNAL_API_SECRET  = data.aws_ssm_parameter.lambda_secret_decrypted.value
     }
   }
 }

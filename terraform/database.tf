@@ -1,3 +1,13 @@
+data "aws_ssm_parameter" "rds_db_username" {
+  name            = "/${var.project_name}/prod/db_username"
+  with_decryption = true
+}
+
+data "aws_ssm_parameter" "rds_db_password" {
+  name            = "/${var.project_name}/prod/db_password"
+  with_decryption = true
+}
+
 resource "aws_db_subnet_group" "default" {
   name       = "${var.project_name}-db-subnet-group"
   subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
@@ -20,8 +30,8 @@ resource "aws_db_instance" "postgres" {
   allocated_storage    = 20
 
   db_name              = "codeduelsdb"
-  username             = var.db_username
-  password             = var.db_password
+  username             = data.aws_ssm_parameter.rds_db_username.value
+  password             = data.aws_ssm_parameter.rds_db_password.value
 
   db_subnet_group_name   = aws_db_subnet_group.default.name
   vpc_security_group_ids = [aws_security_group.data_sg.id]

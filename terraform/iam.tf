@@ -94,7 +94,7 @@ resource "aws_iam_policy" "ecs_execution_ssm_policy" {
           "ssm:GetParameters",
           "ssm:GetParameter"
         ]
-        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/*"
+        Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/prod/*"
       }
     ]
   })

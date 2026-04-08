@@ -1,5 +1,149 @@
 data "aws_caller_identity" "current" {}
 
+data "aws_ssm_parameter" "db_username" { name = "/${var.project_name}/prod/db_username" }
+data "aws_ssm_parameter" "db_password" { name = "/${var.project_name}/prod/db_password" }
+data "aws_ssm_parameter" "jwt_secret" { name = "/${var.project_name}/prod/jwt_secret" }
+data "aws_ssm_parameter" "google_client_id" { name = "/${var.project_name}/prod/google_client_id" }
+data "aws_ssm_parameter" "judge0_api_key" { name = "/${var.project_name}/prod/judge0_api_key" }
+data "aws_ssm_parameter" "lambda_secret" { name = "/${var.project_name}/prod/lambda_secret" }
+data "aws_ssm_parameter" "admin_email" { name = "/${var.project_name}/prod/admin_email" }
+data "aws_ssm_parameter" "admin_password" { name = "/${var.project_name}/prod/admin_password" }
+
+resource "aws_security_group" "alb_sg" {
+  name        = "${var.project_name}-alb-sg"
+  description = "Allow inbound HTTP and HTTPS from the internet"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "HTTP from Internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from Internet"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-alb-sg"
+  }
+}
+
+resource "aws_security_group" "ecs_sg" {
+  name        = "${var.project_name}-ecs-sg"
+  description = "Allow inbound traffic ONLY from the ALB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Allow traffic from ALB"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic (to talk to DB, Redis, APIs)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-ecs-sg"
+  }
+}
+
+resource "aws_security_group" "data_sg" {
+  name        = "${var.project_name}-data-sg"
+  description = "Allow inbound traffic ONLY from ECS containers"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "PostgreSQL from ECS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  ingress {
+    description     = "Redis from ECS"
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-data-sg"
+  }
+}
+
+# ==========================================
+# SQS & S3
+# ==========================================
+resource "aws_sqs_queue" "match_watch_queue" {
+  name = "match-watch-queue"
+  tags = { Name = "${var.project_name}-match-watch-queue" }
+}
+
+resource "aws_sqs_queue" "match_result_queue" {
+  name = "match-result-queue"
+  tags = { Name = "${var.project_name}-match-result-queue" }
+}
+
+resource "aws_sqs_queue" "submission_queue" {
+  name = "submission-queue"
+  tags = { Name = "${var.project_name}-submission-queue" }
+}
+
+resource "aws_s3_bucket" "backend_storage" {
+  bucket_prefix = "${var.project_name}-backend-storage-"
+  force_destroy = true
+  tags = { Name = "${var.project_name}-backend-storage" }
+}
+
+resource "aws_s3_bucket" "frontend_hosting" {
+  bucket_prefix = "${var.project_name}-frontend-hosting-"
+  force_destroy = true
+  tags = { Name = "${var.project_name}-frontend-hosting" }
+}
+
+resource "aws_s3_bucket_public_access_block" "backend_storage_block" {
+  bucket                  = aws_s3_bucket.backend_storage.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# ==========================================
+# LOAD BALANCER
+# ==========================================
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
   internal           = false
@@ -7,9 +151,7 @@ resource "aws_lb" "main" {
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
 
-  tags = {
-    Name = "${var.project_name}-alb"
-  }
+  tags = { Name = "${var.project_name}-alb" }
 }
 
 resource "aws_lb_target_group" "backend_tg" {
@@ -40,12 +182,12 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+# ==========================================
+# ECS CLUSTER & LOGS
+# ==========================================
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
-
-  tags = {
-    Name = "${var.project_name}-cluster"
-  }
+  tags = { Name = "${var.project_name}-cluster" }
 }
 
 resource "aws_cloudwatch_log_group" "backend_logs" {
@@ -58,6 +200,9 @@ resource "aws_cloudwatch_log_group" "sentinel_logs" {
   retention_in_days = 7
 }
 
+# ==========================================
+# MAIN BACKEND ECS
+# ==========================================
 resource "aws_ecs_task_definition" "main_backend" {
   family                   = "${var.project_name}-main-backend-task"
   network_mode             = "awsvpc"
@@ -70,7 +215,7 @@ resource "aws_ecs_task_definition" "main_backend" {
   container_definitions = jsonencode([
     {
       name      = "main-backend"
-      image = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/codeduels-backend:latest"
+      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/codeduels-backend:latest"
       essential = true
       portMappings = [
         {
@@ -81,8 +226,6 @@ resource "aws_ecs_task_definition" "main_backend" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
         { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}" },
-        { name = "SPRING_DATASOURCE_USERNAME", value = var.db_username },
-        { name = "SPRING_DATASOURCE_PASSWORD", value = var.db_password },
         { name = "SPRING_JPA_HIBERNATE_DDL_AUTO", value = "update" },
         { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
         { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
@@ -110,12 +253,14 @@ resource "aws_ecs_task_definition" "main_backend" {
         }
       ]
       secrets = [
-        { name = "JWT_SECRET_KEY", valueFrom = aws_ssm_parameter.jwt_secret.arn },
-        { name = "GOOGLE_CLIENT_ID", valueFrom = aws_ssm_parameter.google_client_id.arn },
-        { name = "JUDGE0_API_KEY", valueFrom = aws_ssm_parameter.judge0_api_key.arn },
-        { name = "LAMBDA_INTERNAL_SECRET", valueFrom = aws_ssm_parameter.lambda_secret.arn },
-        { name = "ADMIN_DEFAULT_EMAIL", valueFrom = aws_ssm_parameter.admin_email.arn },
-        { name = "ADMIN_DEFAULT_PASSWORD", valueFrom = aws_ssm_parameter.admin_password.arn }
+        { name = "SPRING_DATASOURCE_USERNAME", valueFrom = data.aws_ssm_parameter.db_username.arn },
+        { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = data.aws_ssm_parameter.db_password.arn },
+        { name = "JWT_SECRET_KEY", valueFrom = data.aws_ssm_parameter.jwt_secret.arn },
+        { name = "GOOGLE_CLIENT_ID", valueFrom = data.aws_ssm_parameter.google_client_id.arn },
+        { name = "JUDGE0_API_KEY", valueFrom = data.aws_ssm_parameter.judge0_api_key.arn },
+        { name = "LAMBDA_INTERNAL_SECRET", valueFrom = data.aws_ssm_parameter.lambda_secret.arn },
+        { name = "ADMIN_DEFAULT_EMAIL", valueFrom = data.aws_ssm_parameter.admin_email.arn },
+        { name = "ADMIN_DEFAULT_PASSWORD", valueFrom = data.aws_ssm_parameter.admin_password.arn }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -151,6 +296,9 @@ resource "aws_ecs_service" "main_backend" {
   depends_on = [aws_lb_listener.http]
 }
 
+# ==========================================
+# SENTINEL ECS
+# ==========================================
 resource "aws_ecs_task_definition" "sentinel_service" {
   family                   = "${var.project_name}-sentinel-task"
   network_mode             = "awsvpc"
