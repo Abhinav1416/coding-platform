@@ -3,7 +3,10 @@ name: Backend CI
 on:
   push:
     branches: [ "main", "feature/sentinel-service" ]
-    workflow_dispatch:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
 
 permissions:
   id-token: write
