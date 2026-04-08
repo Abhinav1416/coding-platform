@@ -200,9 +200,6 @@ resource "aws_cloudwatch_log_group" "sentinel_logs" {
   retention_in_days = 7
 }
 
-# ==========================================
-# MAIN BACKEND ECS
-# ==========================================
 resource "aws_ecs_task_definition" "main_backend" {
   family                   = "${var.project_name}-main-backend-task"
   network_mode             = "awsvpc"
@@ -235,7 +232,7 @@ resource "aws_ecs_task_definition" "main_backend" {
         {
           name = "SPRING_APPLICATION_JSON",
           value = jsonencode({
-            "app.frontend.url"                                 = "https://dsv9wxpsdo1v2.cloudfront.net",
+            "app.frontend.url" = "https://${aws_cloudfront_distribution.frontend.domain_name}",
             "aws.s3.test-case-cache-ttl-minutes"               = "30",
             "problem.upload.max-size-kb"                       = "300",
             "permissions.expiry-minutes"                       = "45",
@@ -296,9 +293,6 @@ resource "aws_ecs_service" "main_backend" {
   depends_on = [aws_lb_listener.http]
 }
 
-# ==========================================
-# SENTINEL ECS
-# ==========================================
 resource "aws_ecs_task_definition" "sentinel_service" {
   family                   = "${var.project_name}-sentinel-task"
   network_mode             = "awsvpc"
