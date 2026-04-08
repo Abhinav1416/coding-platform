@@ -103,9 +103,6 @@ resource "aws_security_group" "data_sg" {
   }
 }
 
-# ==========================================
-# SQS & S3
-# ==========================================
 resource "aws_sqs_queue" "match_watch_queue" {
   name = "match-watch-queue"
   tags = { Name = "${var.project_name}-match-watch-queue" }
@@ -141,9 +138,6 @@ resource "aws_s3_bucket_public_access_block" "backend_storage_block" {
   restrict_public_buckets = true
 }
 
-# ==========================================
-# LOAD BALANCER
-# ==========================================
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
   internal           = false
@@ -182,9 +176,6 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ==========================================
-# ECS CLUSTER & LOGS
-# ==========================================
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
   tags = { Name = "${var.project_name}-cluster" }
