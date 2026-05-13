@@ -260,12 +260,6 @@ For rapid Phase 2 iteration, the project currently uses local Terraform state.
 
 ## AWS Network Topology
 
-> Network topology diagram will be added soon.
-
-```txt
-assets/architecture/aws-network-topology.png
-```
-
 The AWS network follows a layered VPC design.
 
 ### Edge Layer
@@ -563,43 +557,3 @@ REDIS_PORT=
 ```
 
 In the AWS deployment, runtime secrets are managed through AWS SSM Parameter Store and accessed by ECS tasks through IAM roles.
-
----
-
-## Suggested Architecture Diagrams
-
-> Placeholders for future diagrams.
-
-### 1. High-Level Architecture Diagram
-
-```text
-User → CloudFront → S3 Frontend
-CloudFront /api /ws → ALB → Main Backend ECS
-Main Backend → RDS PostgreSQL / ElastiCache Redis / SQS
-SQS → Sentinel ECS → Judge0 → Redis Pub/Sub → Main Backend → WebSocket Users
-```
-
-### 2. Code Submission Flow Diagram
-
-```text
-Submit Code → Main Backend Validation → SQS → Sentinel Service → Judge0 → Redis Pub/Sub → Main Backend → WebSocket Broadcast
-```
-
-### 3. AWS Network Topology Diagram
-
-```text
-CloudFront outside VPC
-Public Subnets: ALB, NAT Gateway
-Private Subnets: ECS Main Backend, ECS Sentinel
-Isolated Subnets: RDS PostgreSQL, ElastiCache Redis
-```
-
-### 4. CI/CD Pipeline Diagram
-
-```text
-Frontend Repo → GitHub Actions → Build → S3 → CloudFront Invalidation
-Main Backend Repo → GitHub Actions → Gradle Tests → Docker → ECR → ECS
-Sentinel Repo → GitHub Actions → Unit Tests → Docker → ECR → ECS
-```
-
----
