@@ -1,10 +1,10 @@
-# CodeDuels: Real-Time 1v1 Competitive Programming Platform
+# CodeDuels: Real Time 1v1 Competitive Programming Platform
 
-CodeDuels is a full-stack, real-time competitive programming platform where users compete in one-on-one DSA battles with live matchmaking, code execution, real-time result updates, and performance tracking.
+CodeDuels is a full stack, real time competitive programming platform where users compete in one on one DSA battles with live matchmaking, code execution, real time result updates, and performance tracking.
 
-The platform has served **2,000+ registered users** and evolved from a manually deployed AWS application into a **Terraform-managed, ECS-based, microservice-oriented cloud architecture** using AWS SQS, ElastiCache Redis, RDS PostgreSQL, CloudFront, S3, Lambda, GitHub Actions, and AWS ECS Fargate.
+The platform has served **2,000+ registered users** and evolved from a manually deployed AWS application into a **Terraform managed, ECS based, microservice oriented cloud architecture** using AWS SQS, ElastiCache Redis, RDS PostgreSQL, CloudFront, S3, Lambda, GitHub Actions, and AWS ECS Fargate.
 
-> Built to explore real-world backend engineering concepts such as asynchronous processing, real-time communication, cloud deployment, infrastructure as code, CI/CD, authentication, authorization, and distributed service communication.
+> Built to explore real world backend engineering concepts such as asynchronous processing, real time communication, cloud deployment, infrastructure as code, CI/CD, authentication, authorization, and distributed service communication.
 
 ---
 
@@ -19,16 +19,16 @@ The platform has served **2,000+ registered users** and evolved from a manually 
 ## Key Highlights
 
 - Served **2,000+ registered users** on a live competitive programming platform
-- Built real-time 1v1 coding battles with matchmaking, live result updates, and WebSocket-based communication
-- Migrated from manual AWS Console deployment to Terraform-managed Infrastructure as Code
+- Built real time 1v1 coding battles with matchmaking, live result updates, and WebSocket based communication
+- Migrated from manual AWS Console deployment to Terraform managed Infrastructure as Code
 - Deployed frontend using AWS S3 + Amazon CloudFront with secure static hosting
 - Deployed backend services on AWS ECS Fargate behind an Application Load Balancer
-- Introduced a dedicated Sentinel microservice for asynchronous code execution
-- Decoupled submission processing using AWS SQS and Redis Pub/Sub
-- Used AWS RDS PostgreSQL for durable data storage and ElastiCache Redis for real-time state and messaging
+- Introduced a dedicated Sentinel microservice to asynchronously track Codeforces match submissions
+- Decoupled submission processing and match update workflows using AWS SQS
+- Used AWS RDS PostgreSQL for durable data storage and ElastiCache Redis for real time state management
 - Added separate CI/CD pipelines for frontend, main backend, and Sentinel service
 - Added backend unit and integration tests using JUnit 5, Mockito, and Spring Boot Test
-- Designed a cost-aware deployment model where backend infrastructure can be paused when not actively demoed
+- Designed a cost aware deployment model where AWS infrastructure can be paused, destroyed, or recreated on demand to reduce cloud costs
 
 ---
 
@@ -50,20 +50,20 @@ The platform has served **2,000+ registered users** and evolved from a manually 
 
 ## System Evolution
 
-CodeDuels was initially built and deployed using a manual AWS Console-based setup with an EC2-hosted backend.
+CodeDuels was initially built and deployed using a manual AWS Console based setup with an EC2 hosted backend.
 
-After validating the platform with real users, the system was upgraded into a more production-oriented architecture. The Phase 2 migration introduced:
+After validating the platform with real users, the system was upgraded into a more production oriented architecture. The Phase 2 migration introduced:
 
-- Terraform-based Infrastructure as Code
-- ECS Fargate-based backend deployment
-- CloudFront and S3-based frontend hosting
-- AWS-managed RDS PostgreSQL and ElastiCache Redis
-- A dedicated Sentinel microservice for asynchronous code execution
+- Terraform based Infrastructure as Code
+- ECS Fargate based backend deployment
+- CloudFront and S3 based frontend hosting
+- AWS managed RDS PostgreSQL and ElastiCache Redis
+- A dedicated Sentinel microservice for asynchronous Codeforces submission tracking
 - Independent CI/CD pipelines for frontend, main backend, and Sentinel service
 - AWS SSM Parameter Store for runtime secrets
-- A cost-aware deployment approach to control AWS expenses during non-demo periods
+- A cost aware deployment approach to control AWS expenses during inactive periods
 
-This migration improved deployment repeatability, security boundaries, service separation, and long-term maintainability.
+This migration improved deployment repeatability, security boundaries, service separation, and long term maintainability.
 
 ---
 
@@ -71,47 +71,13 @@ This migration improved deployment repeatability, security boundaries, service s
 
 ![Architecture Diagram](./assets/screenshots/Architecture.png)
 
-### High-Level Flow
-
-```text
-User
-  ↓
-Amazon CloudFront
-  ↓
-S3 Frontend Hosting
-
-CloudFront /api and /ws traffic
-  ↓
-Application Load Balancer
-  ↓
-Main Backend - ECS Fargate
-  ↓
-RDS PostgreSQL
-  ↓
-ElastiCache Redis
-
-Main Backend
-  ↓
-SQS Submission Queue
-  ↓
-Sentinel Service - ECS Fargate
-  ↓
-Judge0 API
-  ↓
-Redis Pub/Sub
-  ↓
-Main Backend
-  ↓
-WebSocket Broadcast to Users
-```
-
 The frontend is served through CloudFront and S3. API and WebSocket traffic is routed through CloudFront to the Application Load Balancer, which forwards requests to the main backend running on ECS Fargate.
 
-Long-running code execution is not handled directly inside the user-facing backend. Instead, submissions are pushed to AWS SQS and processed asynchronously by the Sentinel service. Once execution completes, Sentinel publishes the result to Redis Pub/Sub, and the main backend broadcasts the result to both users over WebSockets.
+Long running workflows are handled asynchronously using AWS SQS to prevent blocking the user facing API. For normal matches, the Main Backend queues submissions in SQS before asynchronously consuming them to call Judge0. For Codeforces matches, the Main Backend delegates API polling to the dedicated Sentinel Service through an SQS job. Sentinel continuously polls Codeforces and pushes detected updates to a secondary SQS Submission Updates Queue. The Main Backend then consumes these updates, updates the live match state in Redis, and broadcasts the results to users over WebSockets.
 
 ---
 
-## Microservices
+## Backend Services
 
 ### 1. Main Backend
 
@@ -129,17 +95,19 @@ The `main-backend` service is built with:
 - Handles REST API requests
 - Manages Google OAuth and JWT authentication
 - Coordinates matchmaking and match lifecycle
-- Maintains STOMP/WebSocket connections for real-time updates
-- Sends submission jobs to AWS SQS
-- Subscribes to Redis Pub/Sub topics
+- Maintains STOMP/WebSocket connections for real time updates
+- Sends submission and polling jobs to AWS SQS
+- Consumes asynchronous submission update messages from AWS SQS
+- Executes normal match submissions through Judge0
+- Updates live match state in Redis
 - Broadcasts execution results to competing users
-- Manages user stats, match state, and problem-related workflows
+- Manages user stats, match state, and problem related workflows
 
 ---
 
 ### 2. Sentinel Service
 
-The `sentinel-service` is a dedicated Spring Boot background worker responsible for asynchronous code execution.
+The `sentinel-service` is a dedicated Spring Boot background worker responsible for asynchronously polling and tracking Codeforces match submissions.
 
 The service is built with:
 
@@ -147,23 +115,17 @@ The service is built with:
 - Spring Boot 3
 - Spring Cloud AWS
 - AWS SQS
-- Redis Pub/Sub
-- Judge0 API
+- Redis
+- Codeforces API
 
 #### Responsibilities
 
-- Continuously polls the AWS SQS submission queue
-- Parses and validates submission jobs
-- Calls the external Judge0 API for code execution
-- Processes execution results such as:
-    - Accepted
-    - Wrong Answer
-    - Time Limit Exceeded
-    - Runtime Error
-    - Compilation Error
-- Publishes final execution results to Redis Pub/Sub topics
+- Consumes Codeforces match request and polling jobs from AWS SQS
+- Stores and manages active Codeforces match details in its own dedicated Redis instance
+- Continuously polls the external Codeforces API at regular intervals to check the status of user submissions
+- Pushes newly detected submission updates back to the Main Backend through a secondary AWS SQS queue
 
-This separation keeps long-running code execution outside the main backend and allows the user-facing API service to remain responsive during submission spikes.
+This separation keeps long running, continuous third party API polling outside the main backend, preventing thread blocking and ensuring the user facing API remains highly responsive during matches.
 
 ---
 
@@ -182,12 +144,12 @@ The `codeduels-frontend` is built with:
 
 - User authentication flow
 - Matchmaking interface
-- Real-time duel experience
+- Real time duel experience
 - Code editor interface
 - Live submission result updates
 - Profile and stats display
 
-The frontend is built through GitHub Actions and deployed to AWS S3, with CloudFront used for global content delivery.
+The frontend is built through GitHub Actions and deployed to AWS S3, with CloudFront used for content delivery when the AWS environment is active.
 
 ---
 
@@ -195,40 +157,58 @@ The frontend is built through GitHub Actions and deployed to AWS S3, with CloudF
 
 ![Code Submission Flow](./assets/screenshots/submission-flow.png)
 
-### Step-by-Step Flow
+### Step-by-Step Flows
 
-1. User writes code in the Monaco editor and submits it during a duel.
-2. The frontend sends the submission request to the main backend.
-3. The main backend validates the request, user, match state, and problem constraints.
-4. The backend stores or updates relevant submission and match state.
-5. A submission job is pushed to AWS SQS.
-6. Sentinel service consumes the message from SQS.
-7. Sentinel calls the Judge0 API to execute the code.
-8. Judge0 returns the execution result.
-9. Sentinel processes the result and publishes it to a Redis Pub/Sub topic.
-10. Main backend receives the Redis event.
-11. Main backend broadcasts the result to both users through WebSockets.
-12. Frontend updates the duel screen in real time.
+Because CodeDuels supports both native execution and Codeforces integration, the platform uses two distinct asynchronous submission pipelines.
 
-This design avoids blocking API threads while waiting for external code execution and makes the submission pipeline more resilient under bursts of traffic.
+#### 1. Normal Match Flow: Judge0 Execution
+
+1. User writes code in the Monaco editor and submits it via the React UI.
+2. The frontend sends the submission request to the Main Backend.
+3. The Main Backend validates the request, user, match state, problem constraints, language, and submitted code.
+4. The Main Backend stores or updates the relevant submission and match state.
+5. The Main Backend drops the submission payload into an **AWS SQS Submission Queue**.
+6. The Main Backend returns an immediate response to the frontend so the API request is not blocked while code execution is pending.
+7. The Main Backend asynchronously consumes the submission message from the queue.
+8. The Main Backend calls the external **Judge0 API** through RapidAPI to execute the submitted code.
+9. Judge0 returns the execution result, including verdict, runtime, memory usage, and error details if any.
+10. The Main Backend processes the execution result and updates the live match state in **Redis**.
+11. The Main Backend broadcasts the verdict to users through **WebSockets**.
+12. The frontend updates the duel screen in real time for both players.
+13. Once the match concludes, final statistics are persisted in **PostgreSQL**.
+
+#### 2. Codeforces Match Flow: Asynchronous Polling
+
+1. User submits their Codeforces solution during an active duel.
+2. The frontend sends the submission tracking request to the Main Backend.
+3. The Main Backend validates the user, match state, and active Codeforces duel configuration.
+4. The Main Backend drops a polling job into an **AWS SQS Codeforces Match Queue**.
+5. The Sentinel Service consumes the polling job from SQS.
+6. Sentinel registers and tracks the active Codeforces match in its dedicated Redis store.
+7. Sentinel periodically checks the **Codeforces API** for new submission updates.
+8. Once Sentinel detects a new verdict or relevant submission update, it pushes an update message to a secondary **AWS SQS Submission Updates Queue**.
+9. The Main Backend consumes the update message from the Submission Updates Queue.
+10. The Main Backend updates the primary live match state in **Redis**.
+11. The Main Backend broadcasts the Codeforces verdict to users through **WebSockets**.
+12. The frontend updates the duel screen in real time for both players.
+13. Once the match concludes, final statistics are persisted in **PostgreSQL**.
+
+> **Design Rationale:** By using SQS for asynchronous job handling, this event driven design prevents long running Judge0 executions and continuous Codeforces API polling from blocking user facing API threads. It also makes the platform more resilient under bursts of submission traffic.
 
 ---
 
 ## Infrastructure as Code
 
-The Phase 2 infrastructure is provisioned using Terraform instead of manual AWS Console configuration.
+The Phase 2 AWS infrastructure is provisioned using Terraform instead of manual AWS Console configuration.
 
 Terraform currently manages **54 AWS resources**, including:
 
 - VPC
 - Public, private, and isolated subnets
-- Route tables
-- Internet Gateway
-- NAT Gateway with Elastic IP
-- Application Load Balancer
-- Target groups
+- Route tables, Internet Gateway, NAT Gateway, and Elastic IP
+- Application Load Balancer and target groups
 - ECS cluster
-- ECS task definitions for main backend and Sentinel service
+- ECS task definitions for the Main Backend and Sentinel Service
 - ECS services for both backend services
 - IAM roles and policies
 - SQS queues
@@ -239,22 +219,19 @@ Terraform currently manages **54 AWS resources**, including:
 - ElastiCache Redis
 - CloudWatch log groups
 
-The infrastructure is parameterized using Terraform variables such as:
+The infrastructure is parameterized using Terraform variables, for example:
 
 ```bash
 -var="env=prod"
 ```
 
-This allows the same infrastructure code to be adapted for environments such as development, staging, and production.
+This allows the same infrastructure codebase to be adapted across environments such as development, staging, and production.
 
 ### Current Terraform Tradeoff
 
 For rapid Phase 2 iteration, the project currently uses local Terraform state.
 
-#### Planned Improvement
-
-- Migrate Terraform state to an S3 backend
-- Add DynamoDB locking for safer team-based infrastructure changes
+In a production team environment, this would be migrated to a remote backend such as Amazon S3 with DynamoDB state locking to support safer collaboration, versioned state management, and concurrent Terraform usage.
 
 ---
 
@@ -264,22 +241,22 @@ The AWS network follows a layered VPC design.
 
 ### Edge Layer
 
-- Amazon CloudFront serves static frontend assets from S3.
+- Amazon CloudFront serves static frontend assets from S3 when the frontend environment is active.
 - CloudFront also routes `/api` and `/ws` traffic to the Application Load Balancer.
 
-### Public Subnet
+### Public Subnets
 
-- Application Load Balancer receives inbound API/WebSocket traffic.
-- NAT Gateway allows private backend services to make outbound internet requests, such as calls to Google OAuth and Judge0.
+- The Application Load Balancer receives inbound API and WebSocket traffic.
+- The NAT Gateway allows private backend services to make outbound internet requests, such as calls to Google OAuth, Judge0, Codeforces, and other external APIs.
 
-### Private Subnet
+### Private Subnets
 
-- ECS Fargate runs:
-    - Main backend service
-    - Sentinel service
+- ECS Fargate runs the backend services:
+    - Main Backend service
+    - Sentinel Service
 - ECS tasks do not expose public IP addresses.
 
-### Isolated Subnet
+### Isolated Subnets
 
 - RDS PostgreSQL
 - ElastiCache Redis
@@ -300,9 +277,9 @@ The project uses separate GitHub Actions pipelines for frontend, main backend, a
 **Pipeline:**
 
 1. Install dependencies
-2. Build React application
-3. Sync `dist/` folder to S3 frontend hosting bucket
-4. Invalidate CloudFront cache
+2. Build the React application
+3. Sync the generated `dist/` folder to the S3 frontend hosting bucket
+4. Invalidate the CloudFront cache
 
 ### Main Backend Pipeline
 
@@ -311,9 +288,9 @@ The project uses separate GitHub Actions pipelines for frontend, main backend, a
 **Pipeline:**
 
 1. Run Gradle tests
-2. Build Docker image
-3. Push image to AWS ECR
-4. Trigger ECS rolling deployment update for `main-backend`
+2. Build the Docker image
+3. Push the image to Amazon ECR
+4. Trigger an ECS rolling deployment update for the `main-backend` service
 
 ### Sentinel Service Pipeline
 
@@ -322,27 +299,29 @@ The project uses separate GitHub Actions pipelines for frontend, main backend, a
 **Pipeline:**
 
 1. Run Gradle unit tests
-2. Build Docker image
-3. Push image to AWS ECR
-4. Trigger ECS rolling deployment update for `sentinel-service`
+2. Build the Docker image
+3. Push the image to Amazon ECR
+4. Trigger an ECS rolling deployment update for the `sentinel-service`
 
-This allows frontend and backend services to be built, tested, and deployed independently.
+This setup allows the frontend, Main Backend, and Sentinel Service to be built, tested, and deployed independently while keeping the project organized inside a single monorepo.
 
 ---
 
 ## Cost-Aware AWS Deployment
 
-Because this is a student-built placement project, the infrastructure is designed with cost awareness in mind.
+The AWS infrastructure is designed with cost awareness in mind, so resources are only kept running when needed for demos, testing, or deployment validation.
 
-The frontend can remain available through CloudFront and S3, while backend services can be started only when required for demos or testing.
+Instead of claiming continuous 24/7 availability, the infrastructure can be paused, destroyed, or recreated on demand using Terraform.
 
 ### Cost-Control Strategy
 
-- Keep static frontend hosted on S3 + CloudFront
-- Scale ECS Fargate services down when backend is not needed
-- Stop RDS temporarily during inactive periods
-- Avoid claiming 24/7 production availability when backend infrastructure is paused
-- Keep Terraform code ready to recreate or update infrastructure consistently
+- Spin up the AWS infrastructure only when required for demos or testing
+- Destroy or pause unused resources to avoid unnecessary AWS charges
+- Scale ECS Fargate services down when backend services are not needed
+- Stop or recreate RDS depending on the testing requirement
+- Deploy the frontend to S3 and CloudFront only when the environment is active
+- Avoid claiming 24/7 production availability when the infrastructure is intentionally paused
+- Keep Terraform code ready to recreate, update, or tear down infrastructure consistently
 
 This makes the project practical to maintain while still demonstrating real AWS infrastructure, deployment automation, and cloud architecture skills.
 
@@ -350,39 +329,43 @@ This makes the project practical to maintain while still demonstrating real AWS 
 
 ## Testing
 
-Backend testing was added across both the main backend and Sentinel service.
+Backend testing was added across both the Main Backend and the Sentinel Service.
 
 ### Main Backend Testing
 
-Testing tools:
+**Testing tools:**
 
 - JUnit 5
 - Mockito
 - Spring Boot Test
 
-Areas tested:
+**Areas tested:**
 
 - Authentication flows
 - Matchmaking logic
 - WebSocket broadcasting logic
 - Repository-layer constraints
-- Newly added orchestration logic for asynchronous submission processing
+- Asynchronous submission orchestration logic
+- Judge0 execution result handling
+- SQS based submission processing
 
 ### Sentinel Service Testing
 
-Testing tools:
+**Testing tools:**
 
 - JUnit 5
 - Mockito
 
-Areas tested:
+**Areas tested:**
 
-- SQS message consumption
-- Judge0 request payload construction
-- Execution result processing
-- Redis Pub/Sub publishing
+- Codeforces polling job consumption
+- Active match tracking in Redis
+- Codeforces API response processing
+- Submission update message publishing to SQS
 
-The Sentinel service has unit tests covering the core business flow from message consumption to result publishing. Across the two backend services, around **15-20 core test classes** validate important parts of the event-driven workflow.
+The Sentinel Service includes unit tests covering the core flow from SQS polling job consumption to Codeforces submission tracking and update message publishing.
+
+Across both backend services, around **15–20 core test classes** validate important parts of the asynchronous, event-driven submission workflow.
 
 ---
 
@@ -391,12 +374,12 @@ The Sentinel service has unit tests covering the core business flow from message
 ### User Features
 
 - Google OAuth login
-- JWT-based authentication
+- JWT based authentication
 - 1v1 competitive programming duels
 - Match room creation and joining
-- Difficulty-based problem selection
-- Real-time coding interface
-- Monaco-based code editor
+- Difficulty based problem selection
+- Real time coding interface
+- Monaco based code editor
 - Support for C++, Java, and Python
 - Live submission status updates
 - Match timer and automatic match completion
@@ -404,24 +387,24 @@ The Sentinel service has unit tests covering the core business flow from message
 
 ### Admin / Problem Setter Features
 
-- Role-based access control for admin and problem setter workflows
+- Role based access control for admin and problem setter workflows
 - Problem metadata creation
 - Hidden test case upload flow
-- S3 pre-signed URL-based direct uploads
-- Lambda-based event processing after test case upload
-- Permission-based problem publishing workflow
+- S3 pre signed URL based direct uploads
+- Lambda based event processing after test case upload
+- Permission based problem publishing workflow
 
 ### Backend / System Features
 
 - Asynchronous code execution using SQS
-- Dedicated Sentinel worker service
-- Redis Pub/Sub-based result propagation
-- WebSocket-based real-time communication
-- PostgreSQL-based durable persistence
-- Redis-backed real-time state management
+- Dedicated Sentinel worker service for Codeforces polling
+- SQS based submission and update pipelines
+- WebSocket based real time communication
+- PostgreSQL based durable persistence
+- Redis backed real time state management
 - CloudWatch logging
-- SSM Parameter Store-based secret management
-- Terraform-managed AWS infrastructure
+- SSM Parameter Store based secret management
+- Terraform managed AWS infrastructure
 - Independent CI/CD pipelines
 
 ---
@@ -432,21 +415,21 @@ CodeDuels includes multiple layers of application and infrastructure security.
 
 ### Authentication & Authorization
 
-- Google OAuth-based login
-- JWT-based stateless authentication
-- Role-Based Access Control for users, admins, and problem setters
-- Attribute-Based Access Control for granular problem-management permissions
+- Google OAuth based login
+- JWT based stateless authentication
+- Role Based Access Control for users, admins, and problem setters
+- Attribute Based Access Control for granular problem management permissions
 
-> **Note:** 2FA exists in backend code but is not currently active in the deployed frontend, so it is not presented as a live user-facing feature.
+> **Note:** 2FA exists in backend code but is not currently active in the deployed frontend, so it is not presented as a live user facing feature.
 
 ### Infrastructure Security
 
 - ECS tasks run inside private subnets
 - RDS and ElastiCache run in isolated private subnets
 - No public IP exposure for backend containers
-- Security groups restrict service-to-service communication
+- Security groups restrict service to service communication
 - SSM Parameter Store is used for runtime secret management
-- IAM roles are used to grant least-privilege access to AWS services
+- IAM roles are used to grant least privilege access to AWS services
 - S3 frontend access is secured through CloudFront Origin Access Control
 
 ---
@@ -455,23 +438,23 @@ CodeDuels includes multiple layers of application and infrastructure security.
 
 ### Asynchronous Processing
 
-Code execution is handled asynchronously through SQS and the Sentinel service. This prevents long-running Judge0 calls from blocking the main backend API.
+Code execution and Codeforces polling workflows are handled asynchronously through SQS. This prevents long running Judge0 calls and continuous Codeforces API polling from blocking the main backend API.
 
-### Real-Time Communication
+### Real Time Communication
 
-Redis Pub/Sub connects the asynchronous worker layer with the WebSocket layer. This allows the system to push execution results to users as soon as they are processed.
+SQS and Redis support the asynchronous update pipeline. SQS is used for durable worker communication, while Redis stores live match state and supports real time update coordination before WebSocket broadcasts.
 
 ### Caching and State
 
-Redis is used for real-time match state and Pub/Sub communication, while PostgreSQL remains the durable source of truth.
+Redis is used for real time match state management, while PostgreSQL remains the durable source of truth.
 
 ### Direct S3 Uploads
 
-Large test case files are uploaded directly to S3 using pre-signed URLs, avoiding unnecessary load on the backend server.
+Large test case files are uploaded directly to S3 using pre signed URLs, avoiding unnecessary load on the backend server.
 
 ### Transactional Consistency
 
-Critical backend operations use transactional boundaries to reduce race-condition risks during match creation, submission handling, and match completion.
+Critical backend operations use transactional boundaries to reduce race condition risks during match creation, submission handling, and match completion.
 
 ---
 
@@ -481,9 +464,9 @@ Critical backend operations use transactional boundaries to reduce race-conditio
 | --- | --- |
 | **Frontend** | React, Vite, TypeScript, Tailwind CSS, Monaco Editor, StompJS/SockJS |
 | **Main Backend** | Java 21, Spring Boot 3, Spring Security, Spring Data JPA, Spring WebSockets |
-| **Sentinel Service** | Java 21, Spring Boot 3, Spring Cloud AWS, SQS, Redis Pub/Sub |
+| **Sentinel Service** | Java 21, Spring Boot 3, Spring Cloud AWS, SQS, Redis, Codeforces API |
 | **Database** | AWS RDS PostgreSQL |
-| **Cache / PubSub** | AWS ElastiCache Redis |
+| **Cache / State** | AWS ElastiCache Redis |
 | **Code Execution** | Judge0 API |
 | **Cloud Compute** | AWS ECS Fargate |
 | **Networking** | VPC, Public/Private/Isolated Subnets, ALB, NAT Gateway, Security Groups |
@@ -519,10 +502,6 @@ cd coding-platform
 
 ---
 
-## Environment Variables
-
-> Do not commit real secrets.
-
 ### Frontend
 
 ```env
@@ -543,17 +522,21 @@ REDIS_HOST=
 REDIS_PORT=
 AWS_REGION=
 SQS_SUBMISSION_QUEUE_URL=
+SQS_CODEFORCES_MATCH_QUEUE_URL=
+SQS_SUBMISSION_UPDATES_QUEUE_URL=
+JUDGE0_API_URL=
+JUDGE0_API_KEY=
 ```
 
 ### Sentinel Service
 
 ```env
 AWS_REGION=
-SQS_SUBMISSION_QUEUE_URL=
-JUDGE0_API_URL=
-JUDGE0_API_KEY=
+SQS_CODEFORCES_MATCH_QUEUE_URL=
+SQS_SUBMISSION_UPDATES_QUEUE_URL=
 REDIS_HOST=
 REDIS_PORT=
+CODEFORCES_API_BASE_URL=
 ```
 
 In the AWS deployment, runtime secrets are managed through AWS SSM Parameter Store and accessed by ECS tasks through IAM roles.
