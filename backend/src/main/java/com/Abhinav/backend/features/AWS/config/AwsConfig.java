@@ -1,6 +1,6 @@
 package com.Abhinav.backend.features.AWS.config;
 
-import io.awspring.cloud.sqs.operations.SqsTemplate; // <--- NEW IMPORT
+import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -79,7 +79,6 @@ public class AwsConfig {
                 .build();
     }
 
-    // --- NEW BEAN ADDED HERE ---
     @Bean
     public SqsTemplate sqsTemplate(SqsAsyncClient sqsAsyncClient) {
         return SqsTemplate.builder()

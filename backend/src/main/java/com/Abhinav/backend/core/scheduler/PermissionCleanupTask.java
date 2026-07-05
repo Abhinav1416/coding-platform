@@ -18,7 +18,6 @@ public class PermissionCleanupTask {
     private final TemporaryPermissionRepository permissionRepository;
 
 
-
     @Scheduled(cron = "${scheduler.cleanup.permissions.cron}")
     @Transactional
     public void cleanupExpiredPermissions() {
