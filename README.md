@@ -12,7 +12,7 @@ The platform has served **2,000+ registered users** and evolved from a manually 
 
 > **Cost-Aware Architecture:** The live AWS deployment (ECS Fargate, RDS, ElastiCache) is currently paused to optimize cloud costs. The infrastructure is managed via Terraform and spun up strictly on-demand.
 
-### 📺 [Watch the Full AWS Architecture & Gameplay Demo on YouTube](https://www.youtube.com/watch?v=nctT-6Y0xJg)
+### [Watch the Full AWS Architecture & Gameplay Demo on YouTube](https://www.youtube.com/watch?v=nctT-6Y0xJg)
 *See the real-time WebSocket synchronization, decoupled SQS processing, and the Codeforces Sentinel worker in action.*
 
 **Frontend UI Preview:** [https://coding-platform-uyo1.vercel.app/home](https://coding-platform-uyo1.vercel.app/home) *(Backend paused)*  
