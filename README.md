@@ -6,6 +6,30 @@ The platform has served **2,000+ registered users** and evolved from a manually 
 
 > Built to explore real world backend engineering concepts such as asynchronous processing, real time communication, cloud deployment, infrastructure as code, CI/CD, authentication, authorization, and distributed service communication.
 
+## 📑 Table of Contents
+
+- [Live Demo & Deployment Status](#live-demo--deployment-status)
+- [Key Highlights](#key-highlights)
+- [Screenshots](#screenshots)
+- [System Evolution](#system-evolution)
+- [Architecture Overview](#architecture-overview)
+- [Backend Services](#backend-services)
+  - [Main Backend](#1-main-backend)
+  - [Sentinel Service](#2-sentinel-service)
+  - [Frontend](#3-frontend)
+- [Code Submission Flow](#code-submission-flow)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [AWS Network Topology](#aws-network-topology)
+- [Deployment & CI/CD](#deployment--cicd)
+- [Cost-Aware AWS Deployment](#cost-aware-aws-deployment)
+- [Testing](#testing)
+- [Core Features](#core-features)
+- [Security](#security)
+- [Performance & Reliability](#performance--reliability)
+- [Tech Stack](#tech-stack)
+- [Local Development](#local-development)
+
+  
 ---
 
 ## Live Demo & Deployment Status
