@@ -6,7 +6,7 @@ The platform has served **2,000+ registered users** and evolved from a manually 
 
 > Built to explore real world backend engineering concepts such as asynchronous processing, real time communication, cloud deployment, infrastructure as code, CI/CD, authentication, authorization, and distributed service communication.
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Live Demo & Deployment Status](#live-demo--deployment-status)
 - [Key Highlights](#key-highlights)
