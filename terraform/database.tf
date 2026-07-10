@@ -27,7 +27,8 @@ resource "aws_db_instance" "postgres" {
   engine               = "postgres"
   engine_version       = "16"
   instance_class       = "db.t3.micro"
-  allocated_storage    = 20
+  allocated_storage     = 20
+  max_allocated_storage = 100
 
   db_name              = "codeduelsdb"
   username             = data.aws_ssm_parameter.rds_db_username.value
