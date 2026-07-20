@@ -25,6 +25,11 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 resource "aws_lambda_function" "s3_finalization_lambda" {
   filename         = "lambda_function.jar"
   function_name    = "${var.project_name}-s3-finalization"
@@ -36,12 +41,22 @@ resource "aws_lambda_function" "s3_finalization_lambda" {
 
   source_code_hash = filebase64sha256("lambda_function.jar")
 
+  vpc_config {
+    subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+
   environment {
     variables = {
-      BACKEND_API_ENDPOINT = "http://${aws_lb.main.dns_name}"
+      BACKEND_API_ENDPOINT = "http://${aws_lb.internal.dns_name}"
       INTERNAL_API_SECRET  = data.aws_ssm_parameter.lambda_secret_decrypted.value
     }
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy_attachment.lambda_vpc_access,
+  ]
 }
 
 resource "aws_lambda_permission" "allow_s3_to_call_lambda" {
