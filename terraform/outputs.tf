@@ -3,6 +3,11 @@ output "alb_dns_name" {
   value       = aws_lb.main.dns_name
 }
 
+output "internal_alb_dns_name" {
+  description = "The DNS name of the internal Application Load Balancer used for private in-VPC callbacks (e.g. from the s3-finalization Lambda)"
+  value       = aws_lb.internal.dns_name
+}
+
 output "frontend_bucket_name" {
   description = "The name of the S3 bucket for frontend hosting"
   value       = aws_s3_bucket.frontend_hosting.id

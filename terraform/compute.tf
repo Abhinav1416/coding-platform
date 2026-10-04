@@ -56,6 +56,14 @@ resource "aws_security_group" "ecs_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
+  ingress {
+    description     = "Allow traffic from internal ALB (private Lambda callbacks)"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.internal_alb_sg.id]
+  }
+
   egress {
     description = "Allow all outbound traffic (to talk to DB, Redis, APIs)"
     from_port   = 0
@@ -66,6 +74,50 @@ resource "aws_security_group" "ecs_sg" {
 
   tags = {
     Name = "${var.project_name}-ecs-sg"
+  }
+}
+
+resource "aws_security_group" "lambda_sg" {
+  name        = "${var.project_name}-lambda-sg"
+  description = "Security group for the s3-finalization Lambda running inside the VPC"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    description = "Allow all outbound traffic (internal ALB, NAT for other AWS APIs)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-lambda-sg"
+  }
+}
+
+resource "aws_security_group" "internal_alb_sg" {
+  name        = "${var.project_name}-internal-alb-sg"
+  description = "Allow inbound traffic to the internal ALB ONLY from the s3-finalization Lambda"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "HTTP from s3-finalization Lambda"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda_sg.id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-internal-alb-sg"
   }
 }
 
@@ -167,6 +219,27 @@ resource "aws_lb_target_group" "backend_tg" {
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend_tg.arn
+  }
+}
+
+resource "aws_lb" "internal" {
+  name               = "${var.project_name}-internal-alb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.internal_alb_sg.id]
+  subnets            = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+
+  tags = { Name = "${var.project_name}-internal-alb" }
+}
+
+resource "aws_lb_listener" "internal_http" {
+  load_balancer_arn = aws_lb.internal.arn
   port              = "80"
   protocol          = "HTTP"
 
