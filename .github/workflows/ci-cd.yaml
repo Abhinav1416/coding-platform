@@ -1,0 +1,71 @@
+name: CodeDuels CI/CD
+
+on:
+  push:
+    branches:
+      - feature/k8s-eks-migration
+    paths:
+      - 'backend/**'
+      - 'sentinel/**'
+      - '!k8s/**'
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 797077872680.dkr.ecr.ap-south-1.amazonaws.com
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::797077872680:role/codeduels-github-actions-ecr
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push Main Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/main-backend:${{ github.sha }}
+            ${{ env.ECR_REGISTRY }}/main-backend:latest
+
+      - name: Build & Push Sentinel Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./sentinel
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/sentinel-service:${{ github.sha }}
+            ${{ env.ECR_REGISTRY }}/sentinel-service:latest
+
+      - name: Update Kubernetes YAML with new Git SHA
+        run: |
+          sed -i "s|${{ env.ECR_REGISTRY }}/main-backend:.*|${{ env.ECR_REGISTRY }}/main-backend:${{ github.sha }}|g" k8s/deployments.yaml
+          sed -i "s|${{ env.ECR_REGISTRY }}/sentinel-service:.*|${{ env.ECR_REGISTRY }}/sentinel-service:${{ github.sha }}|g" k8s/deployments.yaml
+
+      - name: Commit and Push Changes to GitOps Repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/deployments.yaml
+          git commit -m "Update image tags to ${{ github.sha }} [skip ci]"
+          git push

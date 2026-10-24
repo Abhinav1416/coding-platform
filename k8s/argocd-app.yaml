@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: codeduels-workload
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/Abhinav1416/coding-platform.git'
+    targetRevision: feature/k8s-eks-migration
+    path: k8s
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
