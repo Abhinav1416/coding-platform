@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-backend
+  namespace: default
+  labels:
+    app: main-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: main-backend
+  template:
+    metadata:
+      labels:
+        app: main-backend
+    spec:
+      containers:
+        - name: main-backend
+          image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/main-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: codeduels-config
+            - secretRef:
+                name: codeduels-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: main-backend-svc
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: main-backend
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-service
+  namespace: default
+  labels:
+    app: sentinel-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentinel-service
+  template:
+    metadata:
+      labels:
+        app: sentinel-service
+    spec:
+      containers:
+        - name: sentinel-service
+          image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/sentinel-service:latest
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: codeduels-config
+            - secretRef:
+                name: codeduels-secrets

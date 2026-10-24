@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: codeduels-config
+  namespace: default
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://codeduels-postgres.c7yae4k46qlb.ap-south-1.rds.amazonaws.com:5432/codeduelsdb"
+  REDIS_HOST: "codeduels-redis.nsbjr0.0001.aps1.cache.amazonaws.com"
+  REDIS_PORT: "6379"
+  AWS_REGION: "ap-south-1"
+  SQS_SUBMISSION_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/797077872680/submission-queue"
+  SQS_CODEFORCES_MATCH_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/797077872680/match-watch-queue"
+  SQS_SUBMISSION_UPDATES_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/797077872680/match-result-queue"
+  JUDGE0_API_URL: "https://judge0-ce.p.rapidapi.com"
+  CODEFORCES_API_BASE_URL: "https://codeforces.com/api"
