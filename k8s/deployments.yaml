@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: main-backend
-          image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/main-backend:latest
+          image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/main-backend:15e07ba982759fcf2bc19e0214bcac0ba5f2a34a
           ports:
             - containerPort: 8080
           envFrom:
@@ -58,7 +58,7 @@ spec:
     spec:
       containers:
         - name: sentinel-service
-          image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/sentinel-service:latest
+          image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/sentinel-service:15e07ba982759fcf2bc19e0214bcac0ba5f2a34a
           ports:
             - containerPort: 8081
           envFrom:
