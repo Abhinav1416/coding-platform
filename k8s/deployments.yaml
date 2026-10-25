@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,6 +21,9 @@ spec:
           image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/main-backend:15e07ba982759fcf2bc19e0214bcac0ba5f2a34a
           ports:
             - containerPort: 8080
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ActiveProcessorCount=1 -XX:MaxRAMPercentage=65.0 -Xss256k -Dspring.main.lazy-initialization=true -Dserver.tomcat.threads.max=15"
           envFrom:
             - configMapRef:
                 name: codeduels-config
@@ -61,6 +65,9 @@ spec:
           image: 797077872680.dkr.ecr.ap-south-1.amazonaws.com/sentinel-service:15e07ba982759fcf2bc19e0214bcac0ba5f2a34a
           ports:
             - containerPort: 8081
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ActiveProcessorCount=1 -XX:MaxRAMPercentage=65.0 -Xss256k -Dspring.main.lazy-initialization=true -Dserver.tomcat.threads.max=15"
           envFrom:
             - configMapRef:
                 name: codeduels-config
