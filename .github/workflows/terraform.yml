@@ -5,10 +5,12 @@ on:
     branches: [ "main", "feature/k8s-eks-migration" ]
     paths:
       - 'terraform/**'
+      - '.github/workflows/terraform.yml'
   pull_request:
     branches: [ "main", "feature/k8s-eks-migration" ]
     paths:
       - 'terraform/**'
+      - '.github/workflows/terraform.yml'
 
 permissions:
   id-token: write
