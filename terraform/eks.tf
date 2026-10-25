@@ -11,28 +11,6 @@ module "eks" {
   subnet_ids               = [aws_subnet.private_1.id, aws_subnet.private_2.id]
   control_plane_subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id, aws_subnet.public_1.id, aws_subnet.public_2.id]
 
-  cluster_addons = {
-    coredns = {
-      most_recent = true
-      resolve_conflicts_on_update = "OVERWRITE"
-    }
-    kube-proxy = {
-      most_recent = true
-      resolve_conflicts_on_update = "OVERWRITE"
-    }
-    vpc-cni = {
-      most_recent = true
-      before_compute = true
-      resolve_conflicts_on_update = "OVERWRITE"
-      configuration_values = jsonencode({
-        env = {
-          ENABLE_PREFIX_DELEGATION = "true"
-          WARM_PREFIX_TARGET       = "1"
-        }
-      })
-    }
-  }
-
   enable_irsa = true
 
   eks_managed_node_groups = {
