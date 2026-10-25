@@ -2,11 +2,11 @@ name: 'Terraform CI/CD'
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feature/k8s-eks-migration" ]
     paths:
       - 'terraform/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "feature/k8s-eks-migration" ]
     paths:
       - 'terraform/**'
 
@@ -50,5 +50,6 @@ jobs:
         run: terraform plan -no-color
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        # Now it will actually apply when you push to your feature branch
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/k8s-eks-migration') && github.event_name == 'push'
         run: terraform apply -auto-approve
