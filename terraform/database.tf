@@ -23,22 +23,22 @@ resource "aws_elasticache_subnet_group" "default" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier           = "${var.project_name}-postgres"
-  engine               = "postgres"
-  engine_version       = "16"
-  instance_class       = "db.t3.micro"
+  identifier            = "${var.project_name}-postgres"
+  engine                = "postgres"
+  engine_version        = "16"
+  instance_class        = "db.t3.micro"
   allocated_storage     = 20
   max_allocated_storage = 100
 
-  db_name              = "codeduelsdb"
-  username             = data.aws_ssm_parameter.rds_db_username.value
-  password             = data.aws_ssm_parameter.rds_db_password.value
+  db_name  = "codeduelsdb"
+  username = data.aws_ssm_parameter.rds_db_username.value
+  password = data.aws_ssm_parameter.rds_db_password.value
 
   db_subnet_group_name   = aws_db_subnet_group.default.name
   vpc_security_group_ids = [aws_security_group.data_sg.id]
 
-  skip_final_snapshot    = true
-  publicly_accessible    = false
+  skip_final_snapshot = true
+  publicly_accessible = false
 
   tags = {
     Name = "${var.project_name}-postgres"
@@ -54,8 +54,8 @@ resource "aws_elasticache_cluster" "redis" {
   engine_version       = "7.0"
   port                 = 6379
 
-  subnet_group_name    = aws_elasticache_subnet_group.default.name
-  security_group_ids   = [aws_security_group.data_sg.id]
+  subnet_group_name  = aws_elasticache_subnet_group.default.name
+  security_group_ids = [aws_security_group.data_sg.id]
 }
 
 resource "aws_security_group" "data_sg" {

@@ -16,13 +16,13 @@ resource "aws_sqs_queue" "submission_queue" {
 resource "aws_s3_bucket" "backend_storage" {
   bucket_prefix = "${var.project_name}-backend-storage-"
   force_destroy = true
-  tags = { Name = "${var.project_name}-backend-storage" }
+  tags          = { Name = "${var.project_name}-backend-storage" }
 }
 
 resource "aws_s3_bucket" "frontend_hosting" {
   bucket_prefix = "${var.project_name}-frontend-hosting-"
   force_destroy = true
-  tags = { Name = "${var.project_name}-frontend-hosting" }
+  tags          = { Name = "${var.project_name}-frontend-hosting" }
 }
 
 resource "aws_s3_bucket_public_access_block" "backend_storage_block" {

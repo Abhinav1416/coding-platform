@@ -5,7 +5,7 @@ module "eks" {
   cluster_name    = "${var.project_name}-cluster"
   cluster_version = "1.32"
 
-  cluster_endpoint_public_access  = true
+  cluster_endpoint_public_access = true
 
   vpc_id                   = aws_vpc.main.id
   subnet_ids               = [aws_subnet.private_1.id, aws_subnet.private_2.id]
@@ -123,7 +123,7 @@ data "aws_iam_policy_document" "github_actions_terraform_assume_role" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       # IMPORTANT: Replace 'Abhinav1416' with your actual GitHub username if different!
-      values   = ["repo:Abhinav1416/coding-platform:*"]
+      values = ["repo:Abhinav1416/coding-platform:*"]
     }
   }
 }
