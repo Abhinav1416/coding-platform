@@ -14,13 +14,16 @@ module "eks" {
   cluster_addons = {
     coredns = {
       most_recent = true
+      resolve_conflicts_on_update = "OVERWRITE"
     }
     kube-proxy = {
       most_recent = true
+      resolve_conflicts_on_update = "OVERWRITE"
     }
     vpc-cni = {
-      most_recent    = true
+      most_recent = true
       before_compute = true
+      resolve_conflicts_on_update = "OVERWRITE"
       configuration_values = jsonencode({
         env = {
           ENABLE_PREFIX_DELEGATION = "true"
