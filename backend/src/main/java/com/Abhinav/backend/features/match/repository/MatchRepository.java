@@ -59,4 +59,11 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
             @Param("statuses") Collection<MatchStatus> statuses,
             Pageable pageable
     );
+
+
+    @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END FROM Match m WHERE (m.playerOneId = :userId OR m.playerTwoId = :userId) AND m.status IN :statuses")
+    boolean existsActiveMatchForUser(
+            @Param("userId") Long userId,
+            @Param("statuses") Collection<MatchStatus> statuses
+    );
 }
