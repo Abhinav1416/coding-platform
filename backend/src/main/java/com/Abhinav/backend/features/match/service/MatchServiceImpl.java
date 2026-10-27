@@ -66,6 +66,12 @@ public class MatchServiceImpl implements MatchService {
             MatchStatus.EXPIRED
     );
 
+    private static final Set<MatchStatus> ACTIVE_MATCH_STATUSES = EnumSet.of(
+            MatchStatus.WAITING_FOR_OPPONENT,
+            MatchStatus.SCHEDULED,
+            MatchStatus.ACTIVE
+    );
+
     private String getUsernameFromEmail(String email) {
         if (email == null || !email.contains("@")) {
             return "anonymous";
@@ -77,6 +83,9 @@ public class MatchServiceImpl implements MatchService {
     public CreateDuelResponse createDuel(CreateDuelRequest request, Long creatorId) {
         if (request.getDifficultyMin() > request.getDifficultyMax()) {
             throw new IllegalArgumentException("Minimum difficulty cannot be greater than maximum difficulty.");
+        }
+        if (matchRepository.existsActiveMatchForUser(creatorId, ACTIVE_MATCH_STATUSES)) {
+            throw new ResourceConflictException("You cannot create a new duel while already participating in an active match.");
         }
         String roomCode = RandomStringUtils.randomAlphanumeric(6).toUpperCase();
         Match match = Match.builder()
@@ -96,6 +105,10 @@ public class MatchServiceImpl implements MatchService {
     @Override
     @Transactional
     public JoinDuelResponse joinDuel(JoinDuelRequest request, Long joiningUserId) {
+        if (matchRepository.existsActiveMatchForUser(joiningUserId, ACTIVE_MATCH_STATUSES)) {
+            throw new ResourceConflictException("You cannot join a duel while already participating in an active match.");
+        }
+
         Match match = matchRepository.findByRoomCode(request.getRoomCode().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Match room not found with code: " + request.getRoomCode()));
 
