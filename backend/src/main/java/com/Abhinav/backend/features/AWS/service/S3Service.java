@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -36,6 +38,8 @@ public class S3Service {
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private static final Logger logger = LoggerFactory.getLogger(S3Service.class);
+
+    private final ConcurrentHashMap<UUID, ReentrantLock> problemLocks = new ConcurrentHashMap<>();
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
@@ -153,35 +157,47 @@ public class S3Service {
             return allTestCases;
         }
 
-        logger.info("{} CACHE MISS. Fetching from source.", logPrefix);
-        allTestCases = new ArrayList<>();
-
-        if (problem.getSampleTestCases() != null && !problem.getSampleTestCases().isBlank()) {
-            try {
-                List<SampleTestCaseDTO> sampleDtos = objectMapper.readValue(
-                        problem.getSampleTestCases(), new TypeReference<>() {});
-                List<Judge0Service.TestCase> sampleCases = sampleDtos.stream()
-                        .map(dto -> new Judge0Service.TestCase(dto.getStdin(), dto.getExpected_output()))
-                        .collect(Collectors.toList());
-                allTestCases.addAll(sampleCases);
-                logger.info("{}   - Parsed {} sample test cases.", logPrefix, sampleCases.size());
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to parse sample test cases JSON for problemId: " + problem.getId(), e);
+        ReentrantLock lock = problemLocks.computeIfAbsent(problem.getId(), k -> new ReentrantLock());
+        lock.lock();
+        try {
+            allTestCases = (List<Judge0Service.TestCase>) redisTemplate.opsForValue().get(cacheKey);
+            if (allTestCases != null) {
+                logger.info("{} CACHE HIT (after acquiring lock). Returning {} cached test cases.", logPrefix, allTestCases.size());
+                return allTestCases;
             }
-        }
 
-        if (problem.getHiddenTestCasesS3Key() != null && !problem.getHiddenTestCasesS3Key().isBlank()) {
-            List<Judge0Service.TestCase> hiddenCases = downloadAndParseHiddenTestCases(problem.getHiddenTestCasesS3Key());
-            allTestCases.addAll(hiddenCases);
-            logger.info("{}   - Parsed {} hidden test cases from S3.", logPrefix, hiddenCases.size());
-        }
+            logger.info("{} CACHE MISS. Fetching from source.", logPrefix);
+            allTestCases = new ArrayList<>();
 
-        if (!allTestCases.isEmpty()) {
-            redisTemplate.opsForValue().set(cacheKey, allTestCases, testCaseCacheTtlMinutes, TimeUnit.MINUTES);
-            logger.info("{}   - Cached {} total test cases with a {}-minute TTL.", logPrefix, allTestCases.size(), testCaseCacheTtlMinutes);
-        }
+            if (problem.getSampleTestCases() != null && !problem.getSampleTestCases().isBlank()) {
+                try {
+                    List<SampleTestCaseDTO> sampleDtos = objectMapper.readValue(
+                            problem.getSampleTestCases(), new TypeReference<>() {});
+                    List<Judge0Service.TestCase> sampleCases = sampleDtos.stream()
+                            .map(dto -> new Judge0Service.TestCase(dto.getStdin(), dto.getExpected_output()))
+                            .collect(Collectors.toList());
+                    allTestCases.addAll(sampleCases);
+                    logger.info("{}   - Parsed {} sample test cases.", logPrefix, sampleCases.size());
+                } catch (Exception e) {
+                    throw new IllegalStateException("Failed to parse sample test cases JSON for problemId: " + problem.getId(), e);
+                }
+            }
 
-        return allTestCases;
+            if (problem.getHiddenTestCasesS3Key() != null && !problem.getHiddenTestCasesS3Key().isBlank()) {
+                List<Judge0Service.TestCase> hiddenCases = downloadAndParseHiddenTestCases(problem.getHiddenTestCasesS3Key());
+                allTestCases.addAll(hiddenCases);
+                logger.info("{}   - Parsed {} hidden test cases from S3.", logPrefix, hiddenCases.size());
+            }
+
+            if (!allTestCases.isEmpty()) {
+                redisTemplate.opsForValue().set(cacheKey, allTestCases, testCaseCacheTtlMinutes, TimeUnit.MINUTES);
+                logger.info("{}   - Cached {} total test cases with a {}-minute TTL.", logPrefix, allTestCases.size(), testCaseCacheTtlMinutes);
+            }
+
+            return allTestCases;
+        } finally {
+            lock.unlock();
+        }
     }
 
     private List<Judge0Service.TestCase> downloadAndParseHiddenTestCases(String s3Key) {
