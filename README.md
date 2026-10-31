@@ -1,6 +1,6 @@
 # CodeDuels — Real-Time 1v1 Competitive Programming Platform
 
-CodeDuels is a full-stack platform for real-time, one-on-one DSA battles, with matchmaking, code execution, live verdict updates, and performance tracking. It has served **2,000+ registered users** and evolved from a manually deployed EC2 application to an **AWS EKS, Terraform, and GitOps-based architecture**.
+CodeDuels is a full-stack platform for real-time, one-on-one DSA battles, with matchmaking, code execution, live verdict updates, and performance tracking. It has served **5,000+ registered users** and evolved from a manually deployed EC2 application to an **AWS EKS, Terraform, and GitOps-based architecture**.
 
 > The project explores asynchronous event processing, WebSockets, microservices, Infrastructure as Code, CI/CD, Kubernetes autoscaling, and cloud security.
 
