@@ -26,7 +26,7 @@ CodeDuels is a full-stack platform for real-time, one-on-one DSA battles, with m
 
 ## Highlights
 
-- **2,000+ registered users** and live 1v1 coding battles with matchmaking and WebSocket updates.
+- **5,000+ registered users** and live 1v1 coding battles with matchmaking and WebSocket updates.
 - Two asynchronous workflows: Judge0 execution for normal matches and a dedicated Sentinel worker for Codeforces matches.
 - AWS SQS for decoupled job processing; Redis for live match state; PostgreSQL for durable storage.
 - Terraform-managed AWS infrastructure, with more than 50 resources in the EKS phase and a documented 54-resource ECS phase.
